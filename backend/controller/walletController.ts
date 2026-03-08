@@ -2050,6 +2050,35 @@ const addWalletAddress = async (
           wallet_name: wallet_name || label || generateWalletName(),
         });
         
+        // Also create/update entry in userWalletModel so it appears on dashboard and wallet page
+        const existingWallet = await userWalletModel.findOne({
+          where: {
+            user_id,
+            company_id: company_id || null,
+            wallet_type: currency,
+          },
+        });
+        
+        if (!existingWallet) {
+          await userWalletModel.create({
+            user_id,
+            company_id: company_id || null,
+            wallet_name: wallet_name || label || generateWalletName(),
+            amount: 0,
+            wallet_type: currency,
+            wallet_address,
+            currency_type: 'CRYPTO',
+          });
+          walletLogger.info(`[addWalletAddress] Created wallet entry for ${currency} in userWalletModel for user ${user_id}, company ${company_id}`);
+        } else {
+          // Update the wallet address if wallet entry already exists
+          await userWalletModel.update(
+            { wallet_address, wallet_name: wallet_name || existingWallet.dataValues.wallet_name },
+            { where: { wallet_id: existingWallet.dataValues.wallet_id } }
+          );
+          walletLogger.info(`[addWalletAddress] Updated wallet entry for ${currency} in userWalletModel for user ${user_id}, company ${company_id}`);
+        }
+        
         // Invalidate wallet cache so getWallet returns fresh data
         await invalidateWalletCache(userData.user_id);
         
@@ -3776,6 +3805,24 @@ const editWalletAddress = async (req: express.Request, res: express.Response) =>
       },
     });
 
+    // Also sync changes to userWalletModel so dashboard/wallet page reflects the update
+    const currency = existingAddress.dataValues.currency;
+    const oldAddress = existingAddress.dataValues.wallet_address;
+    const walletModelWhere: Record<string, unknown> = {
+      user_id,
+      wallet_type: currency,
+      wallet_address: oldAddress,
+    };
+    if (existingAddress.dataValues.company_id) {
+      walletModelWhere.company_id = existingAddress.dataValues.company_id;
+    }
+    const walletModelUpdate: Record<string, unknown> = {};
+    if (wallet_address) walletModelUpdate.wallet_address = wallet_address;
+    if (wallet_name !== undefined) walletModelUpdate.wallet_name = wallet_name;
+    if (Object.keys(walletModelUpdate).length > 0) {
+      await userWalletModel.update(walletModelUpdate, { where: walletModelWhere });
+    }
+
     // Invalidate wallet cache so getWallet returns fresh data
     await invalidateWalletCache(userData.user_id);
 
@@ -3957,6 +4004,17 @@ const deleteWalletAddressWithOTP = async (
     await userWalletAddressModel.destroy({
       where: whereClause,
     });
+
+    // Also delete from userWalletModel so dashboard/wallet page reflects the change
+    const walletModelWhere: Record<string, unknown> = {
+      user_id,
+      wallet_type: walletAddress.dataValues.currency,
+      wallet_address: walletAddress.dataValues.wallet_address,
+    };
+    if (company_id) {
+      walletModelWhere.company_id = company_id;
+    }
+    await userWalletModel.destroy({ where: walletModelWhere });
 
     // Delete OTP from Redis
     await deleteRedisItem(`wallet_delete_otp_${address_id}`);

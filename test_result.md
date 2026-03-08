@@ -711,3 +711,30 @@ backend:
   - Description, amount, currency, fee_payer, redirect_url, tax settings
   - Merchant info, invoice number, accepted cryptocurrencies
   - Direct navigation to checkout links works without redirect
+
+
+## Changes Made - Session 8 (Company Creation + Wallet CRUD)
+
+### 1. New Company Created
+- Created "TestCompany3" (ID 54) via browser automation modal flow
+- Company details: business email test@testcompany3.com
+
+### 2. Wallet CRUD - Full Sync Between Tables
+- **Bug Found**: `addWalletAddress` only wrote to `userWalletAddressModel` but dashboard/wallet page read from `userWalletModel` — new wallets were invisible on dashboard
+- **Fix**: `addWalletAddress` now also creates entry in `userWalletModel` so wallets appear on dashboard
+- **Fix**: `editWalletAddress` now syncs changes to `userWalletModel` 
+- **Fix**: `deleteWalletAddressWithOTP` now also removes from `userWalletModel`
+- File: `backend/controller/walletController.ts`
+
+### 3. Wallet CRUD Test Results (TestCompany3, ID 54)
+| Operation | Status | Details |
+|-----------|--------|---------|
+| CREATE BTC | ✅ | Address added + synced to wallet model |
+| CREATE LTC | ✅ | Address added + synced to wallet model |
+| READ | ✅ | getWallet returns 2 wallets for company 54 |
+| UPDATE name | ✅ | Name changed + synced to wallet model |
+| DELETE BTC | ✅ | Deleted with OTP + removed from wallet model |
+| RE-CREATE BTC | ✅ | Re-added + synced to wallet model |
+
+### Known Issue (Pre-existing)
+- Wallet page shows wallets from all companies briefly during company switch (timing issue with company-scoped data fetch)
