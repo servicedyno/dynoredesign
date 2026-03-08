@@ -148,22 +148,15 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       WHERE ut.user_id = :userId ${companyFilter}
     `;
 
-    // ── 2. Volume: Use stored usd_value for historical accuracy, fallback to base_amount for legacy ──
-    // For transactions WITH usd_value stored, sum that directly (already in USD at time of receipt)
-    // For transactions WITHOUT usd_value, fall back to per-currency conversion (legacy behavior)
+    // ── 2. Volume: Use stored usd_value (historical value at time of transaction) ──
     const volumeQuery = `
       SELECT 
-        ut.base_currency,
-        COALESCE(SUM(ut.base_amount), 0) as total_vol,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_vol,
-        COALESCE(SUM(ut.base_amount) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_vol,
         COALESCE(SUM(ut.usd_value), 0) as total_usd_value,
         COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
         COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
-      GROUP BY ut.base_currency
     `;
 
     // ── 3. Self-transactions count ──
@@ -174,7 +167,7 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     `;
 
     // Run all queries + active wallets in parallel
-    const [countResult, volumeRows, selfCountResult, activeWallets] = await Promise.all([
+    const [countResult, volumeResult, selfCountResult, activeWallets] = await Promise.all([
       sequelize.query(countQuery, {
         replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
         type: QueryTypes.SELECT,
@@ -210,19 +203,30 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const selfCount = parseInt(String((selfCountResult[0] as Record<string, unknown>)?.self_count || '0'));
     const totalCount = incomingTotal + selfCount;
 
-    // ── Convert per-currency volumes to preferred currency ──
-    const [totalVolume, currentVolume, lastVolume] = await Promise.all([
-      convertVolumesToFiat(volumeRows, 'total_vol', preferredCurrency),
-      convertVolumesToFiat(volumeRows, 'current_month_vol', preferredCurrency),
-      convertVolumesToFiat(volumeRows, 'last_month_vol', preferredCurrency),
-    ]);
-
-    // Fee tier needs USD volume — use ALL-TIME cumulative volume for tier progression
-    // Users should not lose their tier when a new month starts
-    let allTimeVolumeUSD = totalVolume;
-    if (preferredCurrency !== 'USD') {
-      allTimeVolumeUSD = await convertVolumesToFiat(volumeRows, 'total_vol', 'USD');
+    // ── Parse volumes (using historical USD values) ──
+    const volumeRow = volumeResult[0] || {} as Record<string, unknown>;
+    let totalVolumeUSD = parseFloat(String(volumeRow.total_usd_value || '0'));
+    let currentVolumeUSD = parseFloat(String(volumeRow.current_month_usd_value || '0'));
+    let lastVolumeUSD = parseFloat(String(volumeRow.last_month_usd_value || '0'));
+    
+    totalVolumeUSD = Math.round(totalVolumeUSD * 100) / 100;
+    currentVolumeUSD = Math.round(currentVolumeUSD * 100) / 100;
+    lastVolumeUSD = Math.round(lastVolumeUSD * 100) / 100;
+    
+    // Convert from USD to preferred currency if needed
+    let totalVolume = totalVolumeUSD;
+    let currentVolume = currentVolumeUSD;
+    let lastVolume = lastVolumeUSD;
+    
+    if (preferredCurrency !== 'USD' && totalVolumeUSD > 0) {
+      const { rate } = await convertToFiat('USD', preferredCurrency, 1);
+      totalVolume = Math.round(totalVolumeUSD * rate * 100) / 100;
+      currentVolume = Math.round(currentVolumeUSD * rate * 100) / 100;
+      lastVolume = Math.round(lastVolumeUSD * rate * 100) / 100;
     }
+
+    // Fee tier needs USD volume — use stored usd_value total (already in USD)
+    let allTimeVolumeUSD = totalVolumeUSD;
 
     // Calculate fee tier (based on cumulative USD volume, display in preferred currency)
     const conversionRate = preferredCurrency !== 'USD' && allTimeVolumeUSD > 0
@@ -340,7 +344,8 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         ${dateTrunc} as date,
         ut.base_currency,
         COUNT(*) as transaction_count,
-        COALESCE(SUM(ut.base_amount), 0) as volume
+        COALESCE(SUM(ut.base_amount), 0) as volume,
+        COALESCE(SUM(ut.usd_value), 0) as usd_volume
       FROM tbl_user_transaction ut
       ${companyJoinChart}
       WHERE ut.user_id = :userId 
@@ -355,7 +360,8 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       SELECT 
         ut.base_currency,
         COUNT(*) as count,
-        COALESCE(SUM(ut.base_amount), 0) as volume
+        COALESCE(SUM(ut.base_amount), 0) as volume,
+        COALESCE(SUM(ut.usd_value), 0) as usd_volume
        FROM tbl_user_transaction ut
        ${companyJoinChart}
        WHERE ut.user_id = :userId 
@@ -391,30 +397,24 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       }),
     ]) as [Array<Record<string, unknown>>, Array<Record<string, unknown>>, Array<Record<string, unknown>>];
 
-    // ── Build conversion-rate cache (one API call per unique currency) ──
-    const uniqueCurrencies = [...new Set(rawChartData.map(r => String(r.base_currency || 'USD')))];
-    const rateMap: Record<string, number> = {};
-    await Promise.all(
-      uniqueCurrencies.map(async (cur) => {
-        if (cur === preferredCurrency) { rateMap[cur] = 1; return; }
-        try {
-          const { rate } = await convertToFiat(cur, preferredCurrency, 1);
-          rateMap[cur] = rate || 0;
-        } catch {
-          rateMap[cur] = 0;
-          apiLogger.warn(`[Chart] convertToFiat failed for ${cur}, using 0`);
-        }
-      })
-    );
-
-    // ── Aggregate chart rows: convert each currency row to fiat, then sum per date ──
+    // ── Aggregate chart rows using stored usd_value ──
+    let chartUsdToPreferredRate = 1;
+    if (preferredCurrency !== 'USD') {
+      try {
+        const { rate } = await convertToFiat('USD', preferredCurrency, 1);
+        chartUsdToPreferredRate = rate || 1;
+      } catch {
+        chartUsdToPreferredRate = 1;
+      }
+    }
+    
     const dateAgg: Record<string, { volume: number; transaction_count: number }> = {};
     for (const row of rawChartData) {
       const dateKey = new Date(String(row.date)).toISOString().split('T')[0];
-      const cur = String(row.base_currency || 'USD');
-      const rawVol = parseFloat(String(row.volume || '0'));
+      const usdVol = parseFloat(String(row.usd_volume || '0'));
       const count = parseInt(String(row.transaction_count || '0'));
-      const convertedVol = rawVol * (rateMap[cur] || 0);
+      
+      const convertedVol = usdVol * chartUsdToPreferredRate;
       if (!dateAgg[dateKey]) dateAgg[dateKey] = { volume: 0, transaction_count: 0 };
       dateAgg[dateKey].volume += convertedVol;
       dateAgg[dateKey].transaction_count += count;
@@ -429,25 +429,18 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     // Fill in missing dates with zero values
     const filledChartData = fillMissingDates(formattedChartData, startDate, new Date(), groupBy);
 
-    // ── Convert currency breakdown volumes to fiat ──
-    const currencyBreakdown = await Promise.all(
-      (currencyBreakdownRaw as Array<Record<string, unknown>>).map(async (c) => {
-        const cur = String(c.base_currency || 'USD');
-        const rawVol = parseFloat(String(c.volume || '0'));
-        let convertedVol = rawVol;
-        if (cur !== preferredCurrency && rawVol > 0) {
-          try {
-            const { amount } = await convertToFiat(cur, preferredCurrency, rawVol);
-            convertedVol = amount;
-          } catch { /* keep raw */ }
-        }
-        return {
-          currency: cur,
-          count: parseInt(String(c.count || '0')),
-          volume: Math.round(convertedVol * 100) / 100,
-        };
-      })
-    );
+    // ── Convert currency breakdown using stored usd_value ──
+    const currencyBreakdown = (currencyBreakdownRaw as Array<Record<string, unknown>>).map((c) => {
+      const cur = String(c.base_currency || 'USD');
+      const usdVol = parseFloat(String(c.usd_volume || '0'));
+      const convertedVol = usdVol * chartUsdToPreferredRate;
+      
+      return {
+        currency: cur,
+        count: parseInt(String(c.count || '0')),
+        volume: Math.round(convertedVol * 100) / 100,
+      };
+    });
 
     const responseData = {
       period,
@@ -540,20 +533,19 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     const companyJoinFee = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
     const companyFilterFee = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
 
-    const totalVolPerCurrency = await sequelize.query(
-      `SELECT ut.base_currency, COALESCE(SUM(ut.base_amount), 0) as volume
+    const volumeResult = await sequelize.query(
+      `SELECT COALESCE(SUM(ut.usd_value), 0) as total_usd_volume
        FROM tbl_user_transaction ut
        ${companyJoinFee}
        WHERE ut.user_id = :userId 
-       ${companyFilterFee}
-       GROUP BY ut.base_currency`,
+       ${companyFilterFee}`,
       {
         replacements: { userId, companyId: company_id },
         type: QueryTypes.SELECT,
       }
     ) as Array<Record<string, unknown>>;
 
-    const allTimeVolumeUSD = await convertVolumesToFiat(totalVolPerCurrency, 'volume', 'USD');
+    const allTimeVolumeUSD = Math.round(parseFloat(String(volumeResult[0]?.total_usd_volume || '0')) * 100) / 100;
     
     // Get conversion rate if not USD
     if (preferredCurrency !== 'USD') {
