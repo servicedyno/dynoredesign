@@ -37,9 +37,7 @@ test_result.md
 memory
 scripts
 .env.example
-Dockerfile
+Dockerfile*
 docker-compose*.yml
-*.heic
-*.png
 CREDENTIAL_UPDATE_LOG.md
 FINAL_MIGRATION_LOG.md
