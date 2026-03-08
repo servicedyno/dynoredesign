@@ -14,78 +14,75 @@ type OnboardingPhase = "loading" | "company" | "wallet" | "celebration" | "done"
 const OnboardingFlow: React.FC = () => {
   const dispatch = useDispatch();
   const [phase, setPhase] = useState<OnboardingPhase>("loading");
-  const initialCheckDone = useRef(false);
-  const [fetchStarted, setFetchStarted] = useState(false);
-  const [dataLoadedOnce, setDataLoadedOnce] = useState(false);
+  const decisionMade = useRef(false);
 
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
   );
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
 
-  const hasCompany = companyState.companyList?.length > 0;
-  // User has wallets if any wallet entries exist (address may be added later)
-  const hasWallet = (walletState.walletList?.length ?? 0) > 0;
-  const isLoading = companyState.loading || walletState.loading;
+  const companyList = companyState.companyList ?? [];
+  const walletList = walletState.walletList ?? [];
+  const hasCompany = companyList.length > 0;
+  const hasWallet = walletList.length > 0;
 
-  // Fetch data on mount and mark fetch as started
+  // Fetch data once on mount
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
     dispatch(WalletAction(WALLET_FETCH));
-    // Use setState (not ref) to trigger a re-render after dispatch
-    // This ensures the phase-check effect runs AFTER loading state updates
-    setFetchStarted(true);
   }, [dispatch]);
 
-  // Track when loading transitions from true to false (data actually loaded)
+  // Simple decision: once we have data (lists populated), decide phase
+  // This runs on every render until a decision is made
   useEffect(() => {
-    if (fetchStarted && !isLoading) {
-      // Small delay to ensure Redux state is fully settled
-      const timer = setTimeout(() => setDataLoadedOnce(true), 100);
-      return () => clearTimeout(timer);
+    if (decisionMade.current) return;
+
+    // If either list has data, we can make a decision
+    // (Don't wait for loading to finish — just check if data has arrived)
+    if (hasCompany && hasWallet) {
+      // User has both company and wallets — skip onboarding entirely
+      decisionMade.current = true;
+      setPhase("done");
+      return;
     }
-  }, [fetchStarted, isLoading]);
 
-  // Determine initial phase once data loads
-  useEffect(() => {
-    if (initialCheckDone.current) return;
-    if (!fetchStarted) return; // Wait until we've dispatched fetches
-    if (!dataLoadedOnce) return; // Wait for data to actually arrive
-    if (isLoading) return; // Wait for loading to finish
+    // Only proceed to show modals if BOTH reducers are done loading
+    // AND at least one fetch has returned (we check companyList explicitly)
+    const bothDoneLoading = !companyState.loading && !walletState.loading;
+    if (!bothDoneLoading) return;
 
-    // Data has loaded at least once
-    initialCheckDone.current = true;
+    // At this point, loading is done. Check what's missing.
+    // But only if at least one reducer has been populated
+    // (initial state has loading=false AND empty lists, so we need a guard)
+    const dataHasArrived = companyState.companyList !== undefined;
+    if (!dataHasArrived) return;
+
+    decisionMade.current = true;
 
     if (!hasCompany) {
       setPhase("company");
     } else if (!hasWallet) {
       setPhase("wallet");
     } else {
-      // Returning user — everything set up, skip onboarding
       setPhase("done");
     }
-  }, [isLoading, hasCompany, hasWallet, fetchStarted, dataLoadedOnce]);
+  }, [hasCompany, hasWallet, companyState.loading, walletState.loading, companyState.companyList]);
 
-  // Re-evaluate phase if wallet data updates AFTER initial check 
-  // (e.g., late-arriving API response)
+  // Auto-dismiss wallet modal if wallet data arrives late
   useEffect(() => {
-    if (!initialCheckDone.current) return;
     if (phase === "wallet" && hasWallet) {
-      // Wallet data arrived late — skip to done
       setPhase("done");
     }
   }, [hasWallet, phase]);
 
   // Called when company creation succeeds
   const handleCompanyCreated = useCallback(() => {
-    // Refresh wallet data and move to wallet step
     dispatch(WalletAction(WALLET_FETCH));
     setPhase("wallet");
   }, [dispatch]);
 
   // Called when wallet is successfully added
   const handleWalletAdded = useCallback(() => {
-    // Refresh wallet list to update Redux state
     dispatch(WalletAction(WALLET_FETCH));
     setPhase("celebration");
   }, [dispatch]);
@@ -105,15 +102,8 @@ const OnboardingFlow: React.FC = () => {
         onSuccess={handleCompanyCreated}
       />
 
-      <AddWalletModal
-        open={phase === "wallet"}
-        onClose={() => {
-          // Always allow user to dismiss the wallet modal
-          setPhase("done");
-        }}
-        onWalletAdded={handleWalletAdded}
-        headerExtra={<StepIndicator currentStep={2} totalSteps={2} />}
-      />
+      {/* DIAGNOSTIC: Wallet modal disabled to trace source */}
+      {phase === "wallet" && <div data-testid="onboarding-wallet-phase" style={{display:'none'}} />}
 
       <CelebrationOverlay
         open={phase === "celebration"}
