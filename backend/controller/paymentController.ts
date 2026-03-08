@@ -4543,12 +4543,6 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             
             if (adminFeeEmailSent && adminFeeEmailSent.sent) {
               cronLogger.info(`[Admin Fee Notification] Email already sent for tx: ${transactionId}, skipping duplicate`);
-            } else if (!isUTXOChain && tempData.is_merchant_pool) {
-              // BUG-2 FIX: For non-UTXO merchant pool addresses, skip "Platform Fee Received" email.
-              // The admin fee is only RETAINED in the pool address (not yet received by admin).
-              // The actual "Admin Fee Swept" email will be sent when the sweep moves funds to admin wallet.
-              // This prevents the admin from getting 2 emails per payment (fee reserved + fee swept).
-              cronLogger.info(`[Admin Fee Notification] Skipping for non-UTXO merchant pool — fee ${adminAmountToSend} ${tempCurrency} retained for sweep (email will be sent on sweep)`);
             } else {
               // Set flag immediately to prevent duplicates
               await setRedisItem(adminFeeEmailKey, { sent: true, sentAt: new Date().toISOString() });
