@@ -1392,7 +1392,6 @@ const CryptoTransfer = ({
               color: "#FFFFFF",
               borderRadius: "30px",
               py: 1.5,
-              ,
               fontWeight: 500,
               textTransform: "none",
               mb: 2,
@@ -1413,7 +1412,6 @@ const CryptoTransfer = ({
               color: theme.palette.text.primary,
               borderRadius: "30px",
               py: 1.5,
-              ,
               fontWeight: 500,
               textTransform: "none",
               "&:hover": {
@@ -1522,7 +1520,6 @@ const CryptoTransfer = ({
               color: "#344054",
               borderRadius: "30px",
               py: 1.5,
-              ,
               fontWeight: 500,
               textTransform: "none",
               "&:hover": {
@@ -1707,7 +1704,6 @@ const CryptoTransfer = ({
                     style={{
                       color: theme.palette.text.primary,
                       fontWeight: 500,
-                      ,
                     }}
                   >
                     {t('crypto.selectCryptoType')}

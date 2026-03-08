@@ -379,7 +379,6 @@ const UnderPayment = ({
                   color: "#10B981",
                   textTransform: "none",
                   borderRadius: 30,
-                  ,
                   fontWeight: 500,
                   py: { xs: 1.5, sm: 2 },
                   fontSize: { xs: "14px", sm: "16px" },

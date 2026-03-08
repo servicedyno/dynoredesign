@@ -575,7 +575,7 @@ const Payment = () => {
           document.body.removeChild(textArea)
         }
         setCopySnackbar(true)
-      } catch {
+      } catch (_e) {
         const textArea = document.createElement('textarea')
         textArea.value = orderReference
         textArea.style.position = 'fixed'
@@ -607,7 +607,7 @@ const Payment = () => {
           document.body.removeChild(textArea)
         }
         setCopySnackbar(true)
-      } catch {
+      } catch (_e) {
         const textArea = document.createElement('textarea')
         textArea.value = linkId
         textArea.style.position = 'fixed'
@@ -729,7 +729,7 @@ const Payment = () => {
                     }}
                     data-testid="incomplete-payment-alert"
                   >
-                    <AlertTitle sx={{ , fontWeight: 600 }}>
+                    <AlertTitle sx={{ fontWeight: 600 }}>
                       {t('checkout.incompletePayment', { defaultValue: 'Incomplete Payment' })}
                     </AlertTitle>
                     <Typography variant="body2" >

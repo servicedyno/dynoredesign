@@ -362,7 +362,6 @@ const BankTransferCompo = ({
                       color: isDark ? '#6C7BFF' : "#0004FF",
                       bgcolor: isDark ? 'rgba(108, 123, 255, 0.2)' : "#E9ECF2",
                       borderRadius: "6px",
-                      ,
                       gap: "4px",
                     }}
                   >
@@ -525,7 +524,6 @@ const BankTransferCompo = ({
                     mt: 1,
                     borderRadius: "99999px",
                     bgcolor: "#0004FF",
-                    ,
                     fontWeight: 500,
                     py: "17px",
                     textTransform: "none",

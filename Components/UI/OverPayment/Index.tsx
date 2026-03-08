@@ -457,7 +457,6 @@ const OverPayment = ({
                   py: 1.75,
                   fontSize: '15px',
                   fontWeight: 600,
-                  ,
                   "&:hover": {
                     backgroundColor: '#4338CA',
                   },

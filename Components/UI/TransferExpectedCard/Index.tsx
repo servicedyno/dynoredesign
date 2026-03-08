@@ -387,7 +387,6 @@ export default function TransferExpectedCard({
                     py: 1.75,
                     fontSize: '15px',
                     fontWeight: 600,
-                    ,
                     '&:hover': {
                       backgroundColor: '#4338CA'
                     }
@@ -425,7 +424,6 @@ export default function TransferExpectedCard({
                   py: 1.75,
                   fontSize: '15px',
                   fontWeight: 600,
-                  ,
                   '&:hover': {
                     backgroundColor: '#4338CA'
                   }
@@ -609,7 +607,6 @@ export default function TransferExpectedCard({
               textTransform: 'none',
               borderRadius: 30,
               py: 1.5,
-              ,
               fontWeight: 500,
               '&:hover': {
                 backgroundColor: isDark ? 'rgba(79, 70, 229, 0.1)' : '#EEF2FF',

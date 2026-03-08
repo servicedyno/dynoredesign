@@ -12,10 +12,23 @@ DynoPay is a full-stack crypto payment gateway.
 - ✅ MongoDB: Running
 
 ## Pod URL Setup
-- **Pod URL**: `https://pod-pay.preview.emergentagent.com`
+- **Pod URL**: `https://d1212cb6-41cd-45ac-bf4d-c2e43e1fe47b.preview.emergentagent.com`
 - **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL` set to pod URL with trailing slash
 - **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL` set to pod URL
 - **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to pod URL
+
+### Pod URL Migration & Checkout Fix (Current Session)
+- Updated all env files from old `pod-pay.preview.emergentagent.com` to current pod URL
+- Installed frontend dependencies (`yarn install` at `/app/`)
+- Installed backend Node.js dependencies (`yarn install` at `/app/backend/`)
+- Fixed Next.js/SWC version mismatch (downgraded next to 14.2.33 to match ARM64 SWC binary)
+- **Fixed checkout build errors** caused by stray commas in `sx={{}}` objects across multiple files:
+  - `pages/pay/index.tsx` line 732: `sx={{ , fontWeight: 600 }}` → `sx={{ fontWeight: 600 }}`
+  - `Components/Page/Pay3Components/bankTransferCompo.tsx` lines 365, 528
+  - `Components/Page/Pay3Components/cryptoTransfer.tsx` lines 1395, 1416, 1525, 1710
+  - `Components/UI/TransferExpectedCard/Index.tsx` lines 390, 428, 612
+  - `Components/UI/OverPayment/Index.tsx` line 460
+  - `Components/UI/UnderPayment/Index.tsx` line 382
 
 ## Changes Made in Current Session (Phase: Referral, Dark Mode, Translations)
 
