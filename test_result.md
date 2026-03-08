@@ -736,5 +736,8 @@ backend:
 | DELETE BTC | ✅ | Deleted with OTP + removed from wallet model |
 | RE-CREATE BTC | ✅ | Re-added + synced to wallet model |
 
-### Known Issue (Pre-existing)
-- Wallet page shows wallets from all companies briefly during company switch (timing issue with company-scoped data fetch)
+### Known Issue (Pre-existing) — FIXED
+- ~~Wallet page shows wallets from all companies briefly during company switch~~ 
+- **Fixed**: `useWalletData` now waits for `companyFetched && selectedCompanyId` before fetching
+- This prevents the initial "all wallets" fetch when `selectedCompanyId` is null during page load
+- Verified: TestCompany3 shows only BTC + LTC; Nomadly1 shows all 15 wallets — no cross-company contamination

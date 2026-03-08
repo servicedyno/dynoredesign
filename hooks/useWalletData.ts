@@ -115,6 +115,9 @@ export const useWalletData = () => {
   const selectedCompanyId = useSelector(
     (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
   );
+  const companyFetched = useSelector(
+    (state: rootReducer) => (state as any).companyReducer?.fetched
+  );
   const walletLoading = Boolean(walletState?.loading);
   const walletListLength = Array.isArray(walletState?.walletList)
     ? walletState.walletList.length
@@ -130,20 +133,24 @@ export const useWalletData = () => {
     const token = window.localStorage.getItem("token");
     if (!token) return;
 
+    // Wait until company list is fetched and a company is selected
+    // This prevents fetching ALL wallets when selectedCompanyId is null during initial load
+    if (!companyFetched || !selectedCompanyId) return;
+
     // Skip if already fetching or if we just fetched for this company
     if (isFetchingRef.current) return;
-    if (lastFetchedCompanyRef.current === (selectedCompanyId ?? null)) return;
+    if (lastFetchedCompanyRef.current === selectedCompanyId) return;
 
-    lastFetchedCompanyRef.current = selectedCompanyId ?? null;
+    lastFetchedCompanyRef.current = selectedCompanyId;
     isFetchingRef.current = true;
 
-    const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
+    const payload = { company_id: selectedCompanyId };
     dispatch(WalletAction(WALLET_FETCH, payload));
 
     // Reset fetching flag after a brief delay to allow the saga to complete
     const timer = setTimeout(() => { isFetchingRef.current = false; }, 2000);
     return () => clearTimeout(timer);
-  }, [dispatch, selectedCompanyId]);
+  }, [dispatch, selectedCompanyId, companyFetched]);
 
   /* ---------------------------- Wallet Data ---------------------------- */
 
