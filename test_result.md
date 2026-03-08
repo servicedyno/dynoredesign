@@ -66,17 +66,80 @@ backend:
         comment: "✅ Company fetch endpoint working correctly. Returns list of 1 company with proper Bearer token authentication"
 
 frontend:
-  - task: "UI Integration Testing"
-    implemented: false
-    working: "NA"
-    file: "N/A"
+  - task: "Create Payment Link Page - Crypto Items Display"
+    implemented: true
+    working: false
+    file: "/app/pages/create-pay-link.tsx, /app/Components/Page/CreatePaymentLink/index.tsx"
     stuck_count: 0
-    priority: "low"
+    priority: "high"
     needs_retesting: false
     status_history:
       - working: "NA"
         agent: "testing"
-        comment: "Frontend testing not required per system limitations"
+        comment: "New test request - Verify default 5 crypto items (BTC, ETH, LTC, USDT-TRC20, USDT-ERC20) with TRX and DOGE hidden initially"
+      - working: false
+        agent: "testing"
+        comment: "❌ CANNOT TEST - Login authentication failed with credentials nomadly@moxx.co / Katiekendra123@. API returns 401 Unauthorized. Without login, cannot access /create-pay-link page to verify crypto item display."
+
+  - task: "Create Payment Link Page - Show All Button"
+    implemented: true
+    working: false
+    file: "/app/Components/UI/pay-link/CryptoSelection.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New test request - Verify 'Show all' button expands crypto items from 5 to 15, making TRX and DOGE visible"
+      - working: false
+        agent: "testing"
+        comment: "❌ CANNOT TEST - Login authentication failed. Cannot access page to test Show All functionality."
+
+  - task: "Create Payment Link Page - Currency Dropdown"
+    implemented: true
+    working: false
+    file: "/app/Components/UI/CurrencySelector/index.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New test request - Verify currency dropdown shows all 14 currencies (USD, EUR, GBP, AUD, CAD, INR, NGN, VND, PKR, BRL, ARS, PHP, SGD, AED) with proper flag icons (no emojis)"
+      - working: false
+        agent: "testing"
+        comment: "❌ CANNOT TEST - Login authentication failed. Cannot access page to verify currency dropdown."
+
+  - task: "Create Payment Link Page - Responsive Layout (Mobile/Tablet)"
+    implemented: true
+    working: false
+    file: "/app/pages/create-pay-link.tsx"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New test request - Verify layout works on mobile (375x800) and tablet (768x1024) views"
+      - working: false
+        agent: "testing"
+        comment: "❌ CANNOT TEST - Login authentication failed. Cannot access page to test responsive layouts."
+
+  - task: "Login Flow with Password Method"
+    implemented: true
+    working: false
+    file: "/app/pages/auth/login.tsx"
+    stuck_count: 1
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "Testing login flow with provided credentials"
+      - working: false
+        agent: "testing"
+        comment: "❌ CRITICAL FAILURE - Login API returns 401 Unauthorized for credentials nomadly@moxx.co / Katiekendra123@. Console error: 'Failed to load resource: the server responded with a status of 401 () at /api/user/login'. Additionally, /api/auth/session returns 404 (NextAuth session endpoint issue). This blocks ALL testing of authenticated pages."
 
 metadata:
   created_by: "testing_agent"
@@ -86,18 +149,22 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Login API with specified credentials"
-    - "Last Company Endpoint - PUT /api/user/last-company" 
-    - "Company Fetch - GET /api/company/getCompany"
-  stuck_tasks: []
+    - "Login Flow with Password Method"
+    - "Create Payment Link Page - Crypto Items Display"
+    - "Create Payment Link Page - Show All Button"
+    - "Create Payment Link Page - Currency Dropdown"
+  stuck_tasks:
+    - "Login Flow with Password Method"
   test_all: false
-  test_priority: "high_first"
+  test_priority: "critical_first"
 
 agent_communication:
   - agent: "testing"
     message: "Starting backend API testing for new referral code, last company persistence, and company fetch features"
   - agent: "testing"
     message: "✅ ALL BACKEND TESTS PASSED (7/7 - 100% success rate). Key findings: 1) Login API working with referral_code DYNO-G468QA (11 chars, correct format), 2) last_company_id field present (value: 3), 3) Last company endpoint properly validates company ownership and returns appropriate errors, 4) Company fetch returns 1 company with Bearer auth. All three endpoints from review request are functional."
+  - agent: "testing"
+    message: "❌ CRITICAL: Cannot test /create-pay-link page - Login FAILED with provided credentials (nomadly@moxx.co / Katiekendra123@). API returns 401 Unauthorized. Console errors show: 'Failed to load resource: the server responded with a status of 401 () at /api/user/login'. Additionally, NextAuth session endpoint (/api/auth/session) returns 404. Without successful authentication, cannot access the create payment link form to test crypto items, currency dropdown, or responsive layouts. BLOCKING ISSUE."
 
 ### Pod URL Migration & Checkout Fix (Current Session)
 - Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`

@@ -22,23 +22,34 @@ import {
 import unitedStatesFlag from "@/assets/Images/Icons/flags/united-states-flag.png";
 import euroFlag from "@/assets/Images/Icons/flags/euro-flag.png";
 import nigerianFlag from "@/assets/Images/Icons/flags/nigerian-flag.png";
+import gbFlag from "@/assets/Images/Icons/flags/gb-flag.png";
+import auFlag from "@/assets/Images/Icons/flags/au-flag.png";
+import caFlag from "@/assets/Images/Icons/flags/ca-flag.png";
+import inFlag from "@/assets/Images/Icons/flags/in-flag.png";
+import vnFlag from "@/assets/Images/Icons/flags/vn-flag.png";
+import pkFlag from "@/assets/Images/Icons/flags/pk-flag.png";
+import brFlag from "@/assets/Images/Icons/flags/br-flag.png";
+import arFlag from "@/assets/Images/Icons/flags/ar-flag.png";
+import phFlag from "@/assets/Images/Icons/flags/ph-flag.png";
+import sgFlag from "@/assets/Images/Icons/flags/sg-flag.png";
+import aeFlag from "@/assets/Images/Icons/flags/ae-flag.png";
 
 // Currency data - all supported base currencies (matching backend SUPPORTED_BASE_CURRENCIES)
 const currencies = [
-  { code: "USD", label: "USD", flag: unitedStatesFlag, emoji: null },
-  { code: "EUR", label: "EUR", flag: euroFlag, emoji: null },
-  { code: "GBP", label: "GBP", flag: null, emoji: "🇬🇧" },
-  { code: "AUD", label: "AUD", flag: null, emoji: "🇦🇺" },
-  { code: "CAD", label: "CAD", flag: null, emoji: "🇨🇦" },
-  { code: "INR", label: "INR", flag: null, emoji: "🇮🇳" },
-  { code: "NGN", label: "NGN", flag: nigerianFlag, emoji: null },
-  { code: "VND", label: "VND", flag: null, emoji: "🇻🇳" },
-  { code: "PKR", label: "PKR", flag: null, emoji: "🇵🇰" },
-  { code: "BRL", label: "BRL", flag: null, emoji: "🇧🇷" },
-  { code: "ARS", label: "ARS", flag: null, emoji: "🇦🇷" },
-  { code: "PHP", label: "PHP", flag: null, emoji: "🇵🇭" },
-  { code: "SGD", label: "SGD", flag: null, emoji: "🇸🇬" },
-  { code: "AED", label: "AED", flag: null, emoji: "🇦🇪" },
+  { code: "USD", label: "USD", flag: unitedStatesFlag },
+  { code: "EUR", label: "EUR", flag: euroFlag },
+  { code: "GBP", label: "GBP", flag: gbFlag },
+  { code: "AUD", label: "AUD", flag: auFlag },
+  { code: "CAD", label: "CAD", flag: caFlag },
+  { code: "INR", label: "INR", flag: inFlag },
+  { code: "NGN", label: "NGN", flag: nigerianFlag },
+  { code: "VND", label: "VND", flag: vnFlag },
+  { code: "PKR", label: "PKR", flag: pkFlag },
+  { code: "BRL", label: "BRL", flag: brFlag },
+  { code: "ARS", label: "ARS", flag: arFlag },
+  { code: "PHP", label: "PHP", flag: phFlag },
+  { code: "SGD", label: "SGD", flag: sgFlag },
+  { code: "AED", label: "AED", flag: aeFlag },
 ];
 
 export interface CurrencySelectorProps {
@@ -177,16 +188,12 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
               flex: 1,
             }}
           >
-            {selectedCurrency.flag ? (
-              <CurrencyFlag
-                src={selectedCurrency.flag.src}
-                alt={selectedCurrency.code}
-                width={isMobile ? 10 : 16}
-                height={isMobile ? 10 : 16}
-              />
-            ) : (
-              <span style={{ fontSize: isMobile ? "12px" : "16px", lineHeight: 1 }}>{selectedCurrency.emoji}</span>
-            )}
+            <CurrencyFlag
+              src={selectedCurrency.flag.src}
+              alt={selectedCurrency.code}
+              width={isMobile ? 10 : 16}
+              height={isMobile ? 10 : 16}
+            />
             <CurrencyText isMobile={isMobile}>
               {selectedCurrency.code}
             </CurrencyText>
@@ -259,16 +266,12 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
                 }}
               >
                 <ListItemIcon sx={{ minWidth: "fit-content" }}>
-                  {currency.flag ? (
-                    <CurrencyFlag
-                      src={currency.flag.src}
-                      alt={currency.code}
-                      width={16}
-                      height={16}
-                    />
-                  ) : (
-                    <span style={{ fontSize: "16px", lineHeight: 1 }}>{currency.emoji}</span>
-                  )}
+                  <CurrencyFlag
+                    src={currency.flag.src}
+                    alt={currency.code}
+                    width={16}
+                    height={16}
+                  />
                 </ListItemIcon>
                 <ListItemText
                   primary={currency.code}
