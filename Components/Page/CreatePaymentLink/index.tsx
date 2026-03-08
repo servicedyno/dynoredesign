@@ -1,6 +1,6 @@
 import PanelCard from "@/Components/UI/PanelCard";
 import { Box, Typography, useMediaQuery } from "@mui/material";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { PaymentLinkAction } from "@/Redux/Actions";
@@ -568,14 +568,33 @@ const CreatePaymentLinkPage = ({
       (a, b) => a.fullOrder - b.fullOrder,
     );
 
-    // Always show all supported crypto currencies
-    setCryptoItems(fullSorted);
+    // Show only first 5 cryptos by default (shortOrder <= 5), expand to all via "Show All"
+    if (showAllCoins) {
+      setCryptoItems(fullSorted);
+    } else {
+      setCryptoItems(
+        fullSorted
+          .filter((item) => item.shortOrder <= 5)
+          .sort((a, b) => a.shortOrder - b.shortOrder),
+      );
+    }
   }, [ALL_CRYPTO_ITEMS, hasPaymentLinkData, showAllCoins]);
 
   const isLarge = useMediaQuery("(min-width:1000px)");
   const isSmall = useMediaQuery("(min-width:650px)");
 
-  const walletNotSetUp = ["BCH"];
+  // Dynamically compute which wallets are not set up based on actual wallet data
+  const walletList = useSelector((state: any) => state.walletReducer?.walletList ?? []);
+  const walletNotSetUp = useMemo(() => {
+    const configuredTypes = new Set(
+      walletList
+        .filter((w: any) => Boolean(w.wallet_address))
+        .map((w: any) => w.wallet_type)
+    );
+    return ALL_CRYPTO_ITEMS
+      .map((item) => item.label)
+      .filter((label) => !configuredTypes.has(label));
+  }, [walletList, ALL_CRYPTO_ITEMS]);
 
   useEffect(() => {
     const handleResize = () => {

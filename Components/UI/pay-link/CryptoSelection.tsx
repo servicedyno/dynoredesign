@@ -98,14 +98,8 @@ const CryptoSelection: React.FC<CryptoSelectionProps> = ({
         )}
 
         <Grid container columnSpacing={"10px"} rowSpacing={"10px"}>
-          {(hasPaymentLinkData
-            ? showFilteredCryptoItems
-              ? filteredCryptoItems
-              : showAllCoins
-                ? cryptoItems
-                : isMobile
-                  ? cryptoItems.slice(0, 6)
-                  : cryptoItems.slice(0, 9)
+          {(showFilteredCryptoItems
+            ? filteredCryptoItems
             : cryptoItems
           ).map((item) => (
             <CryptoItemCard
@@ -122,9 +116,9 @@ const CryptoSelection: React.FC<CryptoSelectionProps> = ({
           ))}
         </Grid>
 
-        {hasPaymentLinkData && (
+        {!showAllCoins && cryptoItems.length < 15 && (
           <Box
-            onClick={() => setShowAllCoins(!showAllCoins)}
+            onClick={() => setShowAllCoins(true)}
             sx={{
               height: isMobile ? "32px" : "40px",
               border: `1px solid ${theme.palette.text.primary}`,
@@ -141,13 +135,30 @@ const CryptoSelection: React.FC<CryptoSelectionProps> = ({
                 color: theme.palette.text.primary,
               }}
             >
-              {showAllCoins
-                ? t("showLess")
-                : t("showAll", {
-                    count: isMobile
-                      ? cryptoItems.length - 5
-                      : cryptoItems.length - 9,
-                  })}
+              {t("showAll", { count: 15 - cryptoItems.length })}
+            </Text>
+          </Box>
+        )}
+        {showAllCoins && (
+          <Box
+            onClick={() => setShowAllCoins(false)}
+            sx={{
+              height: isMobile ? "32px" : "40px",
+              border: `1px solid ${theme.palette.text.primary}`,
+              borderRadius: "6px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              cursor: "pointer",
+            }}
+          >
+            <Text
+              sx={{
+                fontSize: isMobile ? "13px" : "15px",
+                color: theme.palette.text.primary,
+              }}
+            >
+              {t("showLess")}
             </Text>
           </Box>
         )}
