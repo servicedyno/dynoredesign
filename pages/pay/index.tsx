@@ -358,6 +358,21 @@ const Payment = () => {
         data: query_data,
         timezone: customerTimezone
       })
+
+      // Check if payment is already completed (Direct Pay edge case)
+      if (data?.payment_completed) {
+        setIsSuccess(true)
+        setWalletState({
+          amount: Number(data.amount),
+          currency: data.base_currency
+        })
+        if (data.redirect_url) {
+          setRedirectUrl(data.redirect_url)
+        }
+        setLoading(false)
+        return
+      }
+
       setWalletState({
         amount: Number(data.amount),
         currency: data.base_currency

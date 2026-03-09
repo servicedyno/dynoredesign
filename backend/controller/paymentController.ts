@@ -394,6 +394,39 @@ const getData = async (req: express.Request, res: express.Response) => {
     if (!item || Object.keys(item).length === 0) {
       return errorResponseHelper(res, 404, "Payment link not found or expired");
     }
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DB STATUS CHECK: For already-completed payment links, return the actual
+    // DB status so the checkout page can show "Payment Completed" instead of
+    // the payment form. This covers Direct Pay links where the customer may
+    // have paid without visiting checkout (the Redis status stays stale).
+    // ═══════════════════════════════════════════════════════════════════════════
+    if (item.link_id) {
+      try {
+        const [dbLink] = await sequelize.query(
+          `SELECT status, paid_amount, paid_currency FROM tbl_payment_link WHERE link_id = :linkId`,
+          { replacements: { linkId: item.link_id }, type: QueryTypes.SELECT }
+        ) as any[];
+        if (dbLink && dbLink.status === 'successful') {
+          return res.status(200).json({
+            success: true,
+            data: {
+              payment_completed: true,
+              status: 'successful',
+              amount: Number(item.base_amount || item.amount || 0),
+              base_currency: item.base_currency,
+              paid_amount: dbLink.paid_amount,
+              paid_currency: dbLink.paid_currency,
+              description: item.description || null,
+              redirect_url: item.redirect_url || null,
+            },
+          });
+        }
+      } catch (dbErr) {
+        cronLogger.warn('[getData] DB status check failed:', dbErr);
+        // Continue with normal flow if DB check fails
+      }
+    }
     
     // Get company info if company_id exists
     let companyInfo: Record<string, unknown> | null = null;

@@ -1,332 +1,315 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing - Payment Link Creation with Merchant Pool Address
-
-This test script verifies:
-1. User login functionality
-2. BTC-only payment link creation with direct_pay_address (pool address)
-3. Multi-currency payment link creation without direct_pay fields
-4. Checkout flow using pool address
-5. Proper address validation (should be bc1q... format, not 1JH5...)
-
-Test Requirements:
-- Backend URL: https://checkout-pod-setup.preview.emergentagent.com
-- Login credentials: nomadly@moxx.co / Katiekendra123@
-- Company ID: 3
+DynoPay Backend API Test Suite
+Tests specific fixes for the crypto payment processing platform
 """
 
 import requests
 import json
 import sys
-import re
-from datetime import datetime
 from typing import Dict, Any, Optional
-
 
 class DynoPayTester:
     def __init__(self, base_url: str):
         self.base_url = base_url.rstrip('/')
         self.session = requests.Session()
-        self.access_token = None
-        self.test_results = []
+        self.access_token: Optional[str] = None
         
-    def log_test(self, test_name: str, status: str, details: str = ""):
-        """Log test result"""
-        timestamp = datetime.now().strftime("%H:%M:%S")
-        result = {
-            'test': test_name,
-            'status': status,
-            'details': details,
-            'timestamp': timestamp
-        }
-        self.test_results.append(result)
-        
-        # Color coding for terminal output
-        color = '\033[92m' if status == 'PASS' else '\033[91m' if status == 'FAIL' else '\033[93m'
-        reset = '\033[0m'
-        print(f"{color}[{timestamp}] {test_name}: {status}{reset}")
-        if details:
-            print(f"  → {details}")
-            
-    def login(self, email: str, password: str) -> bool:
-        """Login and extract access token"""
+    def test_backend_health(self) -> bool:
+        """Test 1: Backend Health Check - GET /api/status"""
+        print("🔍 Test 1: Backend Health Check")
         try:
-            url = f"{self.base_url}/api/user/login"
-            payload = {
-                "email": email,
-                "password": password
-            }
+            response = self.session.get(f"{self.base_url}/api/status")
+            print(f"   Status Code: {response.status_code}")
             
-            response = self.session.post(url, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
-                if 'data' in data and 'accessToken' in data['data']:
-                    self.access_token = data['data']['accessToken']
-                    self.session.headers.update({
-                        'Authorization': f'Bearer {self.access_token}'
-                    })
-                    self.log_test("Login", "PASS", f"Successfully logged in as {email}")
-                    return True
-                else:
-                    self.log_test("Login", "FAIL", f"No access token in response: {data}")
-                    return False
-            else:
-                self.log_test("Login", "FAIL", f"Login failed with status {response.status_code}: {response.text}")
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
                 return False
                 
+            data = response.json()
+            print(f"   Response: {json.dumps(data, indent=2)}")
+            
+            # Check for overall_status in nested data structure
+            overall_status = data.get('overall_status')
+            if 'data' in data and isinstance(data['data'], dict):
+                overall_status = data['data'].get('overall_status')
+            
+            if overall_status != 'operational':
+                print(f"   ❌ FAIL: Expected overall_status='operational', got '{overall_status}'")
+                return False
+                
+            print("   ✅ PASS: Health check successful")
+            return True
+            
         except Exception as e:
-            self.log_test("Login", "FAIL", f"Login exception: {str(e)}")
+            print(f"   ❌ FAIL: Exception during health check: {str(e)}")
+            return False
+    
+    def test_login(self) -> bool:
+        """Test 2: User Login - POST /api/user/login"""
+        print("\n🔍 Test 2: User Login")
+        try:
+            login_data = {
+                "email": "nomadly@moxx.co",
+                "password": "Katiekendra123@"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/api/user/login",
+                json=login_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+                
+            data = response.json()
+            print(f"   Response keys: {list(data.keys())}")
+            
+            # Check for accessToken in various possible locations
+            access_token = None
+            if 'accessToken' in data:
+                access_token = data['accessToken']
+            elif 'data' in data and isinstance(data['data'], dict) and 'accessToken' in data['data']:
+                access_token = data['data']['accessToken']
+            elif 'token' in data:
+                access_token = data['token']
+            
+            if not access_token:
+                print(f"   ❌ FAIL: No accessToken found in response")
+                print(f"   Full response: {json.dumps(data, indent=2)}")
+                return False
+                
+            self.access_token = access_token
+            print(f"   ✅ PASS: Login successful, token acquired")
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ FAIL: Exception during login: {str(e)}")
+            return False
+    
+    def test_payment_link_920_status(self) -> bool:
+        """Test 3: Payment Link #920 Status Check"""
+        print("\n🔍 Test 3: Payment Link #920 Status (should be 'Completed')")
+        
+        if not self.access_token:
+            print("   ❌ FAIL: No access token available")
             return False
             
-    def create_btc_only_payment_link(self) -> Optional[Dict[str, Any]]:
-        """Create BTC-only payment link and verify direct_pay_address"""
         try:
-            url = f"{self.base_url}/api/pay/createPaymentLink"
-            payload = {
-                "base_amount": 20,
-                "base_currency": "USD",
-                "modes": ["CRYPTO"],
-                "accepted_currencies": ["BTC"],
-                "company_id": 3,
-                "fee_payer": "company",
-                "description": "Test pool address"
-            }
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            response = self.session.get(
+                f"{self.base_url}/api/pay/getPaymentLinks?company_id=3",
+                headers=headers
+            )
             
-            response = self.session.post(url, json=payload, timeout=30)
+            print(f"   Status Code: {response.status_code}")
             
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'data' in data:
-                    payment_data = data['data']
-                    
-                    # Check for required fields
-                    required_fields = ['direct_pay_address', 'direct_pay_qr_code', 'direct_pay_temp_id', 'payment_link']
-                    missing_fields = [field for field in required_fields if field not in payment_data]
-                    
-                    if missing_fields:
-                        self.log_test("BTC Payment Link Creation", "FAIL", 
-                                    f"Missing required fields: {missing_fields}")
-                        return None
-                    
-                    # Validate direct_pay_address format
-                    direct_address = payment_data['direct_pay_address']
-                    if not direct_address.startswith('bc1q'):
-                        self.log_test("BTC Payment Link Creation", "FAIL", 
-                                    f"direct_pay_address should be bc1q... format, got: {direct_address}")
-                        return None
-                    
-                    # Ensure it's NOT the merchant's direct wallet
-                    if direct_address == "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7":
-                        self.log_test("BTC Payment Link Creation", "FAIL", 
-                                    f"direct_pay_address is merchant's wallet, not pool address: {direct_address}")
-                        return None
-                    
-                    # Validate QR code format
-                    qr_code = payment_data['direct_pay_qr_code']
-                    if not qr_code.startswith('data:image/png;base64,'):
-                        self.log_test("BTC Payment Link Creation", "FAIL", 
-                                    f"QR code should be PNG base64 data URL, got: {qr_code[:50]}...")
-                        return None
-                    
-                    # Validate temp_id is numeric
-                    temp_id = payment_data['direct_pay_temp_id']
-                    if not isinstance(temp_id, int):
-                        self.log_test("BTC Payment Link Creation", "FAIL", 
-                                    f"direct_pay_temp_id should be number, got: {temp_id}")
-                        return None
-                    
-                    self.log_test("BTC Payment Link Creation", "PASS", 
-                                f"Pool address: {direct_address}, temp_id: {temp_id}")
-                    return payment_data
-                else:
-                    self.log_test("BTC Payment Link Creation", "FAIL", f"No data in response: {data}")
-                    return None
-            else:
-                self.log_test("BTC Payment Link Creation", "FAIL", 
-                            f"Request failed with status {response.status_code}: {response.text}")
-                return None
-                
-        except Exception as e:
-            self.log_test("BTC Payment Link Creation", "FAIL", f"Exception: {str(e)}")
-            return None
-            
-    def create_multi_currency_payment_link(self) -> Optional[Dict[str, Any]]:
-        """Create multi-currency payment link and verify NO direct_pay fields"""
-        try:
-            url = f"{self.base_url}/api/pay/createPaymentLink"
-            payload = {
-                "base_amount": 25,
-                "base_currency": "USD",
-                "modes": ["CRYPTO"],
-                "accepted_currencies": ["BTC", "ETH"],
-                "company_id": 3,
-                "fee_payer": "company",
-                "description": "Test multi-currency"
-            }
-            
-            response = self.session.post(url, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'data' in data:
-                    payment_data = data['data']
-                    
-                    # Check that direct_pay fields are NOT present
-                    direct_pay_fields = ['direct_pay_address', 'direct_pay_qr_code', 'direct_pay_temp_id']
-                    present_fields = [field for field in direct_pay_fields if field in payment_data]
-                    
-                    if present_fields:
-                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
-                                    f"direct_pay fields should not be present for multi-currency, found: {present_fields}")
-                        return None
-                    
-                    # Verify payment_link and accepted_currencies are present
-                    if 'payment_link' not in payment_data:
-                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
-                                    "payment_link field missing")
-                        return None
-                    
-                    if 'accepted_currencies' not in payment_data:
-                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
-                                    "accepted_currencies field missing")
-                        return None
-                    
-                    accepted_currencies = payment_data['accepted_currencies']
-                    if not isinstance(accepted_currencies, list) or len(accepted_currencies) != 2:
-                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
-                                    f"accepted_currencies should be array of 2 items, got: {accepted_currencies}")
-                        return None
-                    
-                    self.log_test("Multi-Currency Payment Link Creation", "PASS", 
-                                f"No direct_pay fields (correct), accepted_currencies: {accepted_currencies}")
-                    return payment_data
-                else:
-                    self.log_test("Multi-Currency Payment Link Creation", "FAIL", f"No data in response: {data}")
-                    return None
-            else:
-                self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
-                            f"Request failed with status {response.status_code}: {response.text}")
-                return None
-                
-        except Exception as e:
-            self.log_test("Multi-Currency Payment Link Creation", "FAIL", f"Exception: {str(e)}")
-            return None
-            
-    def test_checkout_flow(self, payment_link: str) -> bool:
-        """Test checkout flow using getData endpoint"""
-        try:
-            # Extract reference from payment_link URL
-            if 'd=' not in payment_link:
-                self.log_test("Checkout Flow", "FAIL", "No 'd=' parameter in payment_link")
-                return False
-            
-            ref = payment_link.split('d=')[1].split('&')[0]  # Handle potential additional params
-            
-            url = f"{self.base_url}/api/pay/getData"
-            payload = {"data": ref}
-            
-            response = self.session.post(url, json=payload, timeout=30)
-            
-            if response.status_code == 200:
-                data = response.json()
-                
-                if 'data' in data and 'token' in data['data']:
-                    checkout_data = data['data']
-                    
-                    # Basic validation of checkout response
-                    required_fields = ['amount', 'base_currency', 'token', 'payment_mode']
-                    missing_fields = [field for field in required_fields if field not in checkout_data]
-                    
-                    if missing_fields:
-                        self.log_test("Checkout Flow", "FAIL", 
-                                    f"Missing required checkout fields: {missing_fields}")
-                        return False
-                    
-                    self.log_test("Checkout Flow", "PASS", 
-                                f"Checkout token received, amount: {checkout_data['amount']} {checkout_data['base_currency']}")
-                    return True
-                else:
-                    self.log_test("Checkout Flow", "FAIL", f"No checkout token in response: {data}")
-                    return False
-            else:
-                self.log_test("Checkout Flow", "FAIL", 
-                            f"Request failed with status {response.status_code}: {response.text}")
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
                 return False
                 
+            data = response.json()
+            
+            # Find payment link with link_id = 920
+            payment_links = data.get('data', []) if 'data' in data else data
+            if isinstance(payment_links, dict):
+                payment_links = payment_links.get('paymentLinks', [])
+                
+            link_920 = None
+            for link in payment_links:
+                if str(link.get('link_id')) == '920' or link.get('id') == 920:
+                    link_920 = link
+                    break
+                    
+            if not link_920:
+                print(f"   ❌ FAIL: Payment link #920 not found")
+                print(f"   Available links: {[link.get('link_id', link.get('id')) for link in payment_links]}")
+                return False
+                
+            status = link_920.get('status')
+            print(f"   Link #920 Status: '{status}'")
+            
+            if status != 'Completed':
+                print(f"   ❌ FAIL: Expected status='Completed', got '{status}'")
+                return False
+                
+            print("   ✅ PASS: Payment link #920 has status 'Completed'")
+            return True
+            
         except Exception as e:
-            self.log_test("Checkout Flow", "FAIL", f"Exception: {str(e)}")
+            print(f"   ❌ FAIL: Exception during payment link check: {str(e)}")
+            return False
+    
+    def test_transaction_history(self) -> bool:
+        """Test 4: Transaction History - Find $42 BTC transaction"""
+        print("\n🔍 Test 4: Transaction History ($42 BTC transaction)")
+        
+        if not self.access_token:
+            print("   ❌ FAIL: No access token available")
             return False
             
-    def print_summary(self):
-        """Print test summary"""
-        total_tests = len(self.test_results)
-        passed_tests = len([r for r in self.test_results if r['status'] == 'PASS'])
-        failed_tests = len([r for r in self.test_results if r['status'] == 'FAIL'])
+        try:
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            response = self.session.get(
+                f"{self.base_url}/api/company/getTransactions/3?page=1&limit=10",
+                headers=headers
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+                
+            data = response.json()
+            transactions = data.get('data', []) if 'data' in data else data
+            if isinstance(transactions, dict):
+                transactions = transactions.get('transactions', [])
+                
+            # Find transaction with base_amount=42, status="successful", crypto_currency="BTC"
+            target_transaction = None
+            for txn in transactions:
+                base_amount = txn.get('base_amount') or txn.get('amount') or txn.get('base_value')
+                status = txn.get('status')
+                crypto_currency = txn.get('crypto_currency') or txn.get('currency')
+                
+                if (str(base_amount) == '42' and 
+                    status == 'successful' and 
+                    crypto_currency == 'BTC'):
+                    target_transaction = txn
+                    break
+                    
+            if not target_transaction:
+                print(f"   ❌ FAIL: No transaction found with base_amount=42, status='successful', crypto_currency='BTC'")
+                print(f"   Available transactions:")
+                for i, txn in enumerate(transactions[:3]):  # Show first 3
+                    amount = txn.get('base_amount') or txn.get('amount') or txn.get('base_value')
+                    status = txn.get('status')
+                    currency = txn.get('crypto_currency') or txn.get('currency')
+                    print(f"     {i+1}. Amount: {amount}, Status: {status}, Currency: {currency}")
+                return False
+                
+            print("   ✅ PASS: Found $42 BTC successful transaction")
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ FAIL: Exception during transaction history check: {str(e)}")
+            return False
+    
+    def test_checkout_page_completed_payment(self) -> bool:
+        """Test 5: Checkout Page Status for Completed Payment"""
+        print("\n🔍 Test 5: Checkout Page Status for Completed Payment")
         
-        print("\n" + "="*60)
-        print("TEST SUMMARY")
-        print("="*60)
-        print(f"Total Tests: {total_tests}")
-        print(f"Passed: \033[92m{passed_tests}\033[0m")
-        print(f"Failed: \033[91m{failed_tests}\033[0m")
-        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
-        
-        if failed_tests > 0:
-            print("\nFAILED TESTS:")
-            for result in self.test_results:
-                if result['status'] == 'FAIL':
-                    print(f"  ❌ {result['test']}: {result['details']}")
-        
-        print("\n" + "="*60)
-        return failed_tests == 0
-
+        try:
+            checkout_data = {
+                "data": "11cf30c7f8fcc76dc274a3260727807e18ba2b4236cfc8da"
+            }
+            
+            response = self.session.post(
+                f"{self.base_url}/api/pay/getData",
+                json=checkout_data,
+                headers={"Content-Type": "application/json"}
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+                
+            data = response.json()
+            print(f"   Response keys: {list(data.keys())}")
+            
+            # Check for required fields
+            payment_completed = data.get('payment_completed')
+            status = data.get('status') 
+            paid_amount = data.get('paid_amount')
+            
+            # Check nested data structure if needed
+            if 'data' in data and isinstance(data['data'], dict):
+                nested_data = data['data']
+                payment_completed = payment_completed or nested_data.get('payment_completed')
+                status = status or nested_data.get('status')
+                paid_amount = paid_amount or nested_data.get('paid_amount')
+            
+            print(f"   payment_completed: {payment_completed}")
+            print(f"   status: {status}")
+            print(f"   paid_amount: {paid_amount}")
+            
+            if payment_completed != True:
+                print(f"   ❌ FAIL: Expected payment_completed=true, got {payment_completed}")
+                return False
+                
+            if status != 'successful':
+                print(f"   ❌ FAIL: Expected status='successful', got '{status}'")
+                return False
+                
+            expected_paid_amount = 0.00060867
+            if abs(float(paid_amount) - expected_paid_amount) > 0.00000001:
+                print(f"   ❌ FAIL: Expected paid_amount={expected_paid_amount}, got {paid_amount}")
+                return False
+                
+            print("   ✅ PASS: Checkout page shows completed payment with correct details")
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ FAIL: Exception during checkout page check: {str(e)}")
+            return False
 
 def main():
-    """Main test execution"""
-    print("DynoPay Backend Testing - Payment Link Creation with Merchant Pool Address")
-    print("="*80)
+    # Use the backend URL from frontend/.env
+    backend_url = "https://checkout-pod-setup.preview.emergentagent.com"
     
-    # Configuration
-    BACKEND_URL = "https://checkout-pod-setup.preview.emergentagent.com"
-    LOGIN_EMAIL = "nomadly@moxx.co"
-    LOGIN_PASSWORD = "Katiekendra123@"
+    print("=" * 60)
+    print("DynoPay Backend API Test Suite")
+    print("Testing specific fixes for crypto payment processing")
+    print(f"Backend URL: {backend_url}")
+    print("=" * 60)
     
-    tester = DynoPayTester(BACKEND_URL)
+    tester = DynoPayTester(backend_url)
     
-    # Test sequence
-    print(f"\nTesting backend at: {BACKEND_URL}")
-    print(f"Login credentials: {LOGIN_EMAIL}")
-    print("-" * 80)
+    # Run all tests in sequence
+    tests = [
+        ("Backend Health Check", tester.test_backend_health),
+        ("User Authentication", tester.test_login),
+        ("Payment Link #920 Status", tester.test_payment_link_920_status),
+        ("Transaction History", tester.test_transaction_history),
+        ("Checkout Page Status", tester.test_checkout_page_completed_payment),
+    ]
     
-    # Step 1: Login
-    if not tester.login(LOGIN_EMAIL, LOGIN_PASSWORD):
-        print("❌ Login failed - cannot proceed with tests")
-        return False
+    results = []
+    for test_name, test_func in tests:
+        result = test_func()
+        results.append((test_name, result))
     
-    # Step 2: Create BTC-only payment link
-    btc_payment_data = tester.create_btc_only_payment_link()
-    if not btc_payment_data:
-        print("❌ BTC payment link creation failed")
+    # Summary
+    print("\n" + "=" * 60)
+    print("TEST SUMMARY")
+    print("=" * 60)
     
-    # Step 3: Create multi-currency payment link
-    multi_payment_data = tester.create_multi_currency_payment_link()
-    if not multi_payment_data:
-        print("❌ Multi-currency payment link creation failed")
+    passed = sum(1 for _, result in results if result)
+    total = len(results)
     
-    # Step 4: Test checkout flow (using BTC payment link if available)
-    if btc_payment_data and 'payment_link' in btc_payment_data:
-        tester.test_checkout_flow(btc_payment_data['payment_link'])
+    for test_name, result in results:
+        status = "✅ PASS" if result else "❌ FAIL"
+        print(f"{status}: {test_name}")
+    
+    print(f"\nTotal: {passed}/{total} tests passed")
+    
+    if passed == total:
+        print("\n🎉 All tests passed! DynoPay backend fixes are working correctly.")
+        return 0
     else:
-        tester.log_test("Checkout Flow", "SKIP", "No BTC payment link to test")
-    
-    # Print summary and return result
-    success = tester.print_summary()
-    return success
-
+        print(f"\n⚠️  {total - passed} test(s) failed. See details above.")
+        return 1
 
 if __name__ == "__main__":
-    success = main()
-    sys.exit(0 if success else 1)
+    sys.exit(main())
