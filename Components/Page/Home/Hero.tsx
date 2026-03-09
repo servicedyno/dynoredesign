@@ -99,6 +99,7 @@ const HeroSection = () => {
               src={assets.bitcoinBg}
               alt="background"
               fill
+              sizes="80px"
               className="bitcoinImg"
               draggable={false}
             />
@@ -109,6 +110,7 @@ const HeroSection = () => {
               src={assets.ethereumBg}
               alt="background"
               fill
+              sizes="80px"
               className="ethereumImg"
               draggable={false}
             />
@@ -132,6 +134,7 @@ const HeroSection = () => {
                 src={assets.litecoinBg}
                 alt="Bitcoin Background"
                 fill
+                sizes="60px"
                 className="litecoinDesktopImg"
                 draggable={false}
               />
@@ -141,9 +144,11 @@ const HeroSection = () => {
               src={assets.dashboard}
               alt="Dashboard Container"
               fill
+              sizes="(max-width: 768px) 100vw, 900px"
               className="dashboardDesktopImg"
               priority
-              quality={100}
+              quality={85}
+              placeholder={isSafariLike ? "blur" : undefined}
               draggable={false}
             />
           </DashboardDesktopBox>
@@ -154,8 +159,10 @@ const HeroSection = () => {
             src={assets.wallet}
             alt="Wallet Container"
             fill
+            sizes="(max-width: 768px) 280px, 320px"
             className={isIOS ? "walletImgIOS" : "walletImg"}
-            quality={100}
+            quality={80}
+            placeholder={isSafariLike ? "blur" : undefined}
             draggable={false}
           />
         </WalletCard>
@@ -165,8 +172,10 @@ const HeroSection = () => {
             src={assets.payment}
             alt="Payment Container"
             fill
+            sizes="(max-width: 768px) 280px, 350px"
             className={isIOS ? "paymentImgIOS" : "paymentImg"}
-            quality={100}
+            quality={80}
+            placeholder={isSafariLike ? "blur" : undefined}
             draggable={false}
           />
         </PaymentCard>
@@ -178,8 +187,10 @@ const HeroSection = () => {
             src={assets.wallet}
             alt="Wallet Container"
             fill
+            sizes="280px"
             className={isIOS ? "walletMobileImgIOS" : "walletMobileImg"}
-            quality={100}
+            quality={80}
+            placeholder={isSafariLike ? "blur" : undefined}
             draggable={false}
           />
         </MobileWalletBox>
@@ -189,8 +200,10 @@ const HeroSection = () => {
             src={assets.payment}
             alt="Payment Container"
             fill
+            sizes="280px"
             className={isIOS ? "paymentMobileImgIOS" : "paymentMobileImg"}
-            quality={100}
+            quality={80}
+            placeholder={isSafariLike ? "blur" : undefined}
             draggable={false}
           />
         </MobilePaymentBox>
@@ -200,6 +213,7 @@ const HeroSection = () => {
             src={assets.litecoinBg}
             alt="Dashboard Mobile"
             fill
+            sizes="60px"
             className={isIOS ? "litecoinMobileImgIOS" : "litecoinMobileImg"}
             draggable={false}
           />
@@ -210,9 +224,11 @@ const HeroSection = () => {
             src={assets.dashboard}
             alt="Dashboard Mobile"
             fill
+            sizes="(max-width: 768px) 100vw, 900px"
             className={isIOS ? "dashboardMobileImgIOS" : "dashboardMobileImg"}
             draggable={false}
-            quality={100}
+            quality={85}
+            placeholder={isSafariLike ? "blur" : undefined}
             priority={Boolean(isMobile)}
           />
         </DashboardMobileBox>

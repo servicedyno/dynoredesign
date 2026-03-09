@@ -154,8 +154,9 @@ const FeaturesSection = () => {
                     <Image
                       src={card.image}
                       alt={t(card.titleKey)}
-                      quality={100}
-                      priority={cardData.indexOf(card) < 3}
+                      quality={80}
+                      loading="lazy"
+                      placeholder={os === "ios" || browser === "safari" ? "blur" : undefined}
                       style={{
                         width: isMobile ? "110%" : "100%",
                         height: "100%",
@@ -219,8 +220,9 @@ const FeaturesSection = () => {
                     <Image
                       src={card.image}
                       alt={t(card.titleKey)}
-                      quality={100}
-                      priority={cardData.indexOf(card) < 3}
+                      quality={80}
+                      loading="lazy"
+                      placeholder={os === "ios" || browser === "safari" ? "blur" : undefined}
                       style={{
                         width: "110%",
                         height: "100%",

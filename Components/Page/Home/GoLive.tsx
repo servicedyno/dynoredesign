@@ -148,8 +148,9 @@ const GoLiveSection: React.FC = () => {
                       <Image
                         src={imgSrc}
                         alt={tLanding(card.titleKey)}
-                        quality={100}
-                        priority={idx < 3}
+                        quality={80}
+                        loading="lazy"
+                        placeholder={isSafariLike ? "blur" : undefined}
                         className={imgWidthVariant}
                         draggable={false}
                       />
