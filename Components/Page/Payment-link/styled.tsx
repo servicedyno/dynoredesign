@@ -35,7 +35,7 @@ export const TableBodyCell = styled(TableCell)(({ theme }) => ({
 /* ================= STATUS CHIP ================= */
 
 interface StatusChipProps {
-  status: "active" | "expired" | "paid" | "pending";
+  status: "active" | "expired" | "paid" | "completed" | "pending" | string;
 }
 
 export const StatusChip = styled(Box)<StatusChipProps>(({ status, theme }) => ({
@@ -50,7 +50,7 @@ export const StatusChip = styled(Box)<StatusChipProps>(({ status, theme }) => ({
       ? "1px solid #DCF6E4"
       : status === "expired"
         ? "1px solid #FFC9CA"
-        : status === "paid"
+        : status === "paid" || status === "completed"
           ? "1px solid #B8D3FF"
           : "1px solid #FFE3C0",
   borderRadius: "100px",
@@ -59,7 +59,7 @@ export const StatusChip = styled(Box)<StatusChipProps>(({ status, theme }) => ({
       ? "#EAFFF0"
       : status === "expired"
         ? "#FFEBE5"
-        : status === "paid"
+        : status === "paid" || status === "completed"
           ? "#F0F6FF"
           : "#FFEDD7",
   color:
@@ -67,7 +67,7 @@ export const StatusChip = styled(Box)<StatusChipProps>(({ status, theme }) => ({
       ? "#47B464"
       : status === "expired"
         ? "#E8484A"
-        : status === "paid"
+        : status === "paid" || status === "completed"
           ? "#0071BC"
           : "#F7931A",
   fontSize: "13px",

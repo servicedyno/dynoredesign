@@ -298,12 +298,12 @@ const PaymentLinksTable = ({
                         <Image src={TrueIcon} alt="Active" width={12} height={12} draggable={false} />
                       ) : row.status === "expired" ? (
                         <Image src={FalseIcon} alt="Expired" width={12} height={12} draggable={false} />
-                      ) : row.status === "paid" ? (
+                      ) : row.status === "paid" || row.status === "completed" ? (
                         <Image src={TrueIcon} alt="Paid" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(29%) sepia(88%) saturate(2646%) hue-rotate(189deg) brightness(95%) contrast(101%)" }} />
                       ) : (
                         <HourGlassIcon fill={"#F57C00"} size={12} />
                       )}
-                      {row.status === "active" ? "Active" : row.status === "expired" ? "Expired" : row.status === "paid" ? "Paid" : "Pending"}
+                      {row.status === "active" ? "Active" : row.status === "expired" ? "Expired" : row.status === "paid" || row.status === "completed" ? "Paid" : "Pending"}
                     </StatusChip>
                   </Box>
                   {/* Middle: USD + Crypto */}
@@ -331,7 +331,7 @@ const PaymentLinksTable = ({
                       )}
                       <CopyButton
                         onClick={() => {
-                          row.status === "paid" || row.status === "expired"
+                          row.status === "paid" || row.status === "completed" || row.status === "expired"
                             ? router.push(`/pay-links/${row?.id}`)
                             : handleViewModelOpen(row);
                         }}
@@ -339,7 +339,7 @@ const PaymentLinksTable = ({
                       >
                         <Image src={EyeIcon} alt="View" width={12} height={12} draggable={false} />
                       </CopyButton>
-                      {row.status !== "expired" && row.status !== "paid" && (
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => router.push(`/pay-links/${row?.id}`)}
                           sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
@@ -347,7 +347,7 @@ const PaymentLinksTable = ({
                           <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(0%)" }} />
                         </CopyButton>
                       )}
-                      {row.status !== "expired" && row.status !== "paid" && row.status !== "active" && (
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && row.status !== "active" && (
                         <CopyButton
                           onClick={() => {
                             setDeleteModel(true);
@@ -446,7 +446,7 @@ const PaymentLinksTable = ({
                             height={isMobile ? 12 : 14}
                             draggable={false}
                           />
-                        ) : row.status === "paid" ? (
+                        ) : row.status === "paid" || row.status === "completed" ? (
                           <Image
                             src={TrueIcon}
                             alt="True Icon"
@@ -468,7 +468,7 @@ const PaymentLinksTable = ({
                           ? "Active"
                           : row.status === "expired"
                             ? "Expired"
-                            : row.status === "paid"
+                            : row.status === "paid" || row.status === "completed"
                               ? "Paid"
                               : "Pending"}
                       </StatusChip>
@@ -499,7 +499,7 @@ const PaymentLinksTable = ({
                       )}
                       <CopyButton
                         onClick={() => {
-                          row.status === "paid" || row.status === "expired"
+                          row.status === "paid" || row.status === "completed" || row.status === "expired"
                             ? router.push(`/pay-links/${row?.id}`)
                             : handleViewModelOpen(row);
                         }}
@@ -519,7 +519,7 @@ const PaymentLinksTable = ({
                           draggable={false}
                         />
                       </CopyButton>
-                      {row.status !== "expired" && row.status !== "paid" && (
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => router.push(`/pay-links/${row?.id}`)}
                           sx={{
@@ -542,7 +542,7 @@ const PaymentLinksTable = ({
                           />
                         </CopyButton>
                       )}
-                      {row.status !== "expired" && row.status !== "paid" && (
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => {
                             if (row.status !== "active") {

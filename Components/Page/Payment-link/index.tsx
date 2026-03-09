@@ -54,7 +54,7 @@ const PaymentLinksPage = ({
         : "",
       createdAt: link.created || link.created_at || link.createdAt || "",
       expiresAt: link.expires || link.expires_at || link.expiresAt || "",
-      status: link.status || "pending",
+      status: (link.status || "pending").toLowerCase(),
       timesUsed: link.times_used || link.timesUsed || 0,
       paymentUrl: link.payment_link || link.paymentUrl || link.payment_url || "",
     }));

@@ -66,7 +66,10 @@ const paymentLinkReducer = (
         ...state,
         loading: false,
         paymentLinks: state.paymentLinks.filter(
-          (link: any) => link._id !== payload.id
+          (link: any) => {
+            const linkId = String(link._id || link.link_id || link.id);
+            return linkId !== String(payload.id);
+          }
         ),
       };
 
