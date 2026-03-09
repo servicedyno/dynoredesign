@@ -190,18 +190,39 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     },
   };
 
+  /** Smart format for crypto amounts — trim trailing zeros, sensible precision */
   const formatAmount = (amount: any) => {
     const parts = String(amount).split(" ");
     const value = Number(parts[0]);
     const unit = parts.slice(1).join(" ") || "";
-    // For very small amounts (crypto), show more decimals
-    const decimals = value < 0.01 ? 8 : value < 1 ? 6 : 4;
-    return `${value.toFixed(decimals)} ${unit}`;
+    const upperUnit = unit.toUpperCase();
+
+    // Stablecoins: 2 decimals
+    if (upperUnit.includes("USDT") || upperUnit.includes("USDC") || upperUnit === "USD" || upperUnit.includes("BUSD") || upperUnit.includes("DAI")) {
+      return `${value.toFixed(2)} ${unit}`;
+    }
+
+    // Crypto: up to 8 decimals for BTC, 6 for others, trim trailing zeros
+    const maxDecimals = upperUnit === "BTC" ? 8 : 6;
+    const formatted = value.toFixed(maxDecimals).replace(/\.?0+$/, "");
+    // Ensure at least 2 decimals for readability
+    const dotIndex = formatted.indexOf(".");
+    const currentDecimals = dotIndex >= 0 ? formatted.length - dotIndex - 1 : 0;
+    const result = currentDecimals < 2 && dotIndex >= 0
+      ? value.toFixed(2)
+      : currentDecimals === 0
+        ? value.toFixed(2)
+        : formatted;
+    return `${result} ${unit}`;
   };
 
+  /** Smart format for USD values — clean, no trailing zeros */
   const formatUsd = (usdValue: any) => {
-    const value = usdValue.replace("$", "");
-    return `$${Number(value).toFixed(3)}`;
+    const num = parseFloat(String(usdValue).replace(/[$,]/g, ""));
+    if (isNaN(num) || num === 0) return "$0.00";
+    if (num >= 1) return `$${num.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    if (num >= 0.01) return `$${num.toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00")}`;
+    return `$${num.toFixed(6).replace(/0+$/, "").replace(/\.$/, ".00")}`;
   };
 
   const isDataEmpty = currentTransactions.length === 0;

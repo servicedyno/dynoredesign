@@ -112,12 +112,16 @@ const TransactionPage = () => {
         const autoConvertTarget = (item as any).auto_convert || null;
 
         return {
-          id: item.id || `TX-${Math.random().toString(36).substr(2, 9)}`,
+          id: String((item as any).transaction_id || item.id || `TX-${Math.random().toString(36).substr(2, 9)}`),
           crypto: cryptoCurrency,
           amount: `${cryptoAmount} ${cryptoCurrency}`,
-          usdValue: (item as any).usd_value != null
-            ? `$${Number((item as any).usd_value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-            : `$${Number(item.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          usdValue: (() => {
+            const raw = Number((item as any).usd_value) || Number(item.base_amount) || 0;
+            if (raw === 0) return "$0.00";
+            if (raw >= 1) return `$${raw.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            if (raw >= 0.01) return `$${raw.toFixed(4).replace(/0+$/, "").replace(/\.$/, ".00")}`;
+            return `$${raw.toFixed(6).replace(/0+$/, "").replace(/\.$/, ".00")}`;
+          })(),
           dateTime: formatDateTime(item.createdAt),
           status:
             item.status === "success" || item.status === "successful" || item.status === "Completed" || item.status === "completed" || item.status === "confirmed"

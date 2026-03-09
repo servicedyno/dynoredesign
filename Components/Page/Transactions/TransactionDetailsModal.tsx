@@ -71,26 +71,16 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
   if (!transaction) return null;
 
   const getCryptoIcon = (crypto: string) => {
-    switch (crypto) {
-      case "BTC":
-        return BitcoinIcon;
-      case "ETH":
-        return EthereumIcon;
-      case "LTC":
-        return LitecoinIcon;
-      case "BNB":
-        return BNBIcon;
-      case "DOGE":
-        return DogecoinIcon;
-      case "BCH":
-        return BitcoinCashIcon;
-      case "TRX":
-        return TronIcon;
-      case "USDT":
-        return USDTIcon;
-      default:
-        return BitcoinIcon;
-    }
+    const normalized = crypto?.toUpperCase() || "";
+    if (normalized === "BTC") return BitcoinIcon;
+    if (normalized === "ETH") return EthereumIcon;
+    if (normalized === "LTC") return LitecoinIcon;
+    if (normalized === "DOGE") return DogecoinIcon;
+    if (normalized === "BCH") return BitcoinCashIcon;
+    if (normalized === "TRX") return TronIcon;
+    if (normalized === "BNB") return BNBIcon;
+    if (normalized.includes("USDT") || normalized.includes("USDC")) return USDTIcon;
+    return BitcoinIcon;
   };
 
   const getStatusIcon = (status: "done" | "pending" | "failed") => {
