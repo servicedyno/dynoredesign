@@ -80,7 +80,8 @@ const TransactionPage = () => {
 
         if (selectedWallet !== "all") {
           const targetCurrency = walletMapping[selectedWallet];
-          if (targetCurrency && item.base_currency !== targetCurrency) {
+          const itemCrypto = (item as any).crypto_currency || (item as any).crypto || item.base_currency;
+          if (targetCurrency && itemCrypto !== targetCurrency) {
             return false;
           }
         }
@@ -104,27 +105,36 @@ const TransactionPage = () => {
 
         return true;
       })
-      .map((item: ICustomerTransactions) => ({
-        id: item.id || `TX-${Math.random().toString(36).substr(2, 9)}`,
-        crypto: item.base_currency,
-        amount: `${item.base_amount} ${item.base_currency}`,
-        usdValue: (item as any).usd_value != null
-          ? `$${Number((item as any).usd_value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-          : `$${Number(item.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
-        dateTime: formatDateTime(item.createdAt),
-        status:
-          item.status === "success" || item.status === "successful" || item.status === "Completed" || item.status === "completed" || item.status === "confirmed"
-            ? "done"
-            : item.status === "failed" || item.status === "expired" || item.status === "Expired"
-              ? "failed"
-              : "pending",
-        fees: (item as any).fees || (item as any).fee || "0",
-        confirmations: (item as any).confirmations || "0/0",
-        incomingTransactionId: (item as any).incoming_tx_hash || (item as any).incoming_txid || (item as any).incomingTransactionId || (item as any).transaction_reference || "",
-        outgoingTransactionId: (item as any).outgoing_tx_hash || (item as any).outgoing_txid || (item as any).outgoingTransactionId || "",
-        callbackUrl: (item as any).callback_url || (item as any).callbackUrl || "",
-        webhookResponse: (item as any).webhook_response || (item as any).webhookResponse || null,
-      }));
+      .map((item: ICustomerTransactions) => {
+        const cryptoCurrency = (item as any).crypto_currency || (item as any).crypto || item.base_currency;
+        const cryptoAmount = Number((item as any).crypto_amount) || Number(item.base_amount) || 0;
+        const autoConverted = (item as any).auto_converted === true || (item as any).auto_converted === 'true';
+        const autoConvertTarget = (item as any).auto_convert || null;
+
+        return {
+          id: item.id || `TX-${Math.random().toString(36).substr(2, 9)}`,
+          crypto: cryptoCurrency,
+          amount: `${cryptoAmount} ${cryptoCurrency}`,
+          usdValue: (item as any).usd_value != null
+            ? `$${Number((item as any).usd_value).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+            : `$${Number(item.base_amount).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`,
+          dateTime: formatDateTime(item.createdAt),
+          status:
+            item.status === "success" || item.status === "successful" || item.status === "Completed" || item.status === "completed" || item.status === "confirmed"
+              ? "done"
+              : item.status === "failed" || item.status === "expired" || item.status === "Expired"
+                ? "failed"
+                : "pending",
+          fees: (item as any).fees || (item as any).fee || "0",
+          confirmations: (item as any).confirmations || "0/0",
+          incomingTransactionId: (item as any).incoming_tx_hash || (item as any).incoming_txid || (item as any).incomingTransactionId || (item as any).transaction_reference || "",
+          outgoingTransactionId: (item as any).outgoing_tx_hash || (item as any).outgoing_txid || (item as any).outgoingTransactionId || "",
+          callbackUrl: (item as any).callback_url || (item as any).callbackUrl || "",
+          webhookResponse: (item as any).webhook_response || (item as any).webhookResponse || null,
+          autoConverted,
+          autoConvertTarget,
+        };
+      });
   }, [
     transactionState.customers_transactions,
     searchTerm,

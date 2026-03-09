@@ -5,6 +5,10 @@ import EthereumIcon from "@/assets/cryptocurrency/Ethereum-icon.svg";
 import LitecoinIcon from "@/assets/cryptocurrency/Litecoin-icon.svg";
 import TronIcon from "@/assets/cryptocurrency/Tron-icon.svg";
 import USDTIcon from "@/assets/cryptocurrency/USDT-icon.svg";
+import SolanaIcon from "@/assets/cryptocurrency/Solana-icon.svg";
+import XRPIcon from "@/assets/cryptocurrency/XRP-icon.svg";
+import PolygonIcon from "@/assets/cryptocurrency/Polygon-icon.svg";
+import RLUSDIcon from "@/assets/cryptocurrency/RLUSD-icon.svg";
 import { ArrowOutward as ArrowOutwardIcon } from "@mui/icons-material";
 import { Box, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
@@ -85,26 +89,20 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   }, [transactions]);
 
   const getCryptoIcon = (crypto: string) => {
-    switch (crypto) {
-      case "BTC":
-        return BitcoinIcon;
-      case "ETH":
-        return EthereumIcon;
-      case "LTC":
-        return LitecoinIcon;
-      case "DOGE":
-        return DogecoinIcon;
-      case "BCH":
-        return BitcoinCashIcon;
-      case "TRX":
-        return TronIcon;
-      case "USDT-ERC20":
-        return USDTIcon;
-      case "USDT-TRC20":
-        return USDTIcon;
-      default:
-        return BitcoinIcon;
-    }
+    const normalized = crypto?.toUpperCase() || "";
+    if (normalized === "BTC") return BitcoinIcon;
+    if (normalized === "ETH") return EthereumIcon;
+    if (normalized === "LTC") return LitecoinIcon;
+    if (normalized === "DOGE") return DogecoinIcon;
+    if (normalized === "BCH") return BitcoinCashIcon;
+    if (normalized === "TRX") return TronIcon;
+    if (normalized.includes("USDT")) return USDTIcon;
+    if (normalized.includes("USDC")) return USDTIcon;
+    if (normalized === "SOL") return SolanaIcon;
+    if (normalized === "XRP") return XRPIcon;
+    if (normalized.includes("POLYGON")) return PolygonIcon;
+    if (normalized.includes("RLUSD")) return RLUSDIcon;
+    return BitcoinIcon;
   };
 
   const getStatusIcon = (status: "done" | "pending" | "failed") => {
@@ -193,8 +191,12 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
   };
 
   const formatAmount = (amount: any) => {
-    const [value, unit] = amount.split(" ");
-    return `${Number(value).toFixed(4)} ${unit}`;
+    const parts = String(amount).split(" ");
+    const value = Number(parts[0]);
+    const unit = parts.slice(1).join(" ") || "";
+    // For very small amounts (crypto), show more decimals
+    const decimals = value < 0.01 ? 8 : value < 1 ? 6 : 4;
+    return `${value.toFixed(decimals)} ${unit}`;
   };
 
   const formatUsd = (usdValue: any) => {
@@ -364,41 +366,43 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                         {transaction.crypto}
                       </Typography>
                     </CryptoIconChip>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        gap: "3px",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Image
-                        src={SwapHorizIcon}
-                        alt="swap horiz"
-                        width={15}
-                        height={15}
-                        draggable={false}
-                        style={{
-                          filter:
-                            "brightness(0) saturate(100%) invert(41%) sepia(2%) saturate(168%) hue-rotate(201deg) brightness(95%) contrast(88%)",
-                        }}
-                      />
-                      <ArrowOutwardIcon
+                    {transaction.autoConverted && (
+                      <Box
                         sx={{
-                          fontSize: 16,
-                          transform: "rotate(45deg)",
-                          color: theme.palette.text.secondary,
-                          lineHeight: "100%",
-                        }}
-                      />
-                      <Text
-                        sx={{
-                          fontSize: "13px",
-                          color: theme.palette.text.secondary,
+                          display: "flex",
+                          gap: "3px",
+                          alignItems: "center",
                         }}
                       >
-                        USDT
-                      </Text>
-                    </Box>
+                        <Image
+                          src={SwapHorizIcon}
+                          alt="swap horiz"
+                          width={15}
+                          height={15}
+                          draggable={false}
+                          style={{
+                            filter:
+                              "brightness(0) saturate(100%) invert(41%) sepia(2%) saturate(168%) hue-rotate(201deg) brightness(95%) contrast(88%)",
+                          }}
+                        />
+                        <ArrowOutwardIcon
+                          sx={{
+                            fontSize: 16,
+                            transform: "rotate(45deg)",
+                            color: theme.palette.text.secondary,
+                            lineHeight: "100%",
+                          }}
+                        />
+                        <Text
+                          sx={{
+                            fontSize: "13px",
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          {transaction.autoConvertTarget || "USDT"}
+                        </Text>
+                      </Box>
+                    )}
                   </TransactionsTableCell>
 
                   <TransactionsTableCell>

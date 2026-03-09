@@ -19,6 +19,8 @@ export interface ExtendedTransaction {
     amount: number;
     confirmations: number;
   };
+  autoConverted?: boolean;
+  autoConvertTarget?: string;
 }
 
 export interface ICustomerTransactions {
