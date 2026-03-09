@@ -8,7 +8,12 @@ export interface ExtendedTransaction {
   usdValue: string;
   dateTime: string;
   status: "done" | "pending" | "failed";
-  fees?: string;
+  fees?: number | string;
+  feesBreakdown?: {
+    platform: number;
+    blockchain: number;
+    fixed: number;
+  };
   confirmations?: string;
   incomingTransactionId?: string;
   outgoingTransactionId?: string;

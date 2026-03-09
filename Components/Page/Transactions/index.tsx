@@ -129,8 +129,20 @@ const TransactionPage = () => {
               : item.status === "failed" || item.status === "expired" || item.status === "Expired"
                 ? "failed"
                 : "pending",
-          fees: (item as any).fees || (item as any).fee || "0",
-          confirmations: (item as any).confirmations || "0/0",
+          fees: (() => {
+            const txFee = Number((item as any).transaction_fee) || 0;
+            const fixedFee = Number((item as any).fixed_fee) || 0;
+            const blockchainFee = Number((item as any).blockchain_buffer_fee) || 0;
+            return txFee + fixedFee + blockchainFee;
+          })(),
+          feesBreakdown: {
+            platform: Number((item as any).transaction_fee) || 0,
+            blockchain: Number((item as any).blockchain_buffer_fee) || 0,
+            fixed: Number((item as any).fixed_fee) || 0,
+          },
+          confirmations: (item as any).confirmations
+            ? `${(item as any).confirmations}/${(item as any).required_confirmations || 0}`
+            : "0/0",
           incomingTransactionId: (item as any).incoming_tx_hash || (item as any).incoming_txid || (item as any).incomingTransactionId || (item as any).transaction_reference || "",
           outgoingTransactionId: (item as any).outgoing_tx_hash || (item as any).outgoing_txid || (item as any).outgoingTransactionId || "",
           callbackUrl: (item as any).callback_url || (item as any).callbackUrl || "",
