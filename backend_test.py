@@ -16,7 +16,7 @@ import sys
 from datetime import datetime
 
 # Test configuration
-BACKEND_URL = "https://pod-integration-hub-2.preview.emergentagent.com"
+BACKEND_URL = "https://multi-pod-deploy.preview.emergentagent.com"
 
 # Colors for output
 class Colors:

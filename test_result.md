@@ -37,17 +37,17 @@
 **Test Coverage**: All 6 specific backend verification checks completed successfully
 
 #### ✅ Test 1: API Health Check
-- **Endpoint**: GET https://pod-integration-hub-2.preview.emergentagent.com/api/
+- **Endpoint**: GET https://multi-pod-deploy.preview.emergentagent.com/api/
 - **Result**: PASSED - Returns `{"status":"operational"}` with full API metadata
 - **Response**: Backend operational with version 1.0.0, 15 endpoints available
 
 #### ✅ Test 2: NextAuth Session Endpoint  
-- **Endpoint**: GET https://pod-integration-hub-2.preview.emergentagent.com/api/auth/session
+- **Endpoint**: GET https://multi-pod-deploy.preview.emergentagent.com/api/auth/session
 - **Result**: PASSED - Returns valid JSON `{"user":null}` (not 404 HTML)
 - **Status**: NextAuth proxy interceptor working correctly
 
 #### ✅ Test 3: NextAuth Log Endpoint
-- **Endpoint**: GET https://pod-integration-hub-2.preview.emergentagent.com/api/auth/_log  
+- **Endpoint**: GET https://multi-pod-deploy.preview.emergentagent.com/api/auth/_log  
 - **Result**: PASSED - Returns `{"ok":true}` (not 403 error)
 - **Status**: NextAuth logging endpoint accessible
 

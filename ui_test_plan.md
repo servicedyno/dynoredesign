@@ -4,7 +4,7 @@
 - **Email**: nomadly@moxx.co
 - **Password**: Katiekendra123@
 - **Company**: Nomadly1
-- **Pod URL**: https://pod-integration-hub-2.preview.emergentagent.com
+- **Pod URL**: https://multi-pod-deploy.preview.emergentagent.com
 
 ---
 
