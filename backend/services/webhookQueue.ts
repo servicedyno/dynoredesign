@@ -170,7 +170,79 @@ export function startWebhookWorker(
     webhookLogs.error(`[WebhookQueue] Worker error: ${error.message}`);
   });
 
+  // ── Stalled / Close Detection ─────────────────────────────────────────────
+  worker.on("stalled", (jobId: string) => {
+    webhookLogs.warn(`[WebhookQueue] ⚠️ Job ${jobId} stalled (will be retried)`);
+  });
+
+  worker.on("closing", () => {
+    webhookLogs.warn("[WebhookQueue] ⚠️ Worker is closing/disconnecting");
+  });
+
+  worker.on("closed", () => {
+    webhookLogs.error("[WebhookQueue] ❌ Worker CLOSED — will attempt auto-restart");
+    // Mark worker as null so health check can restart it
+    worker = null;
+  });
+
+  // ── Periodic Health Monitor ────────────────────────────────────────────────
+  // Check every 60 seconds that the worker is alive and processing
+  const healthCheckInterval = setInterval(async () => {
+    try {
+      if (!worker || (worker as any).closing || !worker.isRunning()) {
+        webhookLogs.error("[WebhookQueue] ❌ Worker health check FAILED — worker is dead/closing. Attempting restart...");
+        // Clear the stale worker reference
+        const oldWorker = worker;
+        worker = null;
+        if (oldWorker) {
+          try { await oldWorker.close(); } catch (_) { /* ignore */ }
+        }
+        // Restart the worker
+        startWebhookWorker(processFunction);
+        webhookLogs.info("[WebhookQueue] ✅ Worker restarted by health monitor");
+        return;
+      }
+
+      // Check queue for stuck jobs (waiting jobs but nothing active)
+      const [waiting, active] = await Promise.all([
+        webhookQueue.getWaitingCount(),
+        webhookQueue.getActiveCount(),
+      ]);
+
+      if (waiting > 0 && active === 0) {
+        webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${waiting} waiting jobs, 0 active — possible worker stall`);
+        // If this persists for 2 cycles, force restart
+        if ((worker as any).__stallCount === undefined) (worker as any).__stallCount = 0;
+        (worker as any).__stallCount++;
+        if ((worker as any).__stallCount >= 2) {
+          webhookLogs.error("[WebhookQueue] ❌ Worker appears stalled (2 consecutive checks with waiting jobs). Force restarting...");
+          const oldWorker = worker;
+          worker = null;
+          if (oldWorker) {
+            try { await oldWorker.close(); } catch (_) { /* ignore */ }
+          }
+          startWebhookWorker(processFunction);
+          webhookLogs.info("[WebhookQueue] ✅ Worker force-restarted by health monitor");
+          return;
+        }
+      } else {
+        // Reset stall counter
+        if (worker) (worker as any).__stallCount = 0;
+      }
+
+      webhookLogs.info(`[WebhookQueue] ✅ Health check OK — worker running, waiting=${waiting}, active=${active}`);
+    } catch (err) {
+      webhookLogs.error(`[WebhookQueue] Health check error: ${(err as Error).message}`);
+    }
+  }, 60_000); // Every 60 seconds
+
+  // Clean up interval when worker closes
+  worker.on("closed", () => {
+    clearInterval(healthCheckInterval);
+  });
+
   webhookLogs.info("[WebhookQueue] Worker started (concurrency: 5)");
+  webhookLogs.info("[WebhookQueue] Health monitor started (60s interval)");
   return worker;
 }
 

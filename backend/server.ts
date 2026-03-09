@@ -45,7 +45,7 @@ import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats, sendWeeklyConversionSummaries } from "./services/conversionService";
 import stablecoinConversionModel from "./models/stablecoinConversionModel";
 import { processWebhookRetryQueue } from "./utils/webhookRetry";
-import { startWebhookWorker, getQueueHealth, getDLQItems, retryDLQItem, shutdownWebhookQueue } from "./services/webhookQueue";
+import { startWebhookWorker, getQueueHealth, getDLQItems, retryDLQItem, shutdownWebhookQueue, enqueueWebhook } from "./services/webhookQueue";
 import { processWebhookJob } from "./services/webhookProcessor";
 import { runStartupReconciliation, clearStaleTatumWebhooks } from "./services/reconciliation";
 import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
@@ -375,6 +375,129 @@ app.post("/diagnostics/trigger-sweep", authMiddleware, async (req: express.Reque
     res.status(500).json({ success: false, error: getErrorMessage(error) });
   }
 });
+
+// ── Manual Payment Recovery ─────────────────────────────────────────────────
+// Recovers stuck payments where webhook was received but never processed.
+// Sets up the crypto-{address} Redis key and re-enqueues the webhook job.
+app.post("/diagnostics/recover-payment", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const { temp_address_id, link_id, txId, amount, asset } = req.body;
+    if (!temp_address_id || !link_id) {
+      return res.status(400).json({ success: false, error: "temp_address_id and link_id are required" });
+    }
+
+    const { Sequelize, QueryTypes } = require("sequelize");
+    const sequelize = require("./utils/dbInstance").default;
+    const { getRedisItem, setRedisItem } = require("./utils/redisInstance");
+    const { getCryptoRedisKey } = require("./services/merchantPool/merchantPoolConfig");
+
+    // 1. Fetch temp address from DB
+    const [tempAddr] = await sequelize.query(
+      `SELECT * FROM tbl_merchant_temp_address WHERE temp_address_id = :tempId`,
+      { replacements: { tempId: temp_address_id }, type: QueryTypes.SELECT }
+    );
+    if (!tempAddr) {
+      return res.status(404).json({ success: false, error: "Temp address not found" });
+    }
+
+    // 2. Fetch payment link from DB
+    const [paymentLink] = await sequelize.query(
+      `SELECT * FROM tbl_payment_link WHERE link_id = :linkId`,
+      { replacements: { linkId: link_id }, type: QueryTypes.SELECT }
+    );
+    if (!paymentLink) {
+      return res.status(404).json({ success: false, error: "Payment link not found" });
+    }
+
+    // 3. Fetch customer Redis data
+    const uniqueRef = paymentLink.unique_ref;
+    let customerData = await getRedisItem("customer-" + uniqueRef);
+
+    // 4. Build and set crypto-{address} Redis key
+    const walletAddress = tempAddr.wallet_address;
+    const destTag = tempAddr.destination_tag;
+    const cryptoRedisKey = getCryptoRedisKey(walletAddress, destTag);
+
+    const existingCryptoData = await getRedisItem(cryptoRedisKey);
+    if (existingCryptoData && Object.keys(existingCryptoData).length > 0 && existingCryptoData.status === "successful") {
+      return res.status(409).json({ success: false, error: "Payment already processed", existingData: existingCryptoData });
+    }
+
+    const cryptoData = {
+      mode: "crypto",
+      base_amount_usd: paymentLink.base_amount,
+      total_amount_usd: paymentLink.base_amount,
+      status: "pending",
+      ref: uniqueRef,
+      currency: asset || tempAddr.wallet_type,
+      payment_id: paymentLink.transaction_id,
+      unique_tx_id: paymentLink.transaction_id,
+      walletType: "customer",
+      temp_id: temp_address_id,
+      is_merchant_pool: "true",
+      fee_payer: paymentLink.fee_payer || "company",
+      company_id: paymentLink.company_id || tempAddr.current_company_id,
+      link_id: link_id,
+      webhook_url: paymentLink.webhook_url || customerData?.webhook_url || null,
+      callback_url: paymentLink.callback_url || customerData?.callback_url || null,
+      ...(destTag && { destination_tag: destTag }),
+      recovery_origin: "manual_admin_recovery",
+      recovered_at: new Date().toISOString(),
+    };
+
+    await setRedisItem(cryptoRedisKey, cryptoData);
+    log(`[RecoverPayment] Set ${cryptoRedisKey} with payment data for link ${link_id}`, "info");
+
+    // 5. Re-enqueue the webhook if txId is provided
+    let jobId = null;
+    if (txId) {
+      // Clear any "already processed" marker so the webhook can be re-processed
+      const processedTxKey = `processed-tx-${txId}`;
+      const alreadyProcessed = await getRedisItem(processedTxKey);
+      if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
+        log(`[RecoverPayment] Clearing processed-tx marker for ${txId}`, "info");
+        await setRedisItem(processedTxKey, {});
+      }
+
+      const webhookData = {
+        payload: {
+          address: walletAddress,
+          amount: amount || "0",
+          txId: txId,
+          asset: asset || tempAddr.wallet_type,
+        },
+        queryParams: {
+          company_id: paymentLink.company_id || tempAddr.current_company_id,
+          user_id: tempAddr.owner_user_id,
+          address_id: temp_address_id,
+        },
+        receivedAt: new Date().toISOString(),
+        source: "reconciliation" as const,
+      };
+
+      jobId = await enqueueWebhook(webhookData, { priority: 1, jobId: `recovery-${txId}-${Date.now()}` });
+      log(`[RecoverPayment] Re-enqueued webhook job ${jobId} for tx ${txId}`, "info");
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Recovery initiated",
+      details: {
+        cryptoRedisKey,
+        cryptoDataSet: true,
+        webhookJobId: jobId,
+        tempAddress: walletAddress,
+        linkId: link_id,
+        transactionId: paymentLink.transaction_id,
+      },
+    });
+  } catch (error) {
+    log(`[RecoverPayment] Error: ${getErrorMessage(error)}`, "error");
+    res.status(500).json({ success: false, error: getErrorMessage(error) });
+  }
+});
+
+
 
 // Diagnostics: Binance proxy state
 app.get("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {

@@ -183,7 +183,7 @@ const merchantTempAddressModel = sequelize.define(
       type: DataTypes.STRING(20),
       defaultValue: "AVAILABLE",
       validate: {
-        isIn: [['AVAILABLE', 'RESERVED', 'IN_USE', 'PROCESSING', 'SWEEPING', 'DISABLED', 'PENDING_TRUSTLINE']],
+        isIn: [['AVAILABLE', 'RESERVED', 'PRE_RESERVED', 'IN_USE', 'PROCESSING', 'SWEEPING', 'DISABLED', 'PENDING_TRUSTLINE']],
       },
       comment: "AVAILABLE=ready, RESERVED=waiting (30min), IN_USE=payment done waiting sweep, PROCESSING=received, SWEEPING=being swept",
     },

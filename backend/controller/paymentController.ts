@@ -5961,6 +5961,44 @@ ${refereeCodeSection}
           };
           await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
 
+          // ═══════════════════════════════════════════════════════════════════════
+          // CRITICAL FIX: Set crypto-{address} Redis key at link creation time
+          // This ensures the webhook processor can find payment data even if the
+          // customer sends BTC directly to the address without opening the checkout page.
+          // Previously, this key was only set during addPayment (checkout flow), causing
+          // webhooks to be silently ignored with "No Redis data found" if the customer
+          // paid before visiting checkout.
+          // ═══════════════════════════════════════════════════════════════════════
+          const dpDestTag = poolAddress.dataValues?.destination_tag || poolAddress.destination_tag;
+          const directPayCryptoRedisKey = getCryptoRedisKey(directPayAddress!, dpDestTag);
+
+          // Calculate fee structure for the Direct Pay crypto Redis entry
+          const fallbackFeePercent = parseFloat(process.env.TRANSACTION_FEE_PERCENT || '2.0') / 100;
+          // We don't have crypto_amount yet (customer hasn't selected), but store base info
+          // The webhook processor + cryptoVerification will handle the actual conversion
+          await setRedisItem(directPayCryptoRedisKey, {
+            mode: "crypto",
+            base_amount_usd: normalizedAmount,
+            total_amount_usd: normalizedAmount,
+            status: "pending",
+            ref: uniqueRef,
+            currency: singleCrypto,
+            payment_id: payload.transaction_id,
+            unique_tx_id: payload.transaction_id,
+            walletType: "customer",
+            temp_id: directPayTempId,
+            is_merchant_pool: "true",
+            fee_payer: fee_payer || 'company',
+            company_id: company_id || null,
+            link_id: links.dataValues.link_id,
+            webhook_url: webhook_url || null,
+            callback_url: callback_url || null,
+            ...(dpDestTag && { destination_tag: dpDestTag }),
+            // Mark as direct-pay-created so addPayment can enrich with exact crypto amounts
+            direct_pay_origin: "createPaymentLink",
+          });
+          cronLogger.info(`[createPaymentLink] ✅ Set ${directPayCryptoRedisKey} Redis key for Direct Pay webhook processing`);
+
           cronLogger.info(`[createPaymentLink] Direct Pay address reserved: ${directPayAddress} (temp_id: ${directPayTempId})`);
         }
       } catch (poolError) {
