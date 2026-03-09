@@ -904,7 +904,9 @@ export default function Login() {
                     },
                   }}
                 >
-                  {/* SMS Option */}
+                  {/* SMS Option - only show if user has a registered mobile number */}
+                  {userState.mobile && (
+                  <>
                   <Box
                     sx={{
                       display: "flex",
@@ -978,96 +980,6 @@ export default function Login() {
                     </Box>
                   )}
 
-                  {/* Mobile Input Field - Desktop (only show if mobile not in userState) */}
-                  {loginMethod === "sms" &&
-                    !isMobile &&
-                    !isOtpSent &&
-                    !userState.mobile && (
-                      <Box sx={{ marginTop: "8px" }}>
-                        <InputField
-                          placeholder={t("enterMobilePlaceholder")}
-                          value={mobile}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "");
-                            setMobile(value);
-                            if (mobileError) {
-                              setMobileError("");
-                              setMobileTouched(false);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              !userState.loading &&
-                              mobile &&
-                              mobile.length >= 10
-                            ) {
-                              e.preventDefault();
-                              handleSendSmsOtp();
-                            }
-                          }}
-                          type="text"
-                          inputMode="numeric"
-                          error={mobileTouched && !!mobileError}
-                          helperText={
-                            mobileTouched && mobileError
-                              ? mobileError.includes(" ")
-                                ? mobileError
-                                : t(mobileError)
-                              : ""
-                          }
-                        />
-                      </Box>
-                    )}
-
-                  {/* Mobile Input Field - Mobile (only show if mobile not in userState) */}
-                  {loginMethod === "sms" &&
-                    isMobile &&
-                    !isOtpSent &&
-                    !userState.mobile && (
-                      <Box sx={{ marginTop: "8px" }}>
-                        <InputField
-                          placeholder={t("enterMobilePlaceholder")}
-                          value={mobile}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, "");
-                            setMobile(value);
-                            if (mobileError) {
-                              setMobileError("");
-                              setMobileTouched(false);
-                            }
-                          }}
-                          onKeyDown={(e) => {
-                            if (
-                              e.key === "Enter" &&
-                              !userState.loading &&
-                              mobile &&
-                              mobile.length >= 10
-                            ) {
-                              e.preventDefault();
-                              handleSendSmsOtp();
-                            }
-                          }}
-                          type="text"
-                          inputMode="numeric"
-                          error={mobileTouched && !!mobileError}
-                          helperText={
-                            mobileTouched && mobileError
-                              ? mobileError.includes(" ")
-                                ? mobileError
-                                : t(mobileError)
-                              : ""
-                          }
-                          sideButton={true}
-                          sideButtonType="secondary"
-                          sideButtonIcon={ArrowUpwardIcon}
-                          sideButtonIconWidth={isMobile ? "10px" : "14px"}
-                          sideButtonIconHeight={isMobile ? "10px" : "14px"}
-                          onSideButtonClick={handleSendSmsOtp}
-                        />
-                      </Box>
-                    )}
-
                   {/* Get Code Button - Mobile (when mobile is in userState) */}
                   {loginMethod === "sms" &&
                     isMobile &&
@@ -1117,6 +1029,8 @@ export default function Login() {
                         }}
                       />
                     </Box>
+                  )}
+                  </>
                   )}
 
                   {/* Email Option */}
