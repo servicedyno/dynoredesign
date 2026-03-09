@@ -49,6 +49,7 @@ function getInitialLanguage() {
 
 /**
  * Async IP-based geolocation detection (runs after init, upgrades language if no manual choice yet)
+ * Uses backend proxy endpoint to avoid HTTPS→HTTP mixed-content browser blocks
  */
 async function detectAndApplyGeoLocale() {
   if (isServer) return;
@@ -57,8 +58,10 @@ async function detectAndApplyGeoLocale() {
     const userChoseManually = localStorage.getItem("lang_manual") === "true";
     if (userChoseManually) return;
 
-    const resp = await fetch("http://ip-api.com/json/?fields=status,countryCode", {
-      signal: AbortSignal.timeout(3000),
+    // Call our backend endpoint which proxies to ip-api.com server-side
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
+    const resp = await fetch(`${baseUrl}api/geo-detect`, {
+      signal: AbortSignal.timeout(4000),
     });
     if (!resp.ok) return;
     const data = await resp.json();
@@ -243,6 +246,9 @@ instance.init({
 
 // Persist language on every change & log
 if (!isServer) {
+  // Track whether this is the initial language set during init (before geo-detection)
+  let _geoDetectionDone = false;
+
   i18n.on("languageChanged", (lng) => {
     console.log("[i18n] language changed →", lng);
     try {
@@ -250,13 +256,18 @@ if (!isServer) {
     } catch {}
   });
 
-  // Run async IP-based detection after hydration (only if no saved preference)
-  const hasSavedLang = (() => {
-    try { return !!localStorage.getItem("lang"); } catch { return false; }
+  // Run async IP-based detection after hydration
+  // Check if user has a MANUALLY saved preference (not just the init default)
+  const userChoseManually = (() => {
+    try { return localStorage.getItem("lang_manual") === "true"; } catch { return false; }
   })();
-  if (!hasSavedLang) {
+
+  if (!userChoseManually) {
+    // Always run geo-detection for users who haven't manually chosen a language
     // Delay slightly so app renders first, then upgrade language if IP says differently
-    setTimeout(() => detectAndApplyGeoLocale(), 500);
+    setTimeout(() => {
+      detectAndApplyGeoLocale().finally(() => { _geoDetectionDone = true; });
+    }, 500);
   }
 }
 

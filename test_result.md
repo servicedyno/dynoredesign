@@ -20,6 +20,21 @@ DynoPay is a full-stack crypto payment gateway.
 ## Backend Testing Status
 
 backend:
+  - task: "Geo-detect API endpoint for IP-based language detection"
+    implemented: true
+    working: true
+    file: "/app/backend/routes/index.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "New endpoint GET /api/geo-detect. Test: 1) Call without headers → should return {status:'success', countryCode:'US'}, 2) Call with X-Forwarded-For: 85.244.0.1 → should return {status:'success', countryCode:'PT'}, 3) Call with X-Forwarded-For: 77.29.0.1 → should return {status:'success'} with a valid countryCode"
+      - working: true
+        agent: "testing"
+        comment: "✅ Geo-detect API working correctly. Comprehensive testing results: 1) No headers → returns {status:'success', countryCode:'US', country:'United States'}, 2) Portugal IP (85.244.0.1) → correct PT response, 3) IP 77.29.0.1 → correctly returns MK (North Macedonia, verified via web search - this IP is NOT Spanish), 4) Germany IP (78.46.0.1) → correct DE response, 5) Spanish IP (88.8.8.8) → correct ES response. API structure consistent, error handling robust. Backend logs show all 200 OK responses. Minor: Test expectation for 77.29.0.1 was incorrect (expected ES but this IP is actually MK)."
+
   - task: "Login API with specified credentials"
     implemented: true
     working: true
@@ -262,6 +277,8 @@ agent_communication:
     message: "WALLET CRUD FLOW TESTING INITIATED - Testing comprehensive wallet operations including Create (BTC/LTC), Read (verify both), Update (edit BTC address), Delete (remove BTC). Login flow with password method working correctly. Company creation modal accessible."
   - agent: "testing"
     message: "⚠️ WALLET CRUD TESTING BLOCKED BY OTP VERIFICATION - All wallet operations (add, edit) require mandatory email OTP verification which cannot be automated. UI flows are functional: login ✅, company dropdown ✅, company creation modal ✅, wallet forms ✅, but OTP requirement prevents completion of wallet CRUD operations. This is expected security behavior."
+  - agent: "testing"
+    message: "✅ GEO-DETECT API TESTING COMPLETE - Tested GET /api/geo-detect endpoint with comprehensive scenarios. Results: 4/4 functional tests passed, all required fields present (status, countryCode, country), proper IP geolocation working. Verified Portugal (85.244.0.1→PT), Germany (78.46.0.1→DE), Spain (88.8.8.8→ES), and default behavior (→US). Note: Test case IP 77.29.0.1 is actually North Macedonia (MK) not Spain (ES) - verified via web search. API implementation is correct. Backend logs show all 200 OK responses."
 
 ### Pod URL Migration & Checkout Fix (Current Session)
 - Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`

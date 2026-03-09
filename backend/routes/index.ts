@@ -1,4 +1,5 @@
 import express from "express";
+import axios from "axios";
 import { apiLogger } from "../utils/loggers";
 import userRouter from "./userRouter";
 import eventsRouter from "./eventsRouter";
@@ -155,6 +156,39 @@ router.get("/", (_req: express.Request, res: express.Response) => {
 });
 
 router.use("/user", userRouter);
+
+// Geo-detection endpoint — called by frontend for IP-based language auto-detection
+// This proxies the request server-side to avoid HTTPS→HTTP mixed-content browser blocks
+router.get("/geo-detect", async (req: express.Request, res: express.Response) => {
+  try {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+      || req.headers['x-real-ip'] as string
+      || req.ip
+      || '';
+    
+    // Don't send localhost/private IPs to ip-api
+    const cleanIp = clientIp.replace(/^::ffff:/, ''); // Strip IPv6-mapped prefix
+    const isPrivateIp = !cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp.startsWith('10.') || cleanIp.startsWith('192.168.') || cleanIp.startsWith('172.');
+    const url = isPrivateIp
+      ? 'http://ip-api.com/json/?fields=status,country,countryCode'
+      : `http://ip-api.com/json/${cleanIp}?fields=status,country,countryCode`;
+    
+    const response = await axios.get(url, { timeout: 3000 });
+    
+    if (response.data?.status === 'success') {
+      return res.json({
+        status: 'success',
+        country: response.data.country,
+        countryCode: response.data.countryCode,
+      });
+    }
+    
+    return res.json({ status: 'fail', countryCode: 'US', country: 'Unknown' });
+  } catch (err: any) {
+    apiLogger.warn(`[GeoDetect] IP geolocation failed: ${err?.message}`);
+    return res.json({ status: 'fail', countryCode: 'US', country: 'Unknown' });
+  }
+});
 // Merchant API routes (unified) — supports both OLD and NEW auth flows
 router.use("/user", merchantApiRouter);
 router.use("/admin", adminRouter);

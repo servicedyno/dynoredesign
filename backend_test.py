@@ -1,308 +1,235 @@
 #!/usr/bin/env python3
 """
-Backend API Testing Script for DynoPay Create Payment Link API
-Tests all scenarios as specified in the review request
+Backend API Test Suite for DynoPay Geo-detect Endpoint
+Tests the geo-detect API endpoint with various X-Forwarded-For headers
 """
 
 import requests
 import json
-import time
+import sys
 from typing import Dict, Any, Optional
 
-class DynoPayAPITester:
+# Backend URL from frontend env
+BACKEND_URL = "https://multi-pod-config.preview.emergentagent.com"
+
+class GeoDetectAPITester:
     def __init__(self, base_url: str):
-        self.base_url = base_url.rstrip('/')
-        self.session = requests.Session()
-        self.session.headers.update({
-            'Content-Type': 'application/json',
-            'User-Agent': 'DynoPay-API-Tester/1.0'
-        })
-        self.auth_token = None
+        self.base_url = base_url
+        self.results = []
         
-    def login(self, email: str, password: str) -> Dict[str, Any]:
-        """Login to get authentication token"""
-        print(f"🔐 Logging in with {email}...")
-        
-        login_data = {
-            "email": email,
-            "password": password
-        }
+    def test_geo_detect_endpoint(self, test_name: str, headers: Optional[Dict[str, str]] = None, expected_country_code: Optional[str] = None) -> Dict[str, Any]:
+        """Test the geo-detect API endpoint with specified headers"""
+        url = f"{self.base_url}/api/geo-detect"
         
         try:
-            response = self.session.post(
-                f"{self.base_url}/api/user/login",
-                json=login_data,
-                timeout=30
-            )
+            # Make request with optional headers
+            response = requests.get(url, headers=headers or {}, timeout=10)
             
-            print(f"Login Response Status: {response.status_code}")
-            print(f"Login Response: {response.text[:500]}")
-            
-            if response.status_code == 200:
-                result = response.json()
-                # Handle both response structures: success field or direct data field
-                if (result.get('success') and result.get('data', {}).get('accessToken')) or result.get('data', {}).get('accessToken'):
-                    self.auth_token = result['data']['accessToken']
-                    self.session.headers.update({
-                        'Authorization': f'Bearer {self.auth_token}'
-                    })
-                    print(f"✅ Login successful! Token: {self.auth_token[:20]}...")
-                    return {"success": True, "data": result['data']}
-                else:
-                    print(f"❌ Login failed - invalid response structure: {result}")
-                    return {"success": False, "error": "Invalid response structure"}
-            else:
-                print(f"❌ Login failed with status {response.status_code}: {response.text}")
-                return {"success": False, "error": f"HTTP {response.status_code}: {response.text}"}
-                
-        except Exception as e:
-            print(f"❌ Login exception: {str(e)}")
-            return {"success": False, "error": str(e)}
-    
-    def create_payment_link(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        """Create a payment link with the given payload"""
-        if not self.auth_token:
-            return {"success": False, "error": "Not authenticated"}
-        
-        try:
-            print(f"📤 Creating payment link with payload: {json.dumps(payload, indent=2)}")
-            
-            response = self.session.post(
-                f"{self.base_url}/api/pay/createPaymentLink",
-                json=payload,
-                timeout=30
-            )
-            
-            print(f"Response Status: {response.status_code}")
-            print(f"Response: {response.text[:1000]}")
+            # Parse response
+            response_data = response.json()
             
             result = {
+                "test_name": test_name,
+                "url": url,
+                "headers_sent": headers or {},
                 "status_code": response.status_code,
-                "success": response.status_code in [200, 201],
-                "response": response.json() if response.headers.get('content-type', '').startswith('application/json') else response.text
+                "response_data": response_data,
+                "expected_country_code": expected_country_code,
+                "success": True,
+                "error": None
             }
             
-            return result
-            
+            # Validate response structure
+            if response.status_code == 200:
+                if "status" not in response_data:
+                    result["success"] = False
+                    result["error"] = "Missing 'status' field in response"
+                elif "countryCode" not in response_data:
+                    result["success"] = False
+                    result["error"] = "Missing 'countryCode' field in response"
+                elif expected_country_code and response_data.get("countryCode") != expected_country_code:
+                    result["success"] = False
+                    result["error"] = f"Expected countryCode '{expected_country_code}', got '{response_data.get('countryCode')}'"
+            else:
+                result["success"] = False
+                result["error"] = f"HTTP {response.status_code}: {response.text}"
+                
+        except requests.exceptions.RequestException as e:
+            result = {
+                "test_name": test_name,
+                "url": url,
+                "headers_sent": headers or {},
+                "status_code": None,
+                "response_data": None,
+                "expected_country_code": expected_country_code,
+                "success": False,
+                "error": f"Request failed: {str(e)}"
+            }
+        except json.JSONDecodeError as e:
+            result = {
+                "test_name": test_name,
+                "url": url,
+                "headers_sent": headers or {},
+                "status_code": response.status_code,
+                "response_data": None,
+                "expected_country_code": expected_country_code,
+                "success": False,
+                "error": f"Invalid JSON response: {str(e)}"
+            }
         except Exception as e:
-            print(f"❌ Error creating payment link: {str(e)}")
-            return {"success": False, "error": str(e)}
-    
-    def test_scenario(self, name: str, payload: Dict[str, Any], expected_status: int = 200) -> Dict[str, Any]:
-        """Test a specific scenario"""
-        print(f"\n{'='*60}")
-        print(f"🧪 Testing: {name}")
-        print(f"{'='*60}")
-        
-        result = self.create_payment_link(payload)
-        
-        if result.get("status_code") == expected_status:
-            print(f"✅ {name} - PASSED")
-            # Check for payment_link URL in response
-            if result.get("success") and result.get("response", {}).get("data", {}).get("payment_link"):
-                payment_link = result["response"]["data"]["payment_link"]
-                if "preview.emergentagent.com" in payment_link:
-                    print(f"✅ Payment link contains correct pod URL: {payment_link}")
-                else:
-                    print(f"⚠️  Payment link URL might be incorrect: {payment_link}")
-        else:
-            print(f"❌ {name} - FAILED")
-            print(f"Expected status: {expected_status}, Got: {result.get('status_code')}")
-        
+            result = {
+                "test_name": test_name,
+                "url": url,
+                "headers_sent": headers or {},
+                "status_code": None,
+                "response_data": None,
+                "expected_country_code": expected_country_code,
+                "success": False,
+                "error": f"Unexpected error: {str(e)}"
+            }
+            
+        self.results.append(result)
         return result
 
-def main():
-    # Use the correct pod URL from frontend/.env
-    BASE_URL = "https://multi-pod-config.preview.emergentagent.com"
-    
-    # Login credentials from review request
-    EMAIL = "nomadly@moxx.co" 
-    PASSWORD = "Katiekendra123@"
-    
-    print(f"🚀 Starting DynoPay API Tests")
-    print(f"Base URL: {BASE_URL}")
-    print(f"Testing Create Payment Link API")
-    
-    tester = DynoPayAPITester(BASE_URL)
-    
-    # Step 1: Login
-    login_result = tester.login(EMAIL, PASSWORD)
-    if not login_result["success"]:
-        print(f"❌ Cannot proceed - login failed: {login_result['error']}")
-        return
-    
-    # Test scenarios from review request
-    test_results = {}
-    
-    # Scenario 1: Minimal fields - Just amount + currency
-    test_results["minimal_fields"] = tester.test_scenario(
-        "Minimal fields (amount + currency only)",
-        {
-            "amount": 10,
-            "currency": "USD", 
-            "company_id": 3,
-            "expire": "No",
-            "fee_payer": "company"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 2: Without description - No description field  
-    test_results["without_description"] = tester.test_scenario(
-        "Without description field",
-        {
-            "amount": 15,
-            "currency": "EUR",
-            "company_id": 3,
-            "expire": "No", 
-            "fee_payer": "company"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 3: With description
-    test_results["with_description"] = tester.test_scenario(
-        "With description",
-        {
-            "amount": 20,
-            "currency": "GBP",
-            "company_id": 3,
-            "expire": "No",
-            "fee_payer": "company",
-            "description": "Test payment"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 4: Without post-payment URLs
-    test_results["without_urls"] = tester.test_scenario(
-        "Without post-payment URLs",
-        {
-            "amount": 25,
-            "currency": "USD",
-            "company_id": 3,
-            "expire": "No",
-            "fee_payer": "customer"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 5: With post-payment URLs (using CAD - supported currency)
-    test_results["with_urls"] = tester.test_scenario(
-        "With post-payment URLs",
-        {
-            "amount": 30,
-            "currency": "CAD", 
-            "company_id": 3,
-            "expire": "No",
-            "fee_payer": "company",
-            "redirect_url": "https://example.com/success",
-            "webhook_url": "https://example.com/webhook",
-            "callback_url": "https://example.com/callback"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 6: With accepted cryptocurrencies (using AUD - supported currency)
-    test_results["with_crypto"] = tester.test_scenario(
-        "With accepted cryptocurrencies",
-        {
-            "amount": 35,
-            "currency": "AUD",
-            "company_id": 3,
-            "expire": "No",
-            "fee_payer": "company",
-            "accepted_currencies": ["BTC", "ETH", "USDT-TRC20"]
-        },
-        expected_status=200
-    )
-    
-    # Scenario 7: With tax enabled
-    test_results["with_tax"] = tester.test_scenario(
-        "With tax enabled",
-        {
-            "amount": 40,
-            "currency": "USD",
-            "company_id": 3, 
-            "expire": "No",
-            "fee_payer": "company",
-            "apply_tax": True
-        },
-        expected_status=200
-    )
-    
-    # Scenario 8: Fee payer: customer
-    test_results["fee_payer_customer"] = tester.test_scenario(
-        "Fee payer: customer",
-        {
-            "amount": 45,
-            "currency": "USD",
-            "company_id": 3,
-            "expire": "No", 
-            "fee_payer": "customer"
-        },
-        expected_status=200
-    )
-    
-    # Scenario 9: Validation - Missing amount (should fail)
-    test_results["missing_amount"] = tester.test_scenario(
-        "Validation: Missing amount",
-        {
-            "currency": "USD",
-            "company_id": 3
-        },
-        expected_status=400  # This should return 400 (validation error)
-    )
-    
-    # Scenario 10: Validation - No auth header (should fail)
-    print(f"\n{'='*60}")
-    print(f"🧪 Testing: Validation: No auth header")
-    print(f"{'='*60}")
-    
-    # Remove auth header temporarily
-    original_auth = tester.session.headers.get('Authorization')
-    if 'Authorization' in tester.session.headers:
-        del tester.session.headers['Authorization']
-    
-    test_results["no_auth"] = tester.test_scenario(
-        "Validation: No auth header",
-        {
-            "amount": 10,
-            "currency": "USD", 
-            "company_id": 3
-        },
-        expected_status=403  # CSRF token validation failed is also acceptable
-    )
-    
-    # Restore auth header
-    if original_auth:
-        tester.session.headers['Authorization'] = original_auth
-    
-    # Summary
-    print(f"\n{'='*60}")
-    print(f"📊 TEST SUMMARY")
-    print(f"{'='*60}")
-    
-    passed = 0
-    failed = 0
-    
-    for test_name, result in test_results.items():
-        # Fix logic: check if expected status matches actual status
-        success = result.get("status_code") == 400 if test_name == "missing_amount" else \
-                 result.get("status_code") == 403 if test_name == "no_auth" else \
-                 result.get("success", False)
+    def run_all_tests(self):
+        """Run all geo-detect API tests"""
+        print("🧪 Starting Geo-detect API Tests")
+        print("=" * 60)
         
-        status = "✅ PASSED" if success else "❌ FAILED"
-        print(f"{test_name}: {status}")
-        if success:
-            passed += 1
-        else:
-            failed += 1
+        # Test 1: No special headers (should return JSON with status and countryCode)
+        print("\n📍 Test 1: No X-Forwarded-For header")
+        result1 = self.test_geo_detect_endpoint(
+            "No X-Forwarded-For header",
+            headers=None
+        )
+        self._print_test_result(result1)
+        
+        # Test 2: Portugal IP (85.244.0.1)
+        print("\n📍 Test 2: Portugal IP (85.244.0.1)")
+        result2 = self.test_geo_detect_endpoint(
+            "Portugal IP via X-Forwarded-For",
+            headers={"X-Forwarded-For": "85.244.0.1"},
+            expected_country_code="PT"
+        )
+        self._print_test_result(result2)
+        
+        # Test 3: Spain IP (77.29.0.1)
+        print("\n📍 Test 3: Spain IP (77.29.0.1)")
+        result3 = self.test_geo_detect_endpoint(
+            "Spain IP via X-Forwarded-For",
+            headers={"X-Forwarded-For": "77.29.0.1"},
+            expected_country_code="ES"
+        )
+        self._print_test_result(result3)
+        
+        # Test 4: Germany IP (78.46.0.1)
+        print("\n📍 Test 4: Germany IP (78.46.0.1)")
+        result4 = self.test_geo_detect_endpoint(
+            "Germany IP via X-Forwarded-For",
+            headers={"X-Forwarded-For": "78.46.0.1"},
+            expected_country_code="DE"
+        )
+        self._print_test_result(result4)
+        
+        # Summary
+        self._print_summary()
+        
+    def _print_test_result(self, result: Dict[str, Any]):
+        """Print detailed test result"""
+        status_emoji = "✅" if result["success"] else "❌"
+        print(f"{status_emoji} {result['test_name']}")
+        print(f"   URL: {result['url']}")
+        
+        if result['headers_sent']:
+            print(f"   Headers: {result['headers_sent']}")
+        
+        if result['status_code']:
+            print(f"   Status: {result['status_code']}")
+            
+        if result['response_data']:
+            print(f"   Response: {json.dumps(result['response_data'], indent=2)}")
+            
+        if result['expected_country_code']:
+            actual_code = result['response_data'].get('countryCode') if result['response_data'] else 'N/A'
+            print(f"   Expected: {result['expected_country_code']}, Got: {actual_code}")
+            
+        if result['error']:
+            print(f"   ❌ Error: {result['error']}")
     
-    print(f"\nTotal: {passed + failed} tests")
-    print(f"Passed: ✅ {passed}")
-    print(f"Failed: ❌ {failed}")
-    print(f"Success Rate: {(passed/(passed+failed)*100):.1f}%" if (passed + failed) > 0 else "0%")
+    def _print_summary(self):
+        """Print test summary"""
+        print("\n" + "=" * 60)
+        print("📊 TEST SUMMARY")
+        print("=" * 60)
+        
+        total_tests = len(self.results)
+        passed_tests = sum(1 for r in self.results if r['success'])
+        failed_tests = total_tests - passed_tests
+        
+        print(f"Total Tests: {total_tests}")
+        print(f"✅ Passed: {passed_tests}")
+        print(f"❌ Failed: {failed_tests}")
+        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
+        
+        if failed_tests > 0:
+            print("\n🔍 FAILED TESTS:")
+            for result in self.results:
+                if not result['success']:
+                    print(f"   • {result['test_name']}: {result['error']}")
+        
+        print("\n💡 ANALYSIS:")
+        
+        # Analyze specific issues
+        if any(r['error'] and 'timeout' in r['error'].lower() for r in self.results):
+            print("   ⚠️ Timeout issues detected - backend may be slow or unreachable")
+            
+        if any(r['status_code'] and r['status_code'] >= 500 for r in self.results):
+            print("   ⚠️ Server errors detected - check backend logs")
+            
+        if any(r['status_code'] and r['status_code'] == 404 for r in self.results):
+            print("   ⚠️ 404 errors detected - endpoint may not be implemented")
+            
+        # Check for consistent response structure
+        successful_responses = [r for r in self.results if r['success'] and r['response_data']]
+        if successful_responses:
+            sample_response = successful_responses[0]['response_data']
+            required_fields = ['status', 'countryCode']
+            has_all_fields = all(field in sample_response for field in required_fields)
+            
+            if has_all_fields:
+                print("   ✅ Response structure is consistent and complete")
+            else:
+                missing_fields = [field for field in required_fields if field not in sample_fields]
+                print(f"   ❌ Missing required fields in response: {missing_fields}")
+        
+        return passed_tests == total_tests
+
+def main():
+    """Main test execution"""
+    print("🚀 DynoPay Geo-detect API Testing Suite")
+    print(f"📡 Backend URL: {BACKEND_URL}")
+    print("⏰ Starting tests...")
+    
+    tester = GeoDetectAPITester(BACKEND_URL)
+    
+    try:
+        tester.run_all_tests()
+        
+        # Return appropriate exit code
+        all_passed = all(r['success'] for r in tester.results)
+        if all_passed:
+            print("\n🎉 All tests passed! Geo-detect API is working correctly.")
+            sys.exit(0)
+        else:
+            print("\n💥 Some tests failed. Check the details above.")
+            sys.exit(1)
+            
+    except KeyboardInterrupt:
+        print("\n⏹️ Tests interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        print(f"\n💥 Test suite crashed: {str(e)}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
