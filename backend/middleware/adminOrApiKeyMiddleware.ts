@@ -26,7 +26,7 @@ const adminOrApiKeyMiddleware = async (
           res.locals.apiKeyData = apiKeyData;
           res.locals.authType = "api_key";
           res.locals.company_id = apiKeyData.company_id;
-          res.locals.user_id = apiKeyData.user_id;
+          res.locals.user_id = apiKeyData.adm_id;
           return next();
         }
       } catch (err) {
