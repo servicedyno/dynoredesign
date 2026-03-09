@@ -70,6 +70,8 @@ export interface PaymentLinkSuccessModalProps {
     wallet_address: string;
     [key: string]: any;
   }>;
+  directPayAddress?: string | null;
+  directPayQrCode?: string | null;
 }
 
 export interface PaymentDetailRowProps {

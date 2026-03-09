@@ -87,6 +87,8 @@ const CreatePaymentLinkPage = ({
   const [saveChangeModalOpen, setSaveChangeModalOpen] =
     useState<boolean>(false);
   const [paymentLink, setPaymentLink] = useState("");
+  const [directPayAddress, setDirectPayAddress] = useState<string | null>(null);
+  const [directPayQrCode, setDirectPayQrCode] = useState<string | null>(null);
   const prevPaymentLinksLengthRef = useRef(paymentLinkState?.paymentLinks?.length || 0);
 
   // Watch for newly created payment link from backend response
@@ -97,6 +99,13 @@ const CreatePaymentLinkPage = ({
       const newestLink = currentLinks[0];
       if (newestLink?.payment_link) {
         setPaymentLink(newestLink.payment_link);
+      }
+      // Extract Direct Pay pool address from backend response
+      if (newestLink?.direct_pay_address) {
+        setDirectPayAddress(newestLink.direct_pay_address);
+      }
+      if (newestLink?.direct_pay_qr_code) {
+        setDirectPayQrCode(newestLink.direct_pay_qr_code);
       }
       // Update linkId in paymentSettings so the success modal shows it
       const newLinkId = newestLink?.link_id || newestLink?.linkId || newestLink?._id || "";
@@ -430,6 +439,8 @@ const CreatePaymentLinkPage = ({
       setCustomerEmail("");
       setIncludeTax(false);
       setPaymentLink("");
+      setDirectPayAddress(null);
+      setDirectPayQrCode(null);
     }
   };
 
@@ -668,6 +679,8 @@ const CreatePaymentLinkPage = ({
         paymentSettings={paymentSettings}
         onCopyLink={handleCopyLink}
         walletList={walletList}
+        directPayAddress={directPayAddress}
+        directPayQrCode={directPayQrCode}
       />
       <SaveChangeModel
         open={saveChangeModalOpen}

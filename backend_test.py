@@ -1,250 +1,332 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend Testing Script
-Tests the Node.js/TypeScript backend running behind the Python proxy
+DynoPay Backend Testing - Payment Link Creation with Merchant Pool Address
 
-Focus areas from review request:
-1. API Health: Verify `GET /api/` returns operational status
-2. Email Service Exports: Backend should compile and start without import/export errors
-3. No TypeScript compilation errors related to emailService imports
-4. No "Dynocash" references remain
+This test script verifies:
+1. User login functionality
+2. BTC-only payment link creation with direct_pay_address (pool address)
+3. Multi-currency payment link creation without direct_pay fields
+4. Checkout flow using pool address
+5. Proper address validation (should be bc1q... format, not 1JH5...)
+
+Test Requirements:
+- Backend URL: https://a21adebb-de1d-4a59-a169-5bf700b7e9d8.preview.emergentagent.com
+- Login credentials: nomadly@moxx.co / Katiekendra123@
+- Company ID: 3
 """
 
 import requests
 import json
 import sys
+import re
 from datetime import datetime
+from typing import Dict, Any, Optional
 
-# Test configuration
-BACKEND_URL = "https://multi-pod-deploy.preview.emergentagent.com"
 
-# Colors for output
-class Colors:
-    GREEN = '\033[92m'
-    RED = '\033[91m'
-    YELLOW = '\033[93m'
-    BLUE = '\033[94m'
-    END = '\033[0m'
-    BOLD = '\033[1m'
-
-def log_success(message: str):
-    print(f"{Colors.GREEN}✅ {message}{Colors.END}")
-
-def log_error(message: str):
-    print(f"{Colors.RED}❌ {message}{Colors.END}")
-
-def log_warning(message: str):
-    print(f"{Colors.YELLOW}⚠️ {message}{Colors.END}")
-
-def log_info(message: str):
-    print(f"{Colors.BLUE}ℹ️ {message}{Colors.END}")
-
-def log_header(message: str):
-    print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{message}{Colors.END}")
-    print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
-
-def test_api_health():
-    """Test GET /api/ endpoint for operational status"""
-    log_header("Testing API Health Endpoint")
-    
-    try:
-        response = requests.get(f"{BACKEND_URL}/api/", timeout=30)
+class DynoPayTester:
+    def __init__(self, base_url: str):
+        self.base_url = base_url.rstrip('/')
+        self.session = requests.Session()
+        self.access_token = None
+        self.test_results = []
         
-        log_info(f"URL: {BACKEND_URL}/api/")
-        log_info(f"Status Code: {response.status_code}")
+    def log_test(self, test_name: str, status: str, details: str = ""):
+        """Log test result"""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        result = {
+            'test': test_name,
+            'status': status,
+            'details': details,
+            'timestamp': timestamp
+        }
+        self.test_results.append(result)
         
-        if response.status_code == 200:
-            try:
-                data = response.json()
-                log_info(f"Response: {json.dumps(data, indent=2)}")
-                
-                # Check for expected fields in the API health response
-                # Updated to match actual API response structure
-                required_fields = ['status', 'service']
-                missing_fields = [field for field in required_fields if field not in data]
-                
-                if not missing_fields:
-                    log_success("API Health endpoint working correctly")
-                    
-                    # Additional checks
-                    if data.get('status') == 'operational':
-                        log_success("Backend status is 'operational'")
-                    else:
-                        log_warning(f"Backend status is '{data.get('status')}' (expected 'operational')")
-                    
-                    if 'version' in data:
-                        log_info(f"Backend version: {data.get('version')}")
-                    
-                    if 'service' in data:
-                        log_info(f"Service: {data.get('service')}")
-                        
-                    if 'endpoints' in data:
-                        log_success(f"API endpoints available: {len(data.get('endpoints', {}))}")
-                    
-                    return True, data
-                else:
-                    log_error(f"Missing required fields: {missing_fields}")
-                    return False, data
-                    
-            except json.JSONDecodeError as e:
-                log_error(f"Invalid JSON response: {e}")
-                log_info(f"Raw response: {response.text}")
-                return False, None
-        else:
-            log_error(f"API returned status {response.status_code}")
-            log_info(f"Response: {response.text}")
-            return False, None
+        # Color coding for terminal output
+        color = '\033[92m' if status == 'PASS' else '\033[91m' if status == 'FAIL' else '\033[93m'
+        reset = '\033[0m'
+        print(f"{color}[{timestamp}] {test_name}: {status}{reset}")
+        if details:
+            print(f"  → {details}")
             
-    except requests.exceptions.RequestException as e:
-        log_error(f"Request failed: {str(e)}")
-        return False, None
-
-def test_backend_health():
-    """Test backend status endpoint - try multiple possible endpoints"""
-    log_header("Testing Backend Status Endpoints")
-    
-    status_endpoints = [
-        "/api/status",
-        "/health",
-        "/api/health"
-    ]
-    
-    for endpoint in status_endpoints:
+    def login(self, email: str, password: str) -> bool:
+        """Login and extract access token"""
         try:
-            response = requests.get(f"{BACKEND_URL}{endpoint}", timeout=30)
+            url = f"{self.base_url}/api/user/login"
+            payload = {
+                "email": email,
+                "password": password
+            }
             
-            log_info(f"Testing: {BACKEND_URL}{endpoint}")
-            log_info(f"Status Code: {response.status_code}")
+            response = self.session.post(url, json=payload, timeout=30)
             
             if response.status_code == 200:
-                try:
-                    data = response.json()
-                    log_info(f"Response: {json.dumps(data, indent=2)}")
-                    log_success(f"Found working status endpoint: {endpoint}")
-                    
-                    # Check health status
-                    status_field = data.get('status', data.get('state', 'unknown'))
-                    if status_field in ['healthy', 'operational', 'running', 'ok']:
-                        log_success(f"Status endpoint working - Status: {status_field}")
-                        
-                        # Check services if available
-                        if 'database' in data:
-                            log_info(f"Database: {data.get('database')}")
-                        if 'redis' in data:
-                            log_info(f"Redis: {data.get('redis')}")
-                        
-                        return True, data
-                    else:
-                        log_warning(f"Status: {status_field}")
-                        return False, data
-                        
-                except json.JSONDecodeError:
-                    log_info(f"Non-JSON response from {endpoint}")
-                    continue
-            else:
-                log_info(f"{endpoint}: HTTP {response.status_code}")
-                
-        except requests.exceptions.RequestException as e:
-            log_info(f"{endpoint}: Request failed - {str(e)}")
-            continue
-    
-    log_warning("No working status endpoints found")
-    return False, None
-
-def test_root_endpoint():
-    """Test root endpoint"""
-    log_header("Testing Root Endpoint")
-    
-    try:
-        response = requests.get(f"{BACKEND_URL}/", timeout=30)
-        
-        log_info(f"URL: {BACKEND_URL}/")
-        log_info(f"Status Code: {response.status_code}")
-        
-        if response.status_code == 200:
-            try:
                 data = response.json()
-                log_info(f"Response: {json.dumps(data, indent=2)}")
-                log_success("Root endpoint accessible")
-                return True, data
-            except json.JSONDecodeError:
-                log_info(f"Text response: {response.text[:200]}...")
-                log_success("Root endpoint accessible (non-JSON)")
-                return True, response.text
-        else:
-            log_warning(f"Root endpoint returned status {response.status_code}")
-            return False, None
+                if 'data' in data and 'accessToken' in data['data']:
+                    self.access_token = data['data']['accessToken']
+                    self.session.headers.update({
+                        'Authorization': f'Bearer {self.access_token}'
+                    })
+                    self.log_test("Login", "PASS", f"Successfully logged in as {email}")
+                    return True
+                else:
+                    self.log_test("Login", "FAIL", f"No access token in response: {data}")
+                    return False
+            else:
+                self.log_test("Login", "FAIL", f"Login failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Login", "FAIL", f"Login exception: {str(e)}")
+            return False
             
-    except requests.exceptions.RequestException as e:
-        log_warning(f"Root endpoint request failed: {str(e)}")
-        return False, None
+    def create_btc_only_payment_link(self) -> Optional[Dict[str, Any]]:
+        """Create BTC-only payment link and verify direct_pay_address"""
+        try:
+            url = f"{self.base_url}/api/pay/createPaymentLink"
+            payload = {
+                "base_amount": 20,
+                "base_currency": "USD",
+                "modes": ["CRYPTO"],
+                "accepted_currencies": ["BTC"],
+                "company_id": 3,
+                "fee_payer": "company",
+                "description": "Test pool address"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    payment_data = data['data']
+                    
+                    # Check for required fields
+                    required_fields = ['direct_pay_address', 'direct_pay_qr_code', 'direct_pay_temp_id', 'payment_link']
+                    missing_fields = [field for field in required_fields if field not in payment_data]
+                    
+                    if missing_fields:
+                        self.log_test("BTC Payment Link Creation", "FAIL", 
+                                    f"Missing required fields: {missing_fields}")
+                        return None
+                    
+                    # Validate direct_pay_address format
+                    direct_address = payment_data['direct_pay_address']
+                    if not direct_address.startswith('bc1q'):
+                        self.log_test("BTC Payment Link Creation", "FAIL", 
+                                    f"direct_pay_address should be bc1q... format, got: {direct_address}")
+                        return None
+                    
+                    # Ensure it's NOT the merchant's direct wallet
+                    if direct_address == "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7":
+                        self.log_test("BTC Payment Link Creation", "FAIL", 
+                                    f"direct_pay_address is merchant's wallet, not pool address: {direct_address}")
+                        return None
+                    
+                    # Validate QR code format
+                    qr_code = payment_data['direct_pay_qr_code']
+                    if not qr_code.startswith('data:image/png;base64,'):
+                        self.log_test("BTC Payment Link Creation", "FAIL", 
+                                    f"QR code should be PNG base64 data URL, got: {qr_code[:50]}...")
+                        return None
+                    
+                    # Validate temp_id is numeric
+                    temp_id = payment_data['direct_pay_temp_id']
+                    if not isinstance(temp_id, int):
+                        self.log_test("BTC Payment Link Creation", "FAIL", 
+                                    f"direct_pay_temp_id should be number, got: {temp_id}")
+                        return None
+                    
+                    self.log_test("BTC Payment Link Creation", "PASS", 
+                                f"Pool address: {direct_address}, temp_id: {temp_id}")
+                    return payment_data
+                else:
+                    self.log_test("BTC Payment Link Creation", "FAIL", f"No data in response: {data}")
+                    return None
+            else:
+                self.log_test("BTC Payment Link Creation", "FAIL", 
+                            f"Request failed with status {response.status_code}: {response.text}")
+                return None
+                
+        except Exception as e:
+            self.log_test("BTC Payment Link Creation", "FAIL", f"Exception: {str(e)}")
+            return None
+            
+    def create_multi_currency_payment_link(self) -> Optional[Dict[str, Any]]:
+        """Create multi-currency payment link and verify NO direct_pay fields"""
+        try:
+            url = f"{self.base_url}/api/pay/createPaymentLink"
+            payload = {
+                "base_amount": 25,
+                "base_currency": "USD",
+                "modes": ["CRYPTO"],
+                "accepted_currencies": ["BTC", "ETH"],
+                "company_id": 3,
+                "fee_payer": "company",
+                "description": "Test multi-currency"
+            }
+            
+            response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data:
+                    payment_data = data['data']
+                    
+                    # Check that direct_pay fields are NOT present
+                    direct_pay_fields = ['direct_pay_address', 'direct_pay_qr_code', 'direct_pay_temp_id']
+                    present_fields = [field for field in direct_pay_fields if field in payment_data]
+                    
+                    if present_fields:
+                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
+                                    f"direct_pay fields should not be present for multi-currency, found: {present_fields}")
+                        return None
+                    
+                    # Verify payment_link and accepted_currencies are present
+                    if 'payment_link' not in payment_data:
+                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
+                                    "payment_link field missing")
+                        return None
+                    
+                    if 'accepted_currencies' not in payment_data:
+                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
+                                    "accepted_currencies field missing")
+                        return None
+                    
+                    accepted_currencies = payment_data['accepted_currencies']
+                    if not isinstance(accepted_currencies, list) or len(accepted_currencies) != 2:
+                        self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
+                                    f"accepted_currencies should be array of 2 items, got: {accepted_currencies}")
+                        return None
+                    
+                    self.log_test("Multi-Currency Payment Link Creation", "PASS", 
+                                f"No direct_pay fields (correct), accepted_currencies: {accepted_currencies}")
+                    return payment_data
+                else:
+                    self.log_test("Multi-Currency Payment Link Creation", "FAIL", f"No data in response: {data}")
+                    return None
+            else:
+                self.log_test("Multi-Currency Payment Link Creation", "FAIL", 
+                            f"Request failed with status {response.status_code}: {response.text}")
+                return None
+                
+        except Exception as e:
+            self.log_test("Multi-Currency Payment Link Creation", "FAIL", f"Exception: {str(e)}")
+            return None
+            
+    def test_checkout_flow(self, payment_link: str) -> bool:
+        """Test checkout flow using getData endpoint"""
+        try:
+            # Extract reference from payment_link URL
+            if 'd=' not in payment_link:
+                self.log_test("Checkout Flow", "FAIL", "No 'd=' parameter in payment_link")
+                return False
+            
+            ref = payment_link.split('d=')[1].split('&')[0]  # Handle potential additional params
+            
+            url = f"{self.base_url}/api/pay/getData"
+            payload = {"data": ref}
+            
+            response = self.session.post(url, json=payload, timeout=30)
+            
+            if response.status_code == 200:
+                data = response.json()
+                
+                if 'data' in data and 'token' in data['data']:
+                    checkout_data = data['data']
+                    
+                    # Basic validation of checkout response
+                    required_fields = ['amount', 'base_currency', 'token', 'payment_mode']
+                    missing_fields = [field for field in required_fields if field not in checkout_data]
+                    
+                    if missing_fields:
+                        self.log_test("Checkout Flow", "FAIL", 
+                                    f"Missing required checkout fields: {missing_fields}")
+                        return False
+                    
+                    self.log_test("Checkout Flow", "PASS", 
+                                f"Checkout token received, amount: {checkout_data['amount']} {checkout_data['base_currency']}")
+                    return True
+                else:
+                    self.log_test("Checkout Flow", "FAIL", f"No checkout token in response: {data}")
+                    return False
+            else:
+                self.log_test("Checkout Flow", "FAIL", 
+                            f"Request failed with status {response.status_code}: {response.text}")
+                return False
+                
+        except Exception as e:
+            self.log_test("Checkout Flow", "FAIL", f"Exception: {str(e)}")
+            return False
+            
+    def print_summary(self):
+        """Print test summary"""
+        total_tests = len(self.test_results)
+        passed_tests = len([r for r in self.test_results if r['status'] == 'PASS'])
+        failed_tests = len([r for r in self.test_results if r['status'] == 'FAIL'])
+        
+        print("\n" + "="*60)
+        print("TEST SUMMARY")
+        print("="*60)
+        print(f"Total Tests: {total_tests}")
+        print(f"Passed: \033[92m{passed_tests}\033[0m")
+        print(f"Failed: \033[91m{failed_tests}\033[0m")
+        print(f"Success Rate: {(passed_tests/total_tests*100):.1f}%")
+        
+        if failed_tests > 0:
+            print("\nFAILED TESTS:")
+            for result in self.test_results:
+                if result['status'] == 'FAIL':
+                    print(f"  ❌ {result['test']}: {result['details']}")
+        
+        print("\n" + "="*60)
+        return failed_tests == 0
+
 
 def main():
-    """Run backend tests focusing on review requirements"""
-    log_header("DynoPay Backend Testing")
-    print(f"Backend URL: {BACKEND_URL}")
-    print(f"Test Time: {datetime.now()}")
-    print(f"Focus: API Health, Email Service Compilation, TypeScript Errors")
+    """Main test execution"""
+    print("DynoPay Backend Testing - Payment Link Creation with Merchant Pool Address")
+    print("="*80)
     
-    results = {}
+    # Configuration
+    BACKEND_URL = "https://a21adebb-de1d-4a59-a169-5bf700b7e9d8.preview.emergentagent.com"
+    LOGIN_EMAIL = "nomadly@moxx.co"
+    LOGIN_PASSWORD = "Katiekendra123@"
     
-    # Test 1: API Health (primary requirement)
-    success, data = test_api_health()
-    results['api_health'] = success
+    tester = DynoPayTester(BACKEND_URL)
     
-    # Test 2: Backend Health endpoint
-    success, data = test_backend_health()
-    results['backend_health'] = success
+    # Test sequence
+    print(f"\nTesting backend at: {BACKEND_URL}")
+    print(f"Login credentials: {LOGIN_EMAIL}")
+    print("-" * 80)
     
-    # Test 3: Root endpoint (secondary check)
-    success, data = test_root_endpoint()
-    results['root_endpoint'] = success
+    # Step 1: Login
+    if not tester.login(LOGIN_EMAIL, LOGIN_PASSWORD):
+        print("❌ Login failed - cannot proceed with tests")
+        return False
     
-    # Summary
-    log_header("Test Results Summary")
+    # Step 2: Create BTC-only payment link
+    btc_payment_data = tester.create_btc_only_payment_link()
+    if not btc_payment_data:
+        print("❌ BTC payment link creation failed")
     
-    passed_tests = sum(1 for result in results.values() if result)
-    total_tests = len(results)
+    # Step 3: Create multi-currency payment link
+    multi_payment_data = tester.create_multi_currency_payment_link()
+    if not multi_payment_data:
+        print("❌ Multi-currency payment link creation failed")
     
-    print(f"{Colors.BOLD}Results:{Colors.END}")
-    for test_name, result in results.items():
-        status_emoji = "✅" if result else "❌"
-        status_text = "PASSED" if result else "FAILED"
-        print(f"  {status_emoji} {test_name.replace('_', ' ').title()}: {status_text}")
-    
-    print(f"\n{Colors.BOLD}Overall: {passed_tests}/{total_tests} tests passed{Colors.END}")
-    
-    # Check specific requirements
-    print(f"\n{Colors.BOLD}Review Requirements Check:{Colors.END}")
-    
-    # 1. API Health
-    if results['api_health']:
-        log_success("✅ API Health: GET /api/ returns operational status")
+    # Step 4: Test checkout flow (using BTC payment link if available)
+    if btc_payment_data and 'payment_link' in btc_payment_data:
+        tester.test_checkout_flow(btc_payment_data['payment_link'])
     else:
-        log_error("❌ API Health: GET /api/ failed")
+        tester.log_test("Checkout Flow", "SKIP", "No BTC payment link to test")
     
-    # 2. Backend compilation (inferred from successful responses)
-    if results['api_health'] or results['backend_health']:
-        log_success("✅ Email Service Exports: Backend compiled and started successfully")
-        log_success("✅ TypeScript Compilation: No import/export errors detected")
-    else:
-        log_error("❌ Backend appears to have compilation issues")
-    
-    # 3. No Dynocash references (checked via grep earlier)
-    log_success("✅ Branding: No 'Dynocash' references found in TypeScript files")
-    
-    # Final result
-    if results['api_health']:
-        log_success("\n🎉 PRIMARY TEST PASSED: API Health Check Successful")
-        print(f"\n{Colors.GREEN}✅ Backend is operational and responding correctly{Colors.END}")
-        print(f"{Colors.GREEN}✅ Node.js/TypeScript backend running behind Python proxy{Colors.END}")
-        print(f"{Colors.GREEN}✅ Email service imports working (no compilation errors){Colors.END}")
-        return 0
-    else:
-        log_error("\n❌ PRIMARY TEST FAILED: API Health Check Failed")
-        return 1
+    # Print summary and return result
+    success = tester.print_summary()
+    return success
+
 
 if __name__ == "__main__":
-    exit_code = main()
-    sys.exit(exit_code)
+    success = main()
+    sys.exit(0 if success else 1)

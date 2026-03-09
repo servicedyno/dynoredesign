@@ -49,6 +49,7 @@ export interface IFundData {
   account_number: string;
   network: string;
   mobile: string;
+  direct_pay_temp_id?: number;
 }
 
 export interface FW_API_Response {

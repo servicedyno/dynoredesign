@@ -67,6 +67,8 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
   paymentLink,
   paymentSettings,
   walletList,
+  directPayAddress,
+  directPayQrCode,
 }) => {
   const isMobile = useIsMobile("md");
   const { t } = useTranslation("createPaymentLinkScreen");
@@ -83,12 +85,24 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Determine if single crypto is selected and find its wallet address
+  // Priority: 1) Pool address from backend (directPayAddress), 2) Merchant wallet (fallback)
   const singleCryptoWallet = useMemo(() => {
     const accepted = paymentSettings.acceptedCryptoCurrency;
-    if (!accepted || accepted.length !== 1 || !walletList || walletList.length === 0) {
+    if (!accepted || accepted.length !== 1) {
       return null;
     }
     const selectedCrypto = accepted[0];
+    
+    // Use merchant pool address from backend if available (correct behavior)
+    if (directPayAddress) {
+      return {
+        cryptoType: selectedCrypto,
+        address: directPayAddress,
+      };
+    }
+    
+    // Fallback to merchant wallet (legacy behavior)
+    if (!walletList || walletList.length === 0) return null;
     const wallet = walletList.find(
       (w) => w.wallet_type === selectedCrypto && w.wallet_address
     );
@@ -97,7 +111,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
       cryptoType: selectedCrypto,
       address: wallet.wallet_address,
     };
-  }, [paymentSettings.acceptedCryptoCurrency, walletList]);
+  }, [paymentSettings.acceptedCryptoCurrency, walletList, directPayAddress]);
 
   const getExpireText = () => {
     if (paymentSettings.expire === "no") return tPaymentLink("noExpiration");
@@ -242,12 +256,23 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
                     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
                   }}
                 >
+                {directPayQrCode ? (
+                  <img
+                    src={directPayQrCode}
+                    alt="Direct Pay QR Code"
+                    style={{
+                      width: isMobile ? 140 : 170,
+                      height: isMobile ? 140 : 170,
+                    }}
+                  />
+                ) : (
                   <QRCodeSVG
                     value={singleCryptoWallet.address}
                     size={isMobile ? 140 : 170}
                     level="M"
                     includeMargin={false}
                   />
+                )}
                 </Box>
 
                 <Typography

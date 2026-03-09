@@ -989,6 +989,11 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             value.currency = cryptoAliasMap[value.currency];
           }
           
+          // Pass pre-reserved pool address from Direct Pay (if any) so Crypto uses the same address
+          if (items.direct_pay_temp_id) {
+            value.direct_pay_temp_id = items.direct_pay_temp_id;
+          }
+          
           const { paymentRes, uniqueRef } = await Crypto(value, {
             ...userData,
             adm_id: items.adm_id,
@@ -2657,18 +2662,52 @@ const Crypto = async (
     const paymentId = crypto.randomUUID();
     
     // Reserve address from merchant's pool
-    // This will:
-    // 1. Create merchant's xpub if not exists (lazy initialization)
-    // 2. Initialize pool if empty
-    // 3. Find available address with highest admin_fee_balance
-    // 4. Reserve it for this payment
-    const poolAddressResult = await merchantPoolService.reserveAddress(
-      currency,
-      paymentId,
-      Number(userId),
-      parsedCompanyId || 0,  // Pass 0 if no company_id (will be treated as null in DB)
-      Number(data.amount) || 0
-    );
+    // Check if a Direct Pay address was pre-reserved during payment link creation
+    // If so, use that SAME address to keep consistency between the QR shown to merchant and the checkout
+    let poolAddressResult;
+    if (data.direct_pay_temp_id) {
+      cronLogger.info(`[Crypto] Direct Pay pre-reserved address found (temp_id: ${data.direct_pay_temp_id}), using it`);
+      const preReservedAddr = await merchantTempAddressModel.findOne({
+        where: {
+          temp_address_id: data.direct_pay_temp_id,
+          owner_user_id: Number(userId),
+          wallet_type: currency,
+        }
+      });
+      if (preReservedAddr && (preReservedAddr.dataValues.status === 'RESERVED' || preReservedAddr.dataValues.status === 'PRE_RESERVED')) {
+        // Update with the new payment ID
+        await preReservedAddr.update({
+          current_payment_id: paymentId,
+          status: 'RESERVED',
+          reserved_at: new Date(),
+        });
+        poolAddressResult = preReservedAddr;
+        cronLogger.info(`[Crypto] ✅ Re-used Direct Pay address: ${preReservedAddr.dataValues.wallet_address}`);
+      } else {
+        cronLogger.warn(`[Crypto] Pre-reserved address not found or not available, falling back to normal reservation`);
+        poolAddressResult = await merchantPoolService.reserveAddress(
+          currency,
+          paymentId,
+          Number(userId),
+          parsedCompanyId || 0,
+          Number(data.amount) || 0
+        );
+      }
+    } else {
+      // Normal flow: reserve a new address from the pool
+      // This will:
+      // 1. Create merchant's xpub if not exists (lazy initialization)
+      // 2. Initialize pool if empty
+      // 3. Find available address with highest admin_fee_balance
+      // 4. Reserve it for this payment
+      poolAddressResult = await merchantPoolService.reserveAddress(
+        currency,
+        paymentId,
+        Number(userId),
+        parsedCompanyId || 0,
+        Number(data.amount) || 0
+      );
+    }
     const poolAddress = poolAddressResult as { dataValues: { wallet_address: string; temp_address_id: number; destination_tag?: number; cached_qr_code?: string } };
     
     const address = poolAddress.dataValues.wallet_address;
@@ -5880,6 +5919,58 @@ ${refereeCodeSection}
       // Don't fail the request if email fails
     }
 
+    // ========================================
+    // DIRECT PAY: Reserve merchant pool address when single crypto is selected
+    // ========================================
+    const MERCHANT_POOL_CRYPTO_TYPES_FOR_LINK = ['BTC', 'ETH', 'LTC', 'DOGE', 'TRX', 'BCH', 'USDT-TRC20', 'USDT-ERC20', 'USDC-ERC20', 'SOL', 'XRP', 'RLUSD', 'RLUSD-ERC20', 'POLYGON', 'USDT-POLYGON'];
+    let directPayAddress: string | null = null;
+    let directPayQrCode: string | null = null;
+    let directPayTempId: number | null = null;
+
+    if (
+      finalAcceptedCurrencies.length === 1 &&
+      MERCHANT_POOL_CRYPTO_TYPES_FOR_LINK.includes(finalAcceptedCurrencies[0])
+    ) {
+      const singleCrypto = finalAcceptedCurrencies[0];
+      try {
+        cronLogger.info(`[createPaymentLink] Single crypto ${singleCrypto} selected — reserving merchant pool address for Direct Pay`);
+        const poolAddress = await merchantPoolService.reserveAddress(
+          singleCrypto,
+          payload.transaction_id,
+          userData.user_id,
+          company_id || 0,
+          normalizedAmount || 0
+        );
+
+        if (poolAddress) {
+          directPayAddress = poolAddress.dataValues.wallet_address;
+          directPayTempId = poolAddress.dataValues.temp_address_id;
+
+          // Generate QR code for the pool address
+          const qrPayload = poolAddress.dataValues.destination_tag
+            ? `${directPayAddress}?dt=${poolAddress.dataValues.destination_tag}`
+            : directPayAddress;
+          directPayQrCode = await generateQRCodeWithLogo(qrPayload, singleCrypto, 400);
+
+          // Store the reserved pool address info in Redis so checkout can use the SAME address
+          const updatedRedisPayload = {
+            ...redisPayload,
+            direct_pay_temp_id: directPayTempId,
+            direct_pay_address: directPayAddress,
+          };
+          await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
+
+          cronLogger.info(`[createPaymentLink] Direct Pay address reserved: ${directPayAddress} (temp_id: ${directPayTempId})`);
+        }
+      } catch (poolError) {
+        cronLogger.warn(`[createPaymentLink] Failed to reserve pool address for Direct Pay: ${(poolError as Error).message}`);
+        // Don't fail the link creation — Direct Pay is optional
+      }
+    }
+    // ========================================
+    // END DIRECT PAY
+    // ========================================
+
     // Format response to be consistent with getPaymentLinkById
     const amountDisplay = formatAmountForDisplay(normalizedAmount, normalizedCurrency);
     const currencyInfo = getCurrencyInfo(normalizedCurrency);
@@ -5895,6 +5986,12 @@ ${refereeCodeSection}
         : null,  // null means all configured currencies are accepted
       // Include KYC warning if within grace period (for in-app display)
       ...(kycWarning && { kyc_warning: kycWarning }),
+      // Direct Pay pool address (when single crypto selected)
+      ...(directPayAddress && {
+        direct_pay_address: directPayAddress,
+        direct_pay_qr_code: directPayQrCode,
+        direct_pay_temp_id: directPayTempId,
+      }),
     };
 
     successResponseHelper(res, 200, "Payment link created successfully", responseData);
