@@ -6,7 +6,6 @@ import { useDispatch, useSelector } from "react-redux";
 
 import BitcoinIcon from "@/assets/cryptocurrency/Bitcoin-icon.svg";
 import BitcoinCashIcon from "@/assets/cryptocurrency/BitcoinCash-icon.svg";
-import BNBIcon from "@/assets/cryptocurrency/BNB-icon.svg";
 import DogecoinIcon from "@/assets/cryptocurrency/Dogecoin-icon.svg";
 import EthereumIcon from "@/assets/cryptocurrency/Ethereum-icon.svg";
 import LitecoinIcon from "@/assets/cryptocurrency/Litecoin-icon.svg";
@@ -33,7 +32,6 @@ const WALLET_ORDER: readonly WalletType[] = [
   "TRX",
   "SOL",
   "XRP",
-  "BNB",
   "POLYGON",
   "USDT-ERC20",
   "USDT-TRC20",
@@ -52,7 +50,6 @@ const WALLET_ICONS: Record<WalletType, any> = {
   TRX: TronIcon,
   SOL: SolanaIcon,
   XRP: XRPIcon,
-  BNB: BNBIcon,
   POLYGON: PolygonIcon,
   "USDT-ERC20": USDTIcon,
   "USDT-TRC20": USDTIcon,
@@ -71,7 +68,6 @@ const WALLET_NAMES: Record<WalletType, string> = {
   TRX: "Tron",
   SOL: "Solana",
   XRP: "Ripple",
-  BNB: "BNB",
   POLYGON: "Polygon (POL)",
   "USDT-ERC20": "USDT-ERC20",
   "USDT-TRC20": "USDT-TRC20",
@@ -95,7 +91,6 @@ export const ALLCRYPTOCURRENCIES: readonly Cryptocurrency[] = [
   { code: "TRX", name: "Tron", icon: TronIcon },
   { code: "SOL", name: "Solana", icon: SolanaIcon },
   { code: "XRP", name: "Ripple", icon: XRPIcon },
-  { code: "BNB", name: "BNB", icon: BNBIcon },
   { code: "POLYGON", name: "Polygon (POL)", icon: PolygonIcon },
   { code: "USDT-ERC20", name: "USDT-ERC20", icon: USDTIcon },
   { code: "USDT-TRC20", name: "USDT-TRC20", icon: USDTIcon },

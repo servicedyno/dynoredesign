@@ -54,9 +54,10 @@ const WalletPage = ({
     sessionStorage.removeItem("walletAction");
   }, []);
 
-  const { walletWarning, cryptocurrencies } = useWalletData();
+  const { walletWarning, cryptocurrencies, walletLoading } = useWalletData();
   // Hide "Add Wallet" when all supported crypto types already have wallets
-  const canAddMoreWallets = cryptocurrencies.length > 0;
+  // Also hide during loading to prevent flash of the button
+  const canAddMoreWallets = !walletLoading && cryptocurrencies.length > 0;
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
