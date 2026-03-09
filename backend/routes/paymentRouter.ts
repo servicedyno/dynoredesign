@@ -1,5 +1,6 @@
 import express from "express";
 import { paymentController } from "../controller";
+import { walletController } from "../controller";
 import {
   authMiddleware,
   customerAuthMiddleware,
@@ -7,6 +8,10 @@ import {
 } from "../middleware";
 
 const paymentRouter = express.Router();
+
+// Public encrypt-payload endpoint for checkout flow (no auth required)
+// Moved from /wallet/encrypt-payload which was behind authMiddleware
+paymentRouter.post("/encrypt-payload", walletController.encryptPayload);
 
 paymentRouter.post("/getData", paymentController.getData);
 

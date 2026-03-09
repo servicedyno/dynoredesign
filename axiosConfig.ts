@@ -64,7 +64,15 @@ axiosBaseApi.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
+    // Skip auth redirect for checkout/payment pages — customers are not logged-in merchants
+    const isCheckoutPage = typeof window !== "undefined" && window.location.pathname.startsWith("/pay");
+
     if (error.response?.status === 401 && !isAuthEndpoint(originalRequest?.url || "")) {
+      // On checkout pages, don't redirect to merchant login — just reject the error
+      if (isCheckoutPage) {
+        return Promise.reject(error);
+      }
+
       // Don't retry if this was already a retry or a refresh-token call
       if (originalRequest._retry || (originalRequest.url || "").includes("user/refresh-token")) {
         localStorage.removeItem("token");

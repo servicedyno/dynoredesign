@@ -57,6 +57,7 @@ const EXEMPT_PATHS = [
   "/api/pay/calculateFees",
   "/api/pay/calculate-payment",
   "/api/pay/network-fees",
+  "/api/pay/encrypt-payload",
 ];
 
 /**

@@ -848,3 +848,15 @@ backend:
 - `PaymentSettingsBasic`: Replaced static theme import with dynamic `useTheme()`
 - `[slug]/index.tsx`: Replaced static theme with dynamic `useTheme()` for back button, text colors
 - `CreatePaymentLinkPage`: Replaced static theme import with dynamic `useTheme()`
+
+
+## Changes Made - Session 11 (Checkout ETH Selection Redirect Fix)
+
+### Critical Bug Fix: Selecting crypto on checkout redirected to login page
+- **Root Cause**: `createEncryption()` called `/api/wallet/encrypt-payload` which was behind `authMiddleware` (merchant auth). Checkout page customers don't have merchant auth tokens → 401 → axios interceptor redirected to `/auth/login`.
+- **Backend Fix**: Added public `/api/pay/encrypt-payload` route in `paymentRouter.ts` (no auth required). This is a simple utility endpoint that just encrypts a payload string.
+- **Backend Fix**: Added `/api/pay/encrypt-payload` to CSRF exempt paths in `csrfMiddleware.ts`.
+- **Frontend Fix**: Updated `helpers/createEncryption.ts` to call `/pay/encrypt-payload` instead of `/wallet/encrypt-payload`.
+- **Frontend Fix**: Added safety net in `axiosConfig.ts` response interceptor — when on checkout pages (`/pay`), 401 errors no longer trigger redirect to login.
+- **Files changed**: `backend/routes/paymentRouter.ts`, `backend/middleware/csrfMiddleware.ts`, `helpers/createEncryption.ts`, `axiosConfig.ts`
+- **Verified**: ETH selection on checkout page now works correctly — shows payment address, QR code, and amount without redirect.

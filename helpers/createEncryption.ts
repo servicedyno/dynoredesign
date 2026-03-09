@@ -9,7 +9,7 @@ const createEncryption = async (content: string): Promise<string> => {
   try {
     const {
       data: { data },
-    } = await axiosBaseApi.post("/wallet/encrypt-payload", {
+    } = await axiosBaseApi.post("/pay/encrypt-payload", {
       payload: content,
     });
     return data.data;
