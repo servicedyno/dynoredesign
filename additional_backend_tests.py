@@ -8,7 +8,7 @@ import requests
 import json
 import sys
 
-BACKEND_URL = "https://pod-endpoint-sync.preview.emergentagent.com"
+BACKEND_URL = "https://dynamic-pod-checkout.preview.emergentagent.com"
 
 def test_additional_scenarios():
     """Test additional scenarios and edge cases"""

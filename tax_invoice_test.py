@@ -33,7 +33,7 @@ import os
 from typing import Dict, Any, Optional
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://pod-endpoint-sync.preview.emergentagent.com"
+BACKEND_URL = "https://dynamic-pod-checkout.preview.emergentagent.com"
 
 class TaxInvoiceBackendTester:
     def __init__(self):
