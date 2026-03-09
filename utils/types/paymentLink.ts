@@ -62,8 +62,14 @@ export interface PaymentLinkSuccessModalProps {
     description: string;
     blockchainFees: string;
     linkId: string;
+    acceptedCryptoCurrency?: string[];
   };
   onCopyLink: () => void;
+  walletList?: Array<{
+    wallet_type: string;
+    wallet_address: string;
+    [key: string]: any;
+  }>;
 }
 
 export interface PaymentDetailRowProps {

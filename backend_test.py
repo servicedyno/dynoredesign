@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
-Backend API Test Suite for DynoPay Geo-detect Endpoint
-Tests the geo-detect API endpoint with various X-Forwarded-For headers
+DynoPay Backend API Testing Script
+Tests the specific endpoints mentioned in review request:
+1. Geo-detect API endpoint for IP-based country detection
+2. Login API with specified credentials
+3. Wallet API to verify wallet addresses are set
 """
 
 import requests
@@ -9,227 +12,354 @@ import json
 import sys
 from typing import Dict, Any, Optional
 
-# Backend URL from frontend env
-BACKEND_URL = "https://multi-pod-config.preview.emergentagent.com"
+# Configuration
+BASE_URL = "https://multi-pod-config.preview.emergentagent.com"
+API_BASE = f"{BASE_URL}/api"
 
-class GeoDetectAPITester:
-    def __init__(self, base_url: str):
-        self.base_url = base_url
-        self.results = []
-        
-    def test_geo_detect_endpoint(self, test_name: str, headers: Optional[Dict[str, str]] = None, expected_country_code: Optional[str] = None) -> Dict[str, Any]:
-        """Test the geo-detect API endpoint with specified headers"""
-        url = f"{self.base_url}/api/geo-detect"
-        
-        try:
-            # Make request with optional headers
-            response = requests.get(url, headers=headers or {}, timeout=10)
-            
-            # Parse response
-            response_data = response.json()
-            
-            result = {
-                "test_name": test_name,
-                "url": url,
-                "headers_sent": headers or {},
-                "status_code": response.status_code,
-                "response_data": response_data,
-                "expected_country_code": expected_country_code,
-                "success": True,
-                "error": None
-            }
-            
-            # Validate response structure
-            if response.status_code == 200:
-                if "status" not in response_data:
-                    result["success"] = False
-                    result["error"] = "Missing 'status' field in response"
-                elif "countryCode" not in response_data:
-                    result["success"] = False
-                    result["error"] = "Missing 'countryCode' field in response"
-                elif expected_country_code and response_data.get("countryCode") != expected_country_code:
-                    result["success"] = False
-                    result["error"] = f"Expected countryCode '{expected_country_code}', got '{response_data.get('countryCode')}'"
-            else:
-                result["success"] = False
-                result["error"] = f"HTTP {response.status_code}: {response.text}"
-                
-        except requests.exceptions.RequestException as e:
-            result = {
-                "test_name": test_name,
-                "url": url,
-                "headers_sent": headers or {},
-                "status_code": None,
-                "response_data": None,
-                "expected_country_code": expected_country_code,
-                "success": False,
-                "error": f"Request failed: {str(e)}"
-            }
-        except json.JSONDecodeError as e:
-            result = {
-                "test_name": test_name,
-                "url": url,
-                "headers_sent": headers or {},
-                "status_code": response.status_code,
-                "response_data": None,
-                "expected_country_code": expected_country_code,
-                "success": False,
-                "error": f"Invalid JSON response: {str(e)}"
-            }
-        except Exception as e:
-            result = {
-                "test_name": test_name,
-                "url": url,
-                "headers_sent": headers or {},
-                "status_code": None,
-                "response_data": None,
-                "expected_country_code": expected_country_code,
-                "success": False,
-                "error": f"Unexpected error: {str(e)}"
-            }
-            
-        self.results.append(result)
-        return result
+# Test credentials (from review request)
+LOGIN_EMAIL = "nomadly@moxx.co"
+LOGIN_PASSWORD = "Katiekendra123@"
 
-    def run_all_tests(self):
-        """Run all geo-detect API tests"""
-        print("🧪 Starting Geo-detect API Tests")
-        print("=" * 60)
-        
-        # Test 1: No special headers (should return JSON with status and countryCode)
-        print("\n📍 Test 1: No X-Forwarded-For header")
-        result1 = self.test_geo_detect_endpoint(
-            "No X-Forwarded-For header",
-            headers=None
-        )
-        self._print_test_result(result1)
-        
-        # Test 2: Portugal IP (85.244.0.1)
-        print("\n📍 Test 2: Portugal IP (85.244.0.1)")
-        result2 = self.test_geo_detect_endpoint(
-            "Portugal IP via X-Forwarded-For",
-            headers={"X-Forwarded-For": "85.244.0.1"},
-            expected_country_code="PT"
-        )
-        self._print_test_result(result2)
-        
-        # Test 3: Spain IP (77.29.0.1)
-        print("\n📍 Test 3: Spain IP (77.29.0.1)")
-        result3 = self.test_geo_detect_endpoint(
-            "Spain IP via X-Forwarded-For",
-            headers={"X-Forwarded-For": "77.29.0.1"},
-            expected_country_code="ES"
-        )
-        self._print_test_result(result3)
-        
-        # Test 4: Germany IP (78.46.0.1)
-        print("\n📍 Test 4: Germany IP (78.46.0.1)")
-        result4 = self.test_geo_detect_endpoint(
-            "Germany IP via X-Forwarded-For",
-            headers={"X-Forwarded-For": "78.46.0.1"},
-            expected_country_code="DE"
-        )
-        self._print_test_result(result4)
-        
-        # Summary
-        self._print_summary()
-        
-    def _print_test_result(self, result: Dict[str, Any]):
-        """Print detailed test result"""
-        status_emoji = "✅" if result["success"] else "❌"
-        print(f"{status_emoji} {result['test_name']}")
-        print(f"   URL: {result['url']}")
-        
-        if result['headers_sent']:
-            print(f"   Headers: {result['headers_sent']}")
-        
-        if result['status_code']:
-            print(f"   Status: {result['status_code']}")
-            
-        if result['response_data']:
-            print(f"   Response: {json.dumps(result['response_data'], indent=2)}")
-            
-        if result['expected_country_code']:
-            actual_code = result['response_data'].get('countryCode') if result['response_data'] else 'N/A'
-            print(f"   Expected: {result['expected_country_code']}, Got: {actual_code}")
-            
-        if result['error']:
-            print(f"   ❌ Error: {result['error']}")
-    
-    def _print_summary(self):
-        """Print test summary"""
-        print("\n" + "=" * 60)
-        print("📊 TEST SUMMARY")
-        print("=" * 60)
-        
-        total_tests = len(self.results)
-        passed_tests = sum(1 for r in self.results if r['success'])
-        failed_tests = total_tests - passed_tests
-        
-        print(f"Total Tests: {total_tests}")
-        print(f"✅ Passed: {passed_tests}")
-        print(f"❌ Failed: {failed_tests}")
-        print(f"Success Rate: {(passed_tests/total_tests)*100:.1f}%")
-        
-        if failed_tests > 0:
-            print("\n🔍 FAILED TESTS:")
-            for result in self.results:
-                if not result['success']:
-                    print(f"   • {result['test_name']}: {result['error']}")
-        
-        print("\n💡 ANALYSIS:")
-        
-        # Analyze specific issues
-        if any(r['error'] and 'timeout' in r['error'].lower() for r in self.results):
-            print("   ⚠️ Timeout issues detected - backend may be slow or unreachable")
-            
-        if any(r['status_code'] and r['status_code'] >= 500 for r in self.results):
-            print("   ⚠️ Server errors detected - check backend logs")
-            
-        if any(r['status_code'] and r['status_code'] == 404 for r in self.results):
-            print("   ⚠️ 404 errors detected - endpoint may not be implemented")
-            
-        # Check for consistent response structure
-        successful_responses = [r for r in self.results if r['success'] and r['response_data']]
-        if successful_responses:
-            sample_response = successful_responses[0]['response_data']
-            required_fields = ['status', 'countryCode']
-            has_all_fields = all(field in sample_response for field in required_fields)
-            
-            if has_all_fields:
-                print("   ✅ Response structure is consistent and complete")
-            else:
-                missing_fields = [field for field in required_fields if field not in sample_fields]
-                print(f"   ❌ Missing required fields in response: {missing_fields}")
-        
-        return passed_tests == total_tests
+# Colors for output
+class Colors:
+    GREEN = '\033[92m'
+    RED = '\033[91m'
+    YELLOW = '\033[93m'
+    BLUE = '\033[94m'
+    END = '\033[0m'
+    BOLD = '\033[1m'
 
-def main():
-    """Main test execution"""
-    print("🚀 DynoPay Geo-detect API Testing Suite")
-    print(f"📡 Backend URL: {BACKEND_URL}")
-    print("⏰ Starting tests...")
-    
-    tester = GeoDetectAPITester(BACKEND_URL)
+def log_success(message: str):
+    print(f"{Colors.GREEN}✅ {message}{Colors.END}")
+
+def log_error(message: str):
+    print(f"{Colors.RED}❌ {message}{Colors.END}")
+
+def log_warning(message: str):
+    print(f"{Colors.YELLOW}⚠️ {message}{Colors.END}")
+
+def log_info(message: str):
+    print(f"{Colors.BLUE}ℹ️ {message}{Colors.END}")
+
+def log_header(message: str):
+    print(f"\n{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.BLUE}{message}{Colors.END}")
+    print(f"{Colors.BOLD}{Colors.BLUE}{'='*60}{Colors.END}")
+
+def test_geo_detect_no_headers():
+    """Test GET /api/geo-detect without headers - should return default country"""
+    log_header("Testing Geo-detect API - No Headers")
     
     try:
-        tester.run_all_tests()
+        response = requests.get(f"{API_BASE}/geo-detect", timeout=10)
         
-        # Return appropriate exit code
-        all_passed = all(r['success'] for r in tester.results)
-        if all_passed:
-            print("\n🎉 All tests passed! Geo-detect API is working correctly.")
-            sys.exit(0)
-        else:
-            print("\n💥 Some tests failed. Check the details above.")
-            sys.exit(1)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
             
-    except KeyboardInterrupt:
-        print("\n⏹️ Tests interrupted by user")
-        sys.exit(1)
-    except Exception as e:
-        print(f"\n💥 Test suite crashed: {str(e)}")
-        sys.exit(1)
+            # Check required fields
+            if 'status' in data and 'countryCode' in data:
+                log_success(f"Geo-detect API working - Status: {data.get('status')}, Country: {data.get('countryCode')}")
+                
+                # Additional fields check
+                if 'country' in data:
+                    log_info(f"Country name: {data.get('country')}")
+                
+                return True, data
+            else:
+                log_error(f"Missing required fields in response: {data}")
+                return False, data
+        else:
+            log_error(f"API returned status {response.status_code}: {response.text}")
+            return False, None
+            
+    except requests.exceptions.RequestException as e:
+        log_error(f"Request failed: {str(e)}")
+        return False, None
+    except json.JSONDecodeError as e:
+        log_error(f"Invalid JSON response: {str(e)}")
+        return False, None
+
+def test_geo_detect_portugal_ip():
+    """Test GET /api/geo-detect with Portugal IP - should return PT"""
+    log_header("Testing Geo-detect API - Portugal IP")
+    
+    headers = {
+        "X-Forwarded-For": "85.244.0.1"
+    }
+    
+    try:
+        response = requests.get(f"{API_BASE}/geo-detect", headers=headers, timeout=10)
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Headers sent: {headers}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check required fields
+            if 'status' in data and 'countryCode' in data:
+                expected_country = 'PT'
+                actual_country = data.get('countryCode')
+                
+                if actual_country == expected_country:
+                    log_success(f"Portugal IP detection working - Country: {actual_country}")
+                    return True, data
+                else:
+                    log_error(f"Expected country '{expected_country}', got '{actual_country}'")
+                    return False, data
+            else:
+                log_error(f"Missing required fields in response: {data}")
+                return False, data
+        else:
+            log_error(f"API returned status {response.status_code}: {response.text}")
+            return False, None
+            
+    except requests.exceptions.RequestException as e:
+        log_error(f"Request failed: {str(e)}")
+        return False, None
+    except json.JSONDecodeError as e:
+        log_error(f"Invalid JSON response: {str(e)}")
+        return False, None
+
+def test_login():
+    """Test POST /api/user/login with specified credentials"""
+    log_header("Testing Login API")
+    
+    payload = {
+        "email": LOGIN_EMAIL,
+        "password": LOGIN_PASSWORD
+    }
+    
+    try:
+        response = requests.post(f"{API_BASE}/user/login", json=payload, timeout=10)
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Payload sent: {json.dumps(payload, indent=2)}")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Check for access token (can be in different locations)
+            access_token = None
+            if 'access_token' in data:
+                access_token = data.get('access_token')
+            elif 'data' in data and 'accessToken' in data['data']:
+                access_token = data['data'].get('accessToken')
+            
+            if access_token:
+                log_success("Login successful - Access token received")
+                
+                # Additional field checks (look in userData if nested)
+                user_data = data.get('data', {}).get('userData', data)
+                if 'referral_code' in user_data:
+                    log_info(f"Referral code: {user_data.get('referral_code')}")
+                
+                if 'last_company_id' in user_data:
+                    log_info(f"Last company ID: {user_data.get('last_company_id')}")
+                
+                return True, access_token, data
+            else:
+                log_error(f"No access token in response: {data}")
+                return False, None, data
+        else:
+            log_error(f"Login failed with status {response.status_code}: {response.text}")
+            return False, None, None
+            
+    except requests.exceptions.RequestException as e:
+        log_error(f"Request failed: {str(e)}")
+        return False, None, None
+    except json.JSONDecodeError as e:
+        log_error(f"Invalid JSON response: {str(e)}")
+        return False, None, None
+
+def test_wallet_api(access_token: str):
+    """Test GET /api/wallet/getWallet with Bearer token"""
+    log_header("Testing Wallet API")
+    
+    headers = {
+        "Authorization": f"Bearer {access_token}"
+    }
+    
+    try:
+        response = requests.get(f"{API_BASE}/wallet/getWallet", headers=headers, timeout=10)
+        
+        print(f"Status Code: {response.status_code}")
+        print(f"Headers sent: Authorization: Bearer {access_token[:20]}...")
+        print(f"Response: {response.text}")
+        
+        if response.status_code == 200:
+            data = response.json()
+            
+            # Handle the actual response structure from the API
+            if isinstance(data, dict) and 'data' in data:
+                companies_data = data['data']
+                log_success(f"Wallet API working - Retrieved data for {len(companies_data)} companies")
+                
+                total_wallets = 0
+                wallets_with_addresses = 0
+                wallets_with_types = 0
+                
+                for company_idx, company in enumerate(companies_data):
+                    company_name = company.get('company_name', 'Unknown')
+                    company_id = company.get('company_id', 'Unknown')
+                    wallets = company.get('wallets', [])
+                    wallet_count = len(wallets)
+                    total_wallets += wallet_count
+                    
+                    print(f"\n--- Company: {company_name} (ID: {company_id}) ---")
+                    print(f"Wallets in this company: {wallet_count}")
+                    
+                    for i, wallet in enumerate(wallets):
+                        print(f"\n  --- Wallet {i+1} ---")
+                        
+                        # Check for wallet_type field
+                        if 'wallet_type' in wallet:
+                            wallets_with_types += 1
+                            print(f"    Wallet Type: {wallet.get('wallet_type')}")
+                        else:
+                            log_warning(f"    Missing wallet_type field")
+                        
+                        # Check for wallet_address field
+                        if 'wallet_address' in wallet and wallet.get('wallet_address'):
+                            wallets_with_addresses += 1
+                            address = wallet.get('wallet_address')
+                            print(f"    Wallet Address: {address}")
+                        else:
+                            log_warning(f"    Missing or empty wallet_address field")
+                        
+                        # Show other relevant fields
+                        for key in ['wallet_name', 'wallet_id', 'amount', 'amount_in_usd']:
+                            if key in wallet:
+                                print(f"    {key.replace('_', ' ').title()}: {wallet.get(key)}")
+                
+                # Summary
+                print(f"\n--- Wallet Analysis Summary ---")
+                print(f"Total companies: {len(companies_data)}")
+                print(f"Total wallets: {total_wallets}")
+                print(f"Wallets with type field: {wallets_with_types}")
+                print(f"Wallets with address field: {wallets_with_addresses}")
+                
+                if wallets_with_addresses > 0:
+                    log_success(f"✅ {wallets_with_addresses} wallets have addresses set")
+                else:
+                    log_error("❌ No wallets have addresses set")
+                
+                return True, data
+            elif isinstance(data, list):
+                wallet_count = len(data)
+                log_success(f"Wallet API working - Retrieved {wallet_count} wallets")
+                
+                # Check each wallet for required fields
+                wallets_with_addresses = 0
+                wallets_with_types = 0
+                
+                for i, wallet in enumerate(data):
+                    print(f"\n--- Wallet {i+1} ---")
+                    
+                    # Check for wallet_type field
+                    if 'wallet_type' in wallet:
+                        wallets_with_types += 1
+                        print(f"  Wallet Type: {wallet.get('wallet_type')}")
+                    else:
+                        log_warning(f"  Missing wallet_type field")
+                    
+                    # Check for wallet_address field
+                    if 'wallet_address' in wallet and wallet.get('wallet_address'):
+                        wallets_with_addresses += 1
+                        address = wallet.get('wallet_address')
+                        print(f"  Wallet Address: {address}")
+                    else:
+                        log_warning(f"  Missing or empty wallet_address field")
+                    
+                    # Show other relevant fields
+                    for key in ['name', 'id', 'company_id', 'status']:
+                        if key in wallet:
+                            print(f"  {key.title()}: {wallet.get(key)}")
+                
+                # Summary
+                print(f"\n--- Wallet Analysis Summary ---")
+                print(f"Total wallets: {wallet_count}")
+                print(f"Wallets with type field: {wallets_with_types}")
+                print(f"Wallets with address field: {wallets_with_addresses}")
+                
+                if wallets_with_addresses > 0:
+                    log_success(f"✅ {wallets_with_addresses} wallets have addresses set")
+                else:
+                    log_error("❌ No wallets have addresses set")
+                
+                return True, data
+            else:
+                log_error(f"Unexpected response structure: {type(data)}")
+                return False, data
+        else:
+            log_error(f"Wallet API failed with status {response.status_code}: {response.text}")
+            return False, None
+            
+    except requests.exceptions.RequestException as e:
+        log_error(f"Request failed: {str(e)}")
+        return False, None
+    except json.JSONDecodeError as e:
+        log_error(f"Invalid JSON response: {str(e)}")
+        return False, None
+
+def main():
+    """Run all tests in sequence"""
+    print(f"{Colors.BOLD}DynoPay Backend API Test Suite{Colors.END}")
+    print(f"Testing against: {BASE_URL}")
+    print(f"API Base: {API_BASE}")
+    
+    results = {
+        'geo_detect_no_headers': False,
+        'geo_detect_portugal': False,
+        'login': False,
+        'wallet_api': False
+    }
+    
+    # Test 1: Geo-detect without headers
+    success, data = test_geo_detect_no_headers()
+    results['geo_detect_no_headers'] = success
+    
+    # Test 2: Geo-detect with Portugal IP
+    success, data = test_geo_detect_portugal_ip()
+    results['geo_detect_portugal'] = success
+    
+    # Test 3: Login
+    success, access_token, login_data = test_login()
+    results['login'] = success
+    
+    # Test 4: Wallet API (only if login successful)
+    if success and access_token:
+        success, wallet_data = test_wallet_api(access_token)
+        results['wallet_api'] = success
+    else:
+        log_error("Skipping wallet API test - login failed")
+    
+    # Final summary
+    log_header("Test Results Summary")
+    
+    passed_tests = 0
+    total_tests = len(results)
+    
+    for test_name, result in results.items():
+        status = "✅ PASSED" if result else "❌ FAILED"
+        print(f"{test_name.replace('_', ' ').title()}: {status}")
+        if result:
+            passed_tests += 1
+    
+    print(f"\n{Colors.BOLD}Overall: {passed_tests}/{total_tests} tests passed{Colors.END}")
+    
+    if passed_tests == total_tests:
+        log_success("All tests passed! 🎉")
+        return 0
+    else:
+        log_error(f"{total_tests - passed_tests} test(s) failed")
+        return 1
 
 if __name__ == "__main__":
-    main()
+    exit_code = main()
+    sys.exit(exit_code)

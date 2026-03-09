@@ -80,6 +80,21 @@ backend:
         agent: "testing"
         comment: "✅ Company fetch endpoint working correctly. Returns list of 1 company with proper Bearer token authentication"
 
+  - task: "Wallet API - GET /api/wallet/getWallet with wallet addresses verification"
+    implemented: true
+    working: true
+    file: "/app/backend/controller/walletController.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: "NA"
+        agent: "testing"
+        comment: "New feature to test - Wallet list API to verify wallets have addresses set with wallet_type and wallet_address fields"
+      - working: true
+        agent: "testing"
+        comment: "✅ Wallet API working perfectly. Retrieved 17 wallets across 2 companies (Nomadly1: 15 wallets, TestCompany3: 2 wallets). ALL wallets have both wallet_type and wallet_address fields set. Verified crypto types: BTC, ETH, LTC, DOGE, TRX, USDT-TRC20, USDT-ERC20, USDC-ERC20, BCH, SOL, XRP, POLYGON, RLUSD, USDT-POLYGON, RLUSD-ERC20. API returns comprehensive wallet data including amounts, USD values, and transfer rates."
+
 frontend:
   - task: "Create Payment Link Page - Crypto Items Display"
     implemented: true
@@ -279,6 +294,8 @@ agent_communication:
     message: "⚠️ WALLET CRUD TESTING BLOCKED BY OTP VERIFICATION - All wallet operations (add, edit) require mandatory email OTP verification which cannot be automated. UI flows are functional: login ✅, company dropdown ✅, company creation modal ✅, wallet forms ✅, but OTP requirement prevents completion of wallet CRUD operations. This is expected security behavior."
   - agent: "testing"
     message: "✅ GEO-DETECT API TESTING COMPLETE - Tested GET /api/geo-detect endpoint with comprehensive scenarios. Results: 4/4 functional tests passed, all required fields present (status, countryCode, country), proper IP geolocation working. Verified Portugal (85.244.0.1→PT), Germany (78.46.0.1→DE), Spain (88.8.8.8→ES), and default behavior (→US). Note: Test case IP 77.29.0.1 is actually North Macedonia (MK) not Spain (ES) - verified via web search. API implementation is correct. Backend logs show all 200 OK responses."
+  - agent: "testing"
+    message: "✅ REVIEW REQUEST TESTING COMPLETE (4/4 - 100% SUCCESS RATE) - Comprehensive testing of all endpoints specified in review request: 1) Geo-detect API ✅ without headers returns US, with Portugal IP (85.244.0.1) returns PT correctly, 2) Login API ✅ with credentials nomadly@moxx.co/Katiekendra123@ returns access token, referral_code: DYNO-G468QA, last_company_id: 3, 3) Wallet API ✅ GET /api/wallet/getWallet returns 17 wallets across 2 companies with ALL wallets having wallet_type and wallet_address fields set. No issues found - all endpoints working perfectly."
 
 ### Pod URL Migration & Checkout Fix (Current Session)
 - Updated all env files to current pod URL `6f7f3775-d165-4bd6-8635-d660e9c3ab44`

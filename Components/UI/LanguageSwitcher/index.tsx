@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 import {
   CheckIconBox,
@@ -72,10 +73,11 @@ const LANGUAGES: readonly Language[] = [
 function LanguageSwitcher({ showBig = false }: Props) {
   const isMobile = useIsMobile("md");
   const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const { i18n: i18nInstance } = useTranslation(); // Subscribe to language changes for re-render
 
   const [isOpen, setIsOpen] = useState<boolean>(false);
 
-  const current = i18n.language || "en";
+  const current = i18nInstance.language || i18n.language || "en";
   const selected = useMemo<Language>(() => {
     return LANGUAGES.find((l) => l.code === current) ?? LANGUAGES[1];
   }, [current]);

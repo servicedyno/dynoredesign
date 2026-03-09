@@ -2,10 +2,11 @@ import InputField from "@/Components/UI/AuthLayout/InputFields";
 import PopupModal from "@/Components/UI/PopupModal";
 import useIsMobile from "@/hooks/useIsMobile";
 import { theme } from "@/styles/theme";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import Image from "next/image";
-import React, { useCallback, useRef, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { QRCodeSVG } from "qrcode.react";
 import {
   CloseIconButton,
   LabelText,
@@ -65,6 +66,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
   onClose,
   paymentLink,
   paymentSettings,
+  walletList,
 }) => {
   const isMobile = useIsMobile("md");
   const { t } = useTranslation("createPaymentLinkScreen");
@@ -77,7 +79,25 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
   );
   const tCommon = useCallback((key: string) => t(key, { ns: "common" }), [t]);
   const [openToast, setOpenToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("");
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Determine if single crypto is selected and find its wallet address
+  const singleCryptoWallet = useMemo(() => {
+    const accepted = paymentSettings.acceptedCryptoCurrency;
+    if (!accepted || accepted.length !== 1 || !walletList || walletList.length === 0) {
+      return null;
+    }
+    const selectedCrypto = accepted[0];
+    const wallet = walletList.find(
+      (w) => w.wallet_type === selectedCrypto && w.wallet_address
+    );
+    if (!wallet) return null;
+    return {
+      cryptoType: selectedCrypto,
+      address: wallet.wallet_address,
+    };
+  }, [paymentSettings.acceptedCryptoCurrency, walletList]);
 
   const getExpireText = () => {
     if (paymentSettings.expire === "no") return tPaymentLink("noExpiration");
@@ -90,23 +110,26 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
       : tPaymentLink("paidByClient");
   };
 
+  const showToast = (message: string) => {
+    setOpenToast(false);
+    setToastMessage(message);
+    setTimeout(() => setOpenToast(true), 0);
+    if (toastTimer.current) clearTimeout(toastTimer.current);
+    toastTimer.current = setTimeout(() => setOpenToast(false), 2000);
+  };
+
   const handleCopyPaymentLink = () => {
     if (paymentLink) {
       navigator.clipboard.writeText(paymentLink);
     }
-    setOpenToast(false);
+    showToast(tCommon("copiedToClipboard"));
+  };
 
-    setTimeout(() => {
-      setOpenToast(true);
-    }, 0);
-
-    if (toastTimer.current) {
-      clearTimeout(toastTimer.current);
+  const handleCopyWalletAddress = () => {
+    if (singleCryptoWallet?.address) {
+      navigator.clipboard.writeText(singleCryptoWallet.address);
     }
-
-    toastTimer.current = setTimeout(() => {
-      setOpenToast(false);
-    }, 2000);
+    showToast(tCommon("copiedToClipboard"));
   };
 
   return (
@@ -120,7 +143,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
         sx={{
           "& .MuiDialog-paper": {
             width: "100%",
-            maxWidth: "481px",
+            maxWidth: singleCryptoWallet ? "520px" : "481px",
             top: "50%",
             left: "50%",
             transform: "translate(-50%, -50%)",
@@ -183,6 +206,110 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
               </ApiKeyCopyButton>
             </Box>
 
+            {/* Direct Pay QR Code — shown only when a single cryptocurrency is selected */}
+            {singleCryptoWallet && (
+              <Box
+                sx={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 1.5,
+                  p: isMobile ? 2 : 2.5,
+                  borderRadius: "12px",
+                  border: "1px solid",
+                  borderColor: "divider",
+                  backgroundColor: "background.paper",
+                }}
+              >
+                <Typography
+                  sx={{
+                    fontSize: isMobile ? "13px" : "14px",
+                    fontWeight: 600,
+                    fontFamily: "OutfitMedium",
+                    color: "text.primary",
+                    textAlign: "center",
+                  }}
+                >
+                  Direct Pay — {singleCryptoWallet.cryptoType}
+                </Typography>
+
+                <Box
+                  sx={{
+                    p: 1.5,
+                    borderRadius: "10px",
+                    backgroundColor: "#fff",
+                    display: "inline-flex",
+                    boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
+                  }}
+                >
+                  <QRCodeSVG
+                    value={singleCryptoWallet.address}
+                    size={isMobile ? 140 : 170}
+                    level="M"
+                    includeMargin={false}
+                  />
+                </Box>
+
+                <Typography
+                  sx={{
+                    fontSize: "11px",
+                    color: "text.secondary",
+                    textAlign: "center",
+                    lineHeight: 1.4,
+                  }}
+                >
+                  Scan QR code to pay directly to this wallet
+                </Typography>
+
+                <Box
+                  sx={{
+                    display: "flex",
+                    gap: 1,
+                    alignItems: "center",
+                    width: "100%",
+                    maxWidth: "100%",
+                  }}
+                >
+                  <Box
+                    sx={{
+                      flex: 1,
+                      overflow: "hidden",
+                      borderRadius: "8px",
+                      border: "1px solid",
+                      borderColor: "divider",
+                      px: 1.5,
+                      py: 1,
+                      backgroundColor: "action.hover",
+                    }}
+                  >
+                    <Typography
+                      sx={{
+                        fontSize: isMobile ? "10px" : "12px",
+                        fontFamily: "monospace",
+                        color: "text.primary",
+                        wordBreak: "break-all",
+                        lineHeight: 1.4,
+                      }}
+                    >
+                      {singleCryptoWallet.address}
+                    </Typography>
+                  </Box>
+                  <ApiKeyCopyButton
+                    onClick={handleCopyWalletAddress}
+                    sx={{ flexShrink: 0 }}
+                  >
+                    <Image
+                      src={CopyIcon.src}
+                      alt="copy address"
+                      width={14}
+                      height={14}
+                      draggable={false}
+                    />
+                  </ApiKeyCopyButton>
+                </Box>
+              </Box>
+            )}
+
             <PaymentDetailsContainer>
               <PaymentDetailsTitle>
                 {tPaymentLink("paymentDetails")}
@@ -231,7 +358,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
       </PopupModal>
       <Toast
         open={openToast}
-        message={tCommon("copiedToClipboard")}
+        message={toastMessage}
         severity="success"
       />
     </>

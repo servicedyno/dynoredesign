@@ -667,6 +667,7 @@ const CreatePaymentLinkPage = ({
         paymentLink={paymentLink}
         paymentSettings={paymentSettings}
         onCopyLink={handleCopyLink}
+        walletList={walletList}
       />
       <SaveChangeModel
         open={saveChangeModalOpen}
