@@ -54,7 +54,9 @@ const WalletPage = ({
     sessionStorage.removeItem("walletAction");
   }, []);
 
-  const { walletWarning } = useWalletData();
+  const { walletWarning, cryptocurrencies } = useWalletData();
+  // Hide "Add Wallet" when all supported crypto types already have wallets
+  const canAddMoreWallets = cryptocurrencies.length > 0;
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
@@ -198,28 +200,30 @@ const WalletPage = ({
             },
           }}
         />
-        <CustomButton
-          label={tDashboard("addWallet", "Add wallet")}
-          variant="primary"
-          size="medium"
-          endIcon={<AddRounded sx={{ fontSize: isMobile ? 18 : 20 }} />}
-          onClick={() => setOpenCreate(true)}
-          sx={{
-            height: isMobile ? 34 : 40,
-            px: isMobile ? 1.5 : 2.5,
-            fontSize: isMobile ? 13 : 15,
-            [theme.breakpoints.down("sm")]: {
-              flex: 1,
-              whiteSpace: "nowrap",
-              overflow: "hidden",
-              textOverflow: "ellipsis",
-            },
-          }}
-        />
+        {canAddMoreWallets && (
+          <CustomButton
+            label={tDashboard("addWallet", "Add wallet")}
+            variant="primary"
+            size="medium"
+            endIcon={<AddRounded sx={{ fontSize: isMobile ? 18 : 20 }} />}
+            onClick={() => setOpenCreate(true)}
+            sx={{
+              height: isMobile ? 34 : 40,
+              px: isMobile ? 1.5 : 2.5,
+              fontSize: isMobile ? 13 : 15,
+              [theme.breakpoints.down("sm")]: {
+                flex: 1,
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              },
+            }}
+          />
+        )}
       </>,
     );
     return () => setPageAction(null);
-  }, [setPageAction, tDashboard, isMobile, router]);
+  }, [setPageAction, tDashboard, isMobile, router, canAddMoreWallets]);
 
   return (
     <>

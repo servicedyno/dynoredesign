@@ -22,7 +22,7 @@ const APIs = ({
   );
 
   const [openCreate, setOpenCreate] = useState(false);
-  const apiState = useSelector((state: any) => state?.api);
+  const apiState = useSelector((state: any) => state?.apiReducer);
   const hasExistingKey = Array.isArray(apiState?.apiList) && apiState.apiList.length > 0;
 
   useEffect(() => {
