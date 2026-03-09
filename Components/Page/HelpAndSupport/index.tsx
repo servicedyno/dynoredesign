@@ -1,7 +1,6 @@
 import useIsMobile from "@/hooks/useIsMobile";
 import { Box, Button, CircularProgress } from "@mui/material";
 import { useTranslation } from "react-i18next";
-import CallIcon from "@/assets/Icons/CallIcon.svg";
 import MessageIcon from "@/assets/Icons/MessageIcon.svg";
 import Image from "next/image";
 import {
@@ -161,25 +160,11 @@ const HelpAndSupport = () => {
 
     const footerData = [
         {
-            contectType: t("cllaUs"),
-            contectDetail: "+1 892 8444-531",
-            buttonContent: "",
-            icon: CallIcon,
-            responseTime: "Mon-Fri, 9 AM - 6 PM (ET)",
-        },
-        {
             contectType: t("emailUs"),
-            contectDetail: "info@nameword.com",
+            contectDetail: "support@dynopay.com",
             buttonContent: "",
             icon: MessageIcon,
             responseTime: t("emaiResponseTime"),
-        },
-        {
-            contectType: t("chatUs"),
-            contectDetail: "",
-            buttonContent: t("openChat"),
-            icon: MessageIcon,
-            responseTime: t("chatResponseTime"),
         },
     ];
 
