@@ -32,7 +32,7 @@ const userModel = sequelize.define(
       defaultValue: "images/user_image.png",
     },
     login_type: {
-      type: DataTypes.ENUM("EMAIL", "GOOGLE", "TELEGRAM"),
+      type: DataTypes.ENUM("EMAIL", "GOOGLE", "TELEGRAM", "SMS"),
       defaultValue: "EMAIL",
     },
     telegram_id: {
