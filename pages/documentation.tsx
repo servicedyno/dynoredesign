@@ -627,6 +627,72 @@ const ENDPOINTS: Endpoint[] = [
   }
 }`,
   },
+  {
+    id: "admin-credit-wallet",
+    method: "POST",
+    path: "/admin/customers/:customerId/credit",
+    title: "Credit Customer Wallet (Admin)",
+    description:
+      "Add funds to a customer's wallet. Available for admin dashboard users and merchants via API key for programmatic wallet management. Creates a CREDIT transaction record.",
+    auth: "api-key",
+    headers: [
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key OR admin JWT token" },
+      { name: "Content-Type", value: "application/json", description: "" },
+    ],
+    pathParams: [{ name: "customerId", type: "number", description: "The customer ID (numeric customer_id, not UUID)" }],
+    body: [
+      { name: "amount", type: "number", required: true, description: "Amount to credit to wallet (must be positive)" },
+      { name: "description", type: "string", required: true, description: "Reason or description for the credit" },
+    ],
+    requestExample: `{
+  "amount": 50.00,
+  "description": "Refund for order #12345"
+}`,
+    responseExample: `{
+  "success": true,
+  "message": "Wallet credited successfully",
+  "data": {
+    "customer_id": "123",
+    "previous_balance": "100.00",
+    "amount_credited": "50.00",
+    "new_balance": "150.00",
+    "currency": "USD"
+  }
+}`,
+  },
+  {
+    id: "admin-debit-wallet",
+    method: "POST",
+    path: "/admin/customers/:customerId/debit",
+    title: "Debit Customer Wallet (Admin)",
+    description:
+      "Deduct funds from a customer's wallet. Available for admin dashboard users and merchants via API key for programmatic wallet management. Validates sufficient balance before debiting. Creates a DEBIT transaction record.",
+    auth: "api-key",
+    headers: [
+      { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key OR admin JWT token" },
+      { name: "Content-Type", value: "application/json", description: "" },
+    ],
+    pathParams: [{ name: "customerId", type: "number", description: "The customer ID (numeric customer_id, not UUID)" }],
+    body: [
+      { name: "amount", type: "number", required: true, description: "Amount to debit from wallet (must be positive)" },
+      { name: "description", type: "string", required: true, description: "Reason or description for the debit" },
+    ],
+    requestExample: `{
+  "amount": 25.00,
+  "description": "Service fee for premium support"
+}`,
+    responseExample: `{
+  "success": true,
+  "message": "Wallet debited successfully",
+  "data": {
+    "customer_id": "123",
+    "previous_balance": "150.00",
+    "amount_debited": "25.00",
+    "new_balance": "125.00",
+    "currency": "USD"
+  }
+}`,
+  },
 ];
 
 const SECTIONS: Section[] = [
@@ -638,6 +704,7 @@ const SECTIONS: Section[] = [
   { id: "wallets", title: "Wallets", icon: <AccountBalanceWalletIcon />, endpoints: ["add-funds", "use-wallet", "get-balance"] },
   { id: "transactions", title: "Transactions", icon: <ReceiptLongIcon />, endpoints: ["get-transactions", "get-single-transaction", "get-crypto-transaction"] },
   { id: "currencies", title: "Currencies", icon: <CurrencyExchangeIcon />, endpoints: ["get-supported-currency"] },
+  { id: "admin-api", title: "Admin API", icon: <ShieldOutlinedIcon />, endpoints: ["admin-credit-wallet", "admin-debit-wallet"] },
   { id: "errors", title: "Error Handling", icon: <WarningAmberIcon /> },
 ];
 

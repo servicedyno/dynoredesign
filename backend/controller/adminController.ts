@@ -33,6 +33,14 @@ import {
   userTransactionModel,
 } from "../models/userModels";
 import { adminUnlockAccount } from "../services/accountLockoutService";
+import {
+  customerModel,
+  customerWalletModel,
+  customerTransactionModel,
+  companyModel,
+} from "../models";
+import crypto from "crypto";
+import { Op } from "sequelize";
 
 const getTransactionFee = async (
   _req: express.Request,
@@ -937,6 +945,274 @@ const getUserDetail = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * Credit customer wallet (admin or API)
+ * POST /api/admin/customers/:customerId/credit
+ */
+const creditCustomerWallet = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    const { customerId } = req.params;
+    const { amount, description } = req.body;
+    const authType = res.locals.authType;
+
+    // Validation
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return errorResponseHelper(res, 400, "Valid positive amount is required");
+    }
+
+    if (!description || description.trim() === "") {
+      return errorResponseHelper(res, 400, "Description is required");
+    }
+
+    const creditAmount = Number(amount);
+
+    // Get customer with company info
+    const customerData = await sequelize.query<{
+      customer_id: number;
+      company_id: number;
+      customer_name: string;
+      email: string;
+      company_name: string;
+    }>(
+      `SELECT c.customer_id, c.company_id, c.customer_name, c.email, cm.company_name
+       FROM tbl_customer c
+       LEFT JOIN tbl_company cm ON cm.company_id = c.company_id
+       WHERE c.customer_id = $1`,
+      {
+        bind: [customerId],
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (customerData.length === 0) {
+      return errorResponseHelper(res, 404, "Customer not found");
+    }
+
+    const customer = customerData[0];
+
+    // If using API key, verify it belongs to the same company
+    if (authType === "api_key") {
+      if (res.locals.company_id !== customer.company_id) {
+        return errorResponseHelper(res, 403, "You can only manage customers from your own company");
+      }
+    }
+
+    // Get wallet
+    const walletData = await sequelize.query<{
+      wallet_id: number;
+      amount: number;
+      wallet_type: string;
+    }>(
+      `SELECT wallet_id, amount, wallet_type FROM tbl_customer_wallet WHERE customer_id = $1`,
+      {
+        bind: [customerId],
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (walletData.length === 0) {
+      return errorResponseHelper(res, 404, "Customer wallet not found");
+    }
+
+    const wallet = walletData[0];
+    const newBalance = Number(wallet.amount) + creditAmount;
+
+    // Update wallet balance in a transaction
+    await sequelize.transaction(async (t) => {
+      // Update wallet
+      await sequelize.query(
+        `UPDATE tbl_customer_wallet SET amount = $1, "updatedAt" = NOW() WHERE customer_id = $2`,
+        {
+          bind: [newBalance.toFixed(2), customerId],
+          type: QueryTypes.UPDATE,
+          transaction: t,
+        }
+      );
+
+      // Create transaction record
+      const txId = crypto.randomUUID();
+      const txRef = crypto.randomUUID();
+
+      await sequelize.query(
+        `INSERT INTO tbl_customer_transaction 
+         (id, company_id, customer_id, payment_mode, base_amount, base_currency,
+          paid_amount, paid_currency, transaction_type, transaction_details,
+          transaction_reference, status, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'ADMIN', $4, $5, $4, $5, 'CREDIT', $6, $7, 'successful', NOW(), NOW())`,
+        {
+          bind: [
+            txId,
+            customer.company_id,
+            customerId,
+            creditAmount.toFixed(2),
+            wallet.wallet_type,
+            description.trim(),
+            txRef,
+          ],
+          type: QueryTypes.INSERT,
+          transaction: t,
+        }
+      );
+    });
+
+    adminLogger.info(
+      `[CustomerWallet] Credited ${creditAmount} ${wallet.wallet_type} to customer ${customerId} (${customer.email}). Auth: ${authType}`
+    );
+
+    successResponseHelper(res, 200, "Wallet credited successfully", {
+      customer_id: customerId,
+      previous_balance: Number(wallet.amount).toFixed(2),
+      amount_credited: creditAmount.toFixed(2),
+      new_balance: newBalance.toFixed(2),
+      currency: wallet.wallet_type,
+    });
+  } catch (e) {
+    handleControllerError(res, e, adminLogger);
+  }
+};
+
+/**
+ * Debit customer wallet (admin or API)
+ * POST /api/admin/customers/:customerId/debit
+ */
+const debitCustomerWallet = async (
+  req: express.Request,
+  res: express.Response
+) => {
+  try {
+    const { customerId } = req.params;
+    const { amount, description } = req.body;
+    const authType = res.locals.authType;
+
+    // Validation
+    if (!amount || isNaN(Number(amount)) || Number(amount) <= 0) {
+      return errorResponseHelper(res, 400, "Valid positive amount is required");
+    }
+
+    if (!description || description.trim() === "") {
+      return errorResponseHelper(res, 400, "Description is required");
+    }
+
+    const debitAmount = Number(amount);
+
+    // Get customer with company info
+    const customerData = await sequelize.query<{
+      customer_id: number;
+      company_id: number;
+      customer_name: string;
+      email: string;
+      company_name: string;
+    }>(
+      `SELECT c.customer_id, c.company_id, c.customer_name, c.email, cm.company_name
+       FROM tbl_customer c
+       LEFT JOIN tbl_company cm ON cm.company_id = c.company_id
+       WHERE c.customer_id = $1`,
+      {
+        bind: [customerId],
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (customerData.length === 0) {
+      return errorResponseHelper(res, 404, "Customer not found");
+    }
+
+    const customer = customerData[0];
+
+    // If using API key, verify it belongs to the same company
+    if (authType === "api_key") {
+      if (res.locals.company_id !== customer.company_id) {
+        return errorResponseHelper(res, 403, "You can only manage customers from your own company");
+      }
+    }
+
+    // Get wallet
+    const walletData = await sequelize.query<{
+      wallet_id: number;
+      amount: number;
+      wallet_type: string;
+    }>(
+      `SELECT wallet_id, amount, wallet_type FROM tbl_customer_wallet WHERE customer_id = $1`,
+      {
+        bind: [customerId],
+        type: QueryTypes.SELECT,
+      }
+    );
+
+    if (walletData.length === 0) {
+      return errorResponseHelper(res, 404, "Customer wallet not found");
+    }
+
+    const wallet = walletData[0];
+
+    // Check sufficient balance
+    if (Number(wallet.amount) < debitAmount) {
+      return errorResponseHelper(
+        res,
+        400,
+        `Insufficient balance. Current balance: ${Number(wallet.amount).toFixed(2)} ${wallet.wallet_type}`
+      );
+    }
+
+    const newBalance = Number(wallet.amount) - debitAmount;
+
+    // Update wallet balance in a transaction
+    await sequelize.transaction(async (t) => {
+      // Update wallet
+      await sequelize.query(
+        `UPDATE tbl_customer_wallet SET amount = $1, "updatedAt" = NOW() WHERE customer_id = $2`,
+        {
+          bind: [newBalance.toFixed(2), customerId],
+          type: QueryTypes.UPDATE,
+          transaction: t,
+        }
+      );
+
+      // Create transaction record
+      const txId = crypto.randomUUID();
+      const txRef = crypto.randomUUID();
+
+      await sequelize.query(
+        `INSERT INTO tbl_customer_transaction 
+         (id, company_id, customer_id, payment_mode, base_amount, base_currency,
+          paid_amount, paid_currency, transaction_type, transaction_details,
+          transaction_reference, status, "createdAt", "updatedAt")
+         VALUES ($1, $2, $3, 'ADMIN', $4, $5, $4, $5, 'DEBIT', $6, $7, 'successful', NOW(), NOW())`,
+        {
+          bind: [
+            txId,
+            customer.company_id,
+            customerId,
+            debitAmount.toFixed(2),
+            wallet.wallet_type,
+            description.trim(),
+            txRef,
+          ],
+          type: QueryTypes.INSERT,
+          transaction: t,
+        }
+      );
+    });
+
+    adminLogger.info(
+      `[CustomerWallet] Debited ${debitAmount} ${wallet.wallet_type} from customer ${customerId} (${customer.email}). Auth: ${authType}`
+    );
+
+    successResponseHelper(res, 200, "Wallet debited successfully", {
+      customer_id: customerId,
+      previous_balance: Number(wallet.amount).toFixed(2),
+      amount_debited: debitAmount.toFixed(2),
+      new_balance: newBalance.toFixed(2),
+      currency: wallet.wallet_type,
+    });
+  } catch (e) {
+    handleControllerError(res, e, adminLogger);
+  }
+};
+
 export default {
   createWallets,
   login,
@@ -956,4 +1232,6 @@ export default {
   banUser,
   unlockUser,
   getUserDetail,
+  creditCustomerWallet,
+  debitCustomerWallet,
 };

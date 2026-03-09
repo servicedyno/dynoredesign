@@ -19,14 +19,20 @@ import {
   Dialog,
   DialogTitle,
   DialogContent,
+  DialogActions,
   Tabs,
   Tab,
+  Button,
+  Alert,
+  CircularProgress,
 } from "@mui/material";
 import SearchIcon from "@mui/icons-material/Search";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import CloseIcon from "@mui/icons-material/Close";
 import PeopleIcon from "@mui/icons-material/People";
 import AccountBalanceWalletIcon from "@mui/icons-material/AccountBalanceWallet";
+import AddIcon from "@mui/icons-material/Add";
+import RemoveIcon from "@mui/icons-material/Remove";
 import axiosBaseApi from "@/axiosConfig";
 import { useSelector } from "react-redux";
 import { formatNumberWithComma, getCurrencySymbol } from "@/helpers";
@@ -83,6 +89,15 @@ const CustomersPage: React.FC = () => {
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailTab, setDetailTab] = useState(0);
   const [txPage, setTxPage] = useState(1);
+
+  // Wallet management states
+  const [walletModalOpen, setWalletModalOpen] = useState(false);
+  const [walletAction, setWalletAction] = useState<"credit" | "debit" | null>(null);
+  const [walletAmount, setWalletAmount] = useState("");
+  const [walletDescription, setWalletDescription] = useState("");
+  const [walletLoading, setWalletLoading] = useState(false);
+  const [walletError, setWalletError] = useState("");
+  const [walletSuccess, setWalletSuccess] = useState("");
 
   // Get company's base currency from API state if available
   const apiState = useSelector((state: any) => state?.api);
@@ -146,6 +161,77 @@ const CustomersPage: React.FC = () => {
       month: "short",
       day: "numeric",
     });
+  };
+
+  const openWalletModal = (action: "credit" | "debit") => {
+    setWalletAction(action);
+    setWalletAmount("");
+    setWalletDescription("");
+    setWalletError("");
+    setWalletSuccess("");
+    setWalletModalOpen(true);
+  };
+
+  const closeWalletModal = () => {
+    setWalletModalOpen(false);
+    setWalletAction(null);
+    setWalletAmount("");
+    setWalletDescription("");
+    setWalletError("");
+    setWalletSuccess("");
+  };
+
+  const handleWalletOperation = async () => {
+    if (!selectedCustomer || !walletAction) return;
+
+    // Validation
+    if (!walletAmount || isNaN(Number(walletAmount)) || Number(walletAmount) <= 0) {
+      setWalletError("Please enter a valid positive amount");
+      return;
+    }
+
+    if (!walletDescription.trim()) {
+      setWalletError("Description is required");
+      return;
+    }
+
+    setWalletLoading(true);
+    setWalletError("");
+    setWalletSuccess("");
+
+    try {
+      const endpoint = `/admin/customers/${selectedCustomer.customer.customer_id}/${walletAction}`;
+      const res = await axiosBaseApi.post(endpoint, {
+        amount: Number(walletAmount),
+        description: walletDescription.trim(),
+      });
+
+      if (res.data?.success) {
+        setWalletSuccess(
+          `Successfully ${walletAction === "credit" ? "credited" : "debited"} ${getCurrencySymbol(
+            selectedCustomer.wallet?.wallet_type || baseCurrency,
+            formatNumberWithComma(Number(walletAmount).toFixed(2))
+          )}`
+        );
+
+        // Refresh customer details
+        const detailRes = await axiosBaseApi.get(`/userApi/customer/${selectedCustomer.customer.customer_id}`);
+        setSelectedCustomer(detailRes.data?.data || null);
+
+        // Refresh customer list
+        fetchCustomers();
+
+        // Close modal after 1.5 seconds
+        setTimeout(() => {
+          closeWalletModal();
+        }, 1500);
+      }
+    } catch (err: any) {
+      console.error("Wallet operation error:", err);
+      setWalletError(err.response?.data?.message || "Failed to process wallet operation");
+    } finally {
+      setWalletLoading(false);
+    }
   };
 
   const currencySymbol = getCurrencySymbol(baseCurrency, "").replace(/[\d,. ]/g, "") || "$";
@@ -487,6 +573,28 @@ const CustomersPage: React.FC = () => {
                 </Box>
               </Box>
 
+              {/* Wallet Management Buttons */}
+              <Box sx={{ display: "flex", gap: 2, mb: 3, flexWrap: "wrap" }}>
+                <Button
+                  variant="contained"
+                  color="success"
+                  startIcon={<AddIcon />}
+                  onClick={() => openWalletModal("credit")}
+                  sx={{ flex: isMobile ? "1 1 100%" : "1 1 auto" }}
+                >
+                  Credit Wallet
+                </Button>
+                <Button
+                  variant="outlined"
+                  color="error"
+                  startIcon={<RemoveIcon />}
+                  onClick={() => openWalletModal("debit")}
+                  sx={{ flex: isMobile ? "1 1 100%" : "1 1 auto" }}
+                >
+                  Debit Wallet
+                </Button>
+              </Box>
+
               {/* Tabs: Overview, Transactions */}
               <Tabs value={detailTab} onChange={(_, v) => setDetailTab(v)} sx={{ mb: 2 }}>
                 <Tab label="Transactions" />
@@ -574,6 +682,102 @@ const CustomersPage: React.FC = () => {
             </Box>
           )}
         </DialogContent>
+      </Dialog>
+
+      {/* Wallet Management Modal */}
+      <Dialog
+        open={walletModalOpen}
+        onClose={closeWalletModal}
+        maxWidth="sm"
+        fullWidth
+        PaperProps={{
+          sx: {
+            borderRadius: 3,
+          },
+        }}
+      >
+        <DialogTitle sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", pb: 1 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+            {walletAction === "credit" ? (
+              <AddIcon sx={{ color: "success.main" }} />
+            ) : (
+              <RemoveIcon sx={{ color: "error.main" }} />
+            )}
+            <Typography variant="h6" fontWeight={700}>
+              {walletAction === "credit" ? "Credit" : "Debit"} Wallet
+            </Typography>
+          </Box>
+          <IconButton onClick={closeWalletModal} disabled={walletLoading}>
+            <CloseIcon />
+          </IconButton>
+        </DialogTitle>
+        <DialogContent dividers>
+          {walletSuccess && (
+            <Alert severity="success" sx={{ mb: 2 }}>
+              {walletSuccess}
+            </Alert>
+          )}
+          {walletError && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {walletError}
+            </Alert>
+          )}
+
+          {selectedCustomer && (
+            <Box sx={{ mb: 2, p: 2, borderRadius: 2, bgcolor: theme.palette.background.default }}>
+              <Typography variant="body2" color="text.secondary">Current Balance</Typography>
+              <Typography variant="h5" fontWeight={700} color="primary">
+                {getCurrencySymbol(
+                  selectedCustomer.wallet?.wallet_type || baseCurrency,
+                  formatNumberWithComma(Number(selectedCustomer.wallet?.amount || 0).toFixed(2))
+                )}
+              </Typography>
+            </Box>
+          )}
+
+          <TextField
+            fullWidth
+            label="Amount"
+            type="number"
+            value={walletAmount}
+            onChange={(e) => setWalletAmount(e.target.value)}
+            placeholder="Enter amount"
+            disabled={walletLoading}
+            sx={{ mb: 2 }}
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  {getCurrencySymbol(selectedCustomer?.wallet?.wallet_type || baseCurrency, "").replace(/[\d,. ]/g, "") || "$"}
+                </InputAdornment>
+              ),
+            }}
+          />
+
+          <TextField
+            fullWidth
+            label="Description / Reason"
+            multiline
+            rows={3}
+            value={walletDescription}
+            onChange={(e) => setWalletDescription(e.target.value)}
+            placeholder="Enter description or reason for this transaction"
+            disabled={walletLoading}
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={closeWalletModal} disabled={walletLoading}>
+            Cancel
+          </Button>
+          <Button
+            variant="contained"
+            color={walletAction === "credit" ? "success" : "error"}
+            onClick={handleWalletOperation}
+            disabled={walletLoading || !walletAmount || !walletDescription}
+            startIcon={walletLoading && <CircularProgress size={16} />}
+          >
+            {walletLoading ? "Processing..." : walletAction === "credit" ? "Credit Wallet" : "Debit Wallet"}
+          </Button>
+        </DialogActions>
       </Dialog>
     </Box>
   );

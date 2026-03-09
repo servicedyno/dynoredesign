@@ -1,6 +1,7 @@
 import express from "express";
 import adminController from "../controller/adminController";
 import { adminAuthMiddleware } from "../middleware";
+import adminOrApiKeyMiddleware from "../middleware/adminOrApiKeyMiddleware";
 
 const adminRouter = express.Router();
 
@@ -95,6 +96,19 @@ adminRouter.post(
   "/users/unlock",
   adminAuthMiddleware,
   adminController.unlockUser
+);
+
+// ── Customer Wallet Management ──────────────────────────────────────────────
+// Admin or API key can credit/debit customer wallets
+adminRouter.post(
+  "/customers/:customerId/credit",
+  adminOrApiKeyMiddleware,
+  adminController.creditCustomerWallet
+);
+adminRouter.post(
+  "/customers/:customerId/debit",
+  adminOrApiKeyMiddleware,
+  adminController.debitCustomerWallet
 );
 
 // adminRouter.get(

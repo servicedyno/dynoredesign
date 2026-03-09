@@ -6,12 +6,14 @@ import uploadImage from "./uploadImage";
 import userMiddleware from "./userMiddleware";
 import linkMiddleware from "./linkMiddleware";
 import adminAuthMiddleware from "./adminAuthMiddleware";
+import adminOrApiKeyMiddleware from "./adminOrApiKeyMiddleware";
 import walletMiddleware from "./walletMiddleware";
 import apiUsageLogger from "./apiUsageLogger";
 import { apiKeyRateLimiter, ipRateLimiter, strictRateLimiter, createRateLimiter } from "./rateLimitMiddleware";
 
 export {
   adminAuthMiddleware,
+  adminOrApiKeyMiddleware,
   authMiddleware,
   uploadImage,
   userMiddleware,
