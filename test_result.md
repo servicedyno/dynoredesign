@@ -9,7 +9,16 @@
 - Apply user feedback as highest priority fixes
 - Re-test affected flows after fixes
 
-## Current Task: Full QA Audit — All Fixes Applied
+## Current Task: Pod URL Setup Complete
+
+### Pod URL Migration (2026-03-09):
+1. **Backend .env**: Updated `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` from stale `multi-pod-deploy` to current pod URL `a21adebb-de1d-4a59-a169-5bf700b7e9d8.preview.emergentagent.com`
+2. **Frontend .env**: Updated `REACT_APP_BACKEND_URL` to current pod URL
+3. **Created `.env.local`**: Set `NEXT_PUBLIC_BASE_URL` (used by Next.js `axiosConfig.ts`) to current pod URL
+4. **Installed dependencies**: `yarn install` for both frontend (`/app/`) and backend (`/app/backend/`)
+5. **All services running**: Frontend (Next.js), Backend (Node.js + Python proxy), MongoDB
+
+## Previous Task: Full QA Audit — All Fixes Applied
 
 ### Issues Fixed:
 1. **Grammar**: "There is no wallets" → "There are no wallets" (EN locale)
