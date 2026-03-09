@@ -55,8 +55,8 @@ const HelpDetail = ({
         setLoading(true);
         const res = await axiosBaseApi.get(`/kb/articles/${slug}`);
         const data = res?.data?.data;
-        if (data) {
-          setArticle(data);
+        if (data?.article) {
+          setArticle(data.article);
         } else {
           // Article not found
           setArticle(null);
