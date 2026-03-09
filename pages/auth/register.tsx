@@ -7,7 +7,8 @@ import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import OtpDialog from "@/Components/UI/OtpDialog";
-import { AuthContainer, CardWrapper } from "@/Containers/Login/styled";
+import { AuthContainer, CardWrapper, SplitLayoutWrapper, BrandPanel, FormPanel } from "@/Containers/Login/styled";
+import AuthBrandContent from "@/Components/UI/AuthLayout/BrandContent";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
   USER_API_ERROR,
@@ -418,6 +419,15 @@ const Register = () => {
   };
 
   return (
+    <SplitLayoutWrapper>
+      <BrandPanel>
+        <AuthBrandContent
+          headline="Start accepting crypto payments today"
+          subtitle="Join thousands of merchants using DynoPay to accept Bitcoin, Ethereum, USDT, and more with instant settlement and low fees."
+        />
+      </BrandPanel>
+
+      <FormPanel>
     <AuthContainer>
       <CardWrapper
         sx={{
@@ -965,6 +975,8 @@ const Register = () => {
         error={otpError}
       />
     </AuthContainer>
+      </FormPanel>
+    </SplitLayoutWrapper>
   );
 };
 
