@@ -7,6 +7,7 @@ import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
 import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import NProgress from "nprogress";
+import dynamic from "next/dynamic";
 
 import type { SxProps, Theme } from "@mui/material";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material";
@@ -17,17 +18,26 @@ import LanguageBootstrap from "@/helpers/LanguageBootstrap";
 import store from "@/store";
 import { ThemeProvider as AppThemeProvider, useThemeMode } from "@/contexts/ThemeContext";
 
-import {
-  AdminLayout,
-  ClientLayout,
-  LoginLayout,
-  PaymentLayout,
-} from "@/Containers";
-import HomeLayout from "@/Containers/Home";
-
 import { homeTheme, homeThemeDark } from "@/styles/homeTheme";
 import { theme, themeDark } from "@/styles/theme";
 import { lightTheme, darkTheme } from "@/styles/theme";
+
+// ─── Dynamic imports: each layout only loads when its route is hit ───
+const HomeLayout = dynamic(() => import("@/Containers/Home"), {
+  loading: () => null,
+});
+const ClientLayout = dynamic(() => import("@/Containers/Client"), {
+  loading: () => null,
+});
+const AdminLayout = dynamic(() => import("@/Containers/Admin"), {
+  loading: () => null,
+});
+const LoginLayout = dynamic(() => import("@/Containers/Login"), {
+  loading: () => null,
+});
+const PaymentLayout = dynamic(() => import("@/Containers/Payment"), {
+  loading: () => null,
+});
 
 // -----------------------------
 // Types

@@ -92,11 +92,16 @@ function LanguageSwitcher({ showBig = false }: Props) {
   const toggle = useCallback(() => setIsOpen((v) => !v), []);
 
   const changeLang = useCallback(
-    (lng: LanguageCode) => {
+    async (lng: LanguageCode) => {
       if (lng === current) {
         close();
         return;
       }
+      // Pre-load language bundle before switching (lazy i18n)
+      try {
+        const { loadLanguageAsync } = await import("@/i18n");
+        await loadLanguageAsync(lng);
+      } catch {}
       i18n.changeLanguage(lng);
       try {
         localStorage.setItem("lang", lng);

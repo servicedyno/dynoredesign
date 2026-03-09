@@ -409,7 +409,11 @@ const MobileNavigationBar = () => {
           open={openLang}
           languages={languages}
           currentLanguage={i18n.language || "en"}
-          onSelect={(code: string) => {
+          onSelect={async (code: string) => {
+            try {
+              const { loadLanguageAsync } = await import("@/i18n");
+              await loadLanguageAsync(code);
+            } catch {}
             i18n.changeLanguage(code);
             localStorage.setItem("lang", code);
             localStorage.setItem("lang_manual", "true");

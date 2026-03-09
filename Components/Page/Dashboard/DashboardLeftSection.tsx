@@ -2,7 +2,11 @@ import RoundedStackIcon from "@/assets/Icons/roundedStck-icon.svg";
 import TransactionIcon from "@/assets/Icons/transaction.svg";
 import ArrowUpSuccessIcon from "@/assets/Icons/up-success.svg";
 import WalletIcon from "@/assets/Icons/wallet-grey.svg";
-import Chart from "@/Components/UI/AreaChart";
+import dynamic from "next/dynamic";
+const Chart = dynamic(() => import("@/Components/UI/AreaChart"), {
+  ssr: false,
+  loading: () => <div style={{ height: 300 }} />,
+});
 import CustomButton from "@/Components/UI/Buttons";
 import {
   CryptocurrencyIcon,

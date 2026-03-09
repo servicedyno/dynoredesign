@@ -25,40 +25,32 @@ const TIMEZONE_TO_LANG = {
  */
 function detectFromBrowser() {
   try {
-    // Try navigator.language first
     const browserLang = (navigator.language || "").split("-")[0];
     if (SUPPORTED_LANGUAGES.includes(browserLang)) return browserLang;
-
-    // Try timezone
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
     if (tz && TIMEZONE_TO_LANG[tz]) return TIMEZONE_TO_LANG[tz];
   } catch {}
   return DEFAULT_LANGUAGE;
 }
 
-// Resolve initial language: saved preference > browser/timezone > default
 function getInitialLanguage() {
   if (isServer) return DEFAULT_LANGUAGE;
   try {
     const saved = localStorage.getItem("lang");
     if (saved && SUPPORTED_LANGUAGES.includes(saved)) return saved;
   } catch {}
-  // No saved language — use browser/timezone detection as synchronous baseline
   return detectFromBrowser();
 }
 
 /**
- * Async IP-based geolocation detection (runs after init, upgrades language if no manual choice yet)
- * Uses backend proxy endpoint to avoid HTTPS→HTTP mixed-content browser blocks
+ * Async IP-based geolocation detection
  */
 async function detectAndApplyGeoLocale() {
   if (isServer) return;
   try {
-    // Only auto-detect if user never manually changed language
     const userChoseManually = localStorage.getItem("lang_manual") === "true";
     if (userChoseManually) return;
 
-    // Call our backend endpoint which proxies to ip-api.com server-side
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
     const resp = await fetch(`${baseUrl}api/geo-detect`, {
       signal: AbortSignal.timeout(4000),
@@ -67,163 +59,253 @@ async function detectAndApplyGeoLocale() {
     const data = await resp.json();
     if (data.status !== "success") return;
 
-    // Import the mapping utility
     const { getLocaleFromCountry } = await import("./utils/geoLocale");
     const detectedLang = getLocaleFromCountry(data.countryCode);
 
     if (detectedLang && SUPPORTED_LANGUAGES.includes(detectedLang) && detectedLang !== i18n.language) {
+      await loadLanguageAsync(detectedLang);
       i18n.changeLanguage(detectedLang);
       localStorage.setItem("lang", detectedLang);
       console.log("[i18n] IP-based language detected →", detectedLang, `(${data.countryCode})`);
     }
   } catch (err) {
-    // Silently ignore — sync detection already handled it
     console.log("[i18n] IP geo-detection skipped:", err?.message || err);
   }
+}
+
+// ─── Namespace list (must match files under langs/locales/{lang}/) ───
+const ALL_NAMESPACES = [
+  "common", "auth", "dashboardLayout", "profile", "notifications",
+  "apiScreen", "walletScreen", "companyDialog", "companySettings",
+  "transactions", "createPaymentLinkScreen", "paymentLinks",
+  "helpAndSupport", "landing", "fees", "apiStatus",
+  "termsConditions", "privacyPolicy", "amlPolicy", "referrals",
+];
+
+/**
+ * Synchronously load a language's resources using require()
+ * This is used ONLY for the initial language so we don't need a network round-trip.
+ */
+function requireLanguage(lang) {
+  const ns = {};
+  // Using individual requires so webpack can statically resolve them
+  switch (lang) {
+    case "en":
+      ns.common = require("./langs/locales/en/common.json");
+      ns.auth = require("./langs/locales/en/auth.json");
+      ns.dashboardLayout = require("./langs/locales/en/dashboardLayout.json");
+      ns.profile = require("./langs/locales/en/profile.json");
+      ns.notifications = require("./langs/locales/en/notifications.json");
+      ns.apiScreen = require("./langs/locales/en/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/en/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/en/companyDialog.json");
+      ns.companySettings = require("./langs/locales/en/companySettings.json");
+      ns.transactions = require("./langs/locales/en/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/en/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/en/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/en/helpAndSupport.json");
+      ns.landing = require("./langs/locales/en/landing.json");
+      ns.fees = require("./langs/locales/en/fees.json");
+      ns.apiStatus = require("./langs/locales/en/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/en/termsConditions.json");
+      ns.privacyPolicy = require("./langs/locales/en/privacyPolicy.json");
+      ns.amlPolicy = require("./langs/locales/en/amlPolicy.json");
+      ns.referrals = require("./langs/locales/en/referrals.json");
+      break;
+    case "pt":
+      ns.common = require("./langs/locales/pt/common.json");
+      ns.auth = require("./langs/locales/pt/auth.json");
+      ns.dashboardLayout = require("./langs/locales/pt/dashboardLayout.json");
+      ns.profile = require("./langs/locales/pt/profile.json");
+      ns.notifications = require("./langs/locales/pt/notifications.json");
+      ns.apiScreen = require("./langs/locales/pt/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/pt/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/pt/companyDialog.json");
+      ns.companySettings = require("./langs/locales/pt/companySettings.json");
+      ns.transactions = require("./langs/locales/pt/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/pt/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/pt/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/pt/helpAndSupport.json");
+      ns.landing = require("./langs/locales/pt/landing.json");
+      ns.fees = require("./langs/locales/pt/fees.json");
+      ns.apiStatus = require("./langs/locales/pt/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/pt/termsConditions.json");
+      ns.privacyPolicy = require("./langs/locales/pt/privacyPolicy.json");
+      ns.amlPolicy = require("./langs/locales/pt/amlPolicy.json");
+      ns.referrals = require("./langs/locales/pt/referrals.json");
+      break;
+    case "fr":
+      ns.common = require("./langs/locales/fr/common.json");
+      ns.auth = require("./langs/locales/fr/auth.json");
+      ns.dashboardLayout = require("./langs/locales/fr/dashboardLayout.json");
+      ns.profile = require("./langs/locales/fr/profile.json");
+      ns.notifications = require("./langs/locales/fr/notifications.json");
+      ns.apiScreen = require("./langs/locales/fr/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/fr/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/fr/companyDialog.json");
+      ns.companySettings = require("./langs/locales/fr/companySettings.json");
+      ns.transactions = require("./langs/locales/fr/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/fr/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/fr/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/fr/helpAndSupport.json");
+      ns.landing = require("./langs/locales/fr/landing.json");
+      ns.fees = require("./langs/locales/fr/fees.json");
+      ns.apiStatus = require("./langs/locales/fr/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/fr/termsConditions.json");
+      ns.privacyPolicy = require("./langs/locales/fr/privacyPolicy.json");
+      ns.amlPolicy = require("./langs/locales/fr/amlPolicy.json");
+      ns.referrals = require("./langs/locales/fr/referrals.json");
+      break;
+    case "es":
+      ns.common = require("./langs/locales/es/common.json");
+      ns.auth = require("./langs/locales/es/auth.json");
+      ns.dashboardLayout = require("./langs/locales/es/dashboardLayout.json");
+      ns.profile = require("./langs/locales/es/profile.json");
+      ns.notifications = require("./langs/locales/es/notifications.json");
+      ns.apiScreen = require("./langs/locales/es/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/es/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/es/companyDialog.json");
+      ns.companySettings = require("./langs/locales/es/companySettings.json");
+      ns.transactions = require("./langs/locales/es/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/es/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/es/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/es/helpAndSupport.json");
+      ns.landing = require("./langs/locales/es/landing.json");
+      ns.fees = require("./langs/locales/es/fees.json");
+      ns.apiStatus = require("./langs/locales/es/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/es/termsConditions.json");
+      ns.privacyPolicy = require("./langs/locales/es/privacyPolicy.json");
+      ns.amlPolicy = require("./langs/locales/es/amlPolicy.json");
+      ns.referrals = require("./langs/locales/es/referrals.json");
+      break;
+    case "de":
+      ns.common = require("./langs/locales/de/common.json");
+      ns.auth = require("./langs/locales/de/auth.json");
+      ns.dashboardLayout = require("./langs/locales/de/dashboardLayout.json");
+      ns.profile = require("./langs/locales/de/profile.json");
+      ns.notifications = require("./langs/locales/de/notifications.json");
+      ns.apiScreen = require("./langs/locales/de/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/de/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/de/companyDialog.json");
+      ns.companySettings = require("./langs/locales/de/companySettings.json");
+      ns.transactions = require("./langs/locales/de/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/de/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/de/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/de/helpAndSupport.json");
+      ns.landing = require("./langs/locales/de/landing.json");
+      ns.fees = require("./langs/locales/de/fees.json");
+      ns.apiStatus = require("./langs/locales/de/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/de/termsConditions.json");
+      ns.amlPolicy = require("./langs/locales/de/amlPolicy.json");
+      ns.privacyPolicy = require("./langs/locales/de/privacyPolicy.json");
+      ns.referrals = require("./langs/locales/de/referrals.json");
+      break;
+    case "nl":
+      ns.common = require("./langs/locales/nl/common.json");
+      ns.auth = require("./langs/locales/nl/auth.json");
+      ns.dashboardLayout = require("./langs/locales/nl/dashboardLayout.json");
+      ns.profile = require("./langs/locales/nl/profile.json");
+      ns.notifications = require("./langs/locales/nl/notifications.json");
+      ns.apiScreen = require("./langs/locales/nl/apiScreen.json");
+      ns.walletScreen = require("./langs/locales/nl/walletScreen.json");
+      ns.companyDialog = require("./langs/locales/nl/companyDialog.json");
+      ns.companySettings = require("./langs/locales/nl/companySettings.json");
+      ns.transactions = require("./langs/locales/nl/transactions.json");
+      ns.createPaymentLinkScreen = require("./langs/locales/nl/createPaymentLinkScreen.json");
+      ns.paymentLinks = require("./langs/locales/nl/paymentLinks.json");
+      ns.helpAndSupport = require("./langs/locales/nl/helpAndSupport.json");
+      ns.landing = require("./langs/locales/nl/landing.json");
+      ns.fees = require("./langs/locales/nl/fees.json");
+      ns.apiStatus = require("./langs/locales/nl/apiStatus.json");
+      ns.termsConditions = require("./langs/locales/nl/termsConditions.json");
+      ns.amlPolicy = require("./langs/locales/nl/amlPolicy.json");
+      ns.privacyPolicy = require("./langs/locales/nl/privacyPolicy.json");
+      ns.referrals = require("./langs/locales/nl/referrals.json");
+      break;
+    default:
+      return requireLanguage("en");
+  }
+  return ns;
+}
+
+// ─── Lazy-load a language via dynamic import() → separate webpack chunk ───
+const _loadedLanguages = new Set();
+
+async function loadLanguageAsync(lang) {
+  if (_loadedLanguages.has(lang)) return; // already loaded
+
+  // Each language gets its own webpack chunk via import()
+  let ns;
+  switch (lang) {
+    case "en": ns = requireLanguage("en"); break;
+    case "pt": {
+      const [common,auth,dashboardLayout,profile,notifications,apiScreen,walletScreen,companyDialog,companySettings,transactions,createPaymentLinkScreen,paymentLinks,helpAndSupport,landing,fees,apiStatus,termsConditions,privacyPolicy,amlPolicy,referrals] = await Promise.all([
+        import("./langs/locales/pt/common.json"),import("./langs/locales/pt/auth.json"),import("./langs/locales/pt/dashboardLayout.json"),import("./langs/locales/pt/profile.json"),import("./langs/locales/pt/notifications.json"),import("./langs/locales/pt/apiScreen.json"),import("./langs/locales/pt/walletScreen.json"),import("./langs/locales/pt/companyDialog.json"),import("./langs/locales/pt/companySettings.json"),import("./langs/locales/pt/transactions.json"),import("./langs/locales/pt/createPaymentLinkScreen.json"),import("./langs/locales/pt/paymentLinks.json"),import("./langs/locales/pt/helpAndSupport.json"),import("./langs/locales/pt/landing.json"),import("./langs/locales/pt/fees.json"),import("./langs/locales/pt/apiStatus.json"),import("./langs/locales/pt/termsConditions.json"),import("./langs/locales/pt/privacyPolicy.json"),import("./langs/locales/pt/amlPolicy.json"),import("./langs/locales/pt/referrals.json")
+      ]);
+      ns = {common:common.default||common,auth:auth.default||auth,dashboardLayout:dashboardLayout.default||dashboardLayout,profile:profile.default||profile,notifications:notifications.default||notifications,apiScreen:apiScreen.default||apiScreen,walletScreen:walletScreen.default||walletScreen,companyDialog:companyDialog.default||companyDialog,companySettings:companySettings.default||companySettings,transactions:transactions.default||transactions,createPaymentLinkScreen:createPaymentLinkScreen.default||createPaymentLinkScreen,paymentLinks:paymentLinks.default||paymentLinks,helpAndSupport:helpAndSupport.default||helpAndSupport,landing:landing.default||landing,fees:fees.default||fees,apiStatus:apiStatus.default||apiStatus,termsConditions:termsConditions.default||termsConditions,privacyPolicy:privacyPolicy.default||privacyPolicy,amlPolicy:amlPolicy.default||amlPolicy,referrals:referrals.default||referrals};
+      break;
+    }
+    case "fr": {
+      const [common,auth,dashboardLayout,profile,notifications,apiScreen,walletScreen,companyDialog,companySettings,transactions,createPaymentLinkScreen,paymentLinks,helpAndSupport,landing,fees,apiStatus,termsConditions,privacyPolicy,amlPolicy,referrals] = await Promise.all([
+        import("./langs/locales/fr/common.json"),import("./langs/locales/fr/auth.json"),import("./langs/locales/fr/dashboardLayout.json"),import("./langs/locales/fr/profile.json"),import("./langs/locales/fr/notifications.json"),import("./langs/locales/fr/apiScreen.json"),import("./langs/locales/fr/walletScreen.json"),import("./langs/locales/fr/companyDialog.json"),import("./langs/locales/fr/companySettings.json"),import("./langs/locales/fr/transactions.json"),import("./langs/locales/fr/createPaymentLinkScreen.json"),import("./langs/locales/fr/paymentLinks.json"),import("./langs/locales/fr/helpAndSupport.json"),import("./langs/locales/fr/landing.json"),import("./langs/locales/fr/fees.json"),import("./langs/locales/fr/apiStatus.json"),import("./langs/locales/fr/termsConditions.json"),import("./langs/locales/fr/privacyPolicy.json"),import("./langs/locales/fr/amlPolicy.json"),import("./langs/locales/fr/referrals.json")
+      ]);
+      ns = {common:common.default||common,auth:auth.default||auth,dashboardLayout:dashboardLayout.default||dashboardLayout,profile:profile.default||profile,notifications:notifications.default||notifications,apiScreen:apiScreen.default||apiScreen,walletScreen:walletScreen.default||walletScreen,companyDialog:companyDialog.default||companyDialog,companySettings:companySettings.default||companySettings,transactions:transactions.default||transactions,createPaymentLinkScreen:createPaymentLinkScreen.default||createPaymentLinkScreen,paymentLinks:paymentLinks.default||paymentLinks,helpAndSupport:helpAndSupport.default||helpAndSupport,landing:landing.default||landing,fees:fees.default||fees,apiStatus:apiStatus.default||apiStatus,termsConditions:termsConditions.default||termsConditions,privacyPolicy:privacyPolicy.default||privacyPolicy,amlPolicy:amlPolicy.default||amlPolicy,referrals:referrals.default||referrals};
+      break;
+    }
+    case "es": {
+      const [common,auth,dashboardLayout,profile,notifications,apiScreen,walletScreen,companyDialog,companySettings,transactions,createPaymentLinkScreen,paymentLinks,helpAndSupport,landing,fees,apiStatus,termsConditions,privacyPolicy,amlPolicy,referrals] = await Promise.all([
+        import("./langs/locales/es/common.json"),import("./langs/locales/es/auth.json"),import("./langs/locales/es/dashboardLayout.json"),import("./langs/locales/es/profile.json"),import("./langs/locales/es/notifications.json"),import("./langs/locales/es/apiScreen.json"),import("./langs/locales/es/walletScreen.json"),import("./langs/locales/es/companyDialog.json"),import("./langs/locales/es/companySettings.json"),import("./langs/locales/es/transactions.json"),import("./langs/locales/es/createPaymentLinkScreen.json"),import("./langs/locales/es/paymentLinks.json"),import("./langs/locales/es/helpAndSupport.json"),import("./langs/locales/es/landing.json"),import("./langs/locales/es/fees.json"),import("./langs/locales/es/apiStatus.json"),import("./langs/locales/es/termsConditions.json"),import("./langs/locales/es/privacyPolicy.json"),import("./langs/locales/es/amlPolicy.json"),import("./langs/locales/es/referrals.json")
+      ]);
+      ns = {common:common.default||common,auth:auth.default||auth,dashboardLayout:dashboardLayout.default||dashboardLayout,profile:profile.default||profile,notifications:notifications.default||notifications,apiScreen:apiScreen.default||apiScreen,walletScreen:walletScreen.default||walletScreen,companyDialog:companyDialog.default||companyDialog,companySettings:companySettings.default||companySettings,transactions:transactions.default||transactions,createPaymentLinkScreen:createPaymentLinkScreen.default||createPaymentLinkScreen,paymentLinks:paymentLinks.default||paymentLinks,helpAndSupport:helpAndSupport.default||helpAndSupport,landing:landing.default||landing,fees:fees.default||fees,apiStatus:apiStatus.default||apiStatus,termsConditions:termsConditions.default||termsConditions,privacyPolicy:privacyPolicy.default||privacyPolicy,amlPolicy:amlPolicy.default||amlPolicy,referrals:referrals.default||referrals};
+      break;
+    }
+    case "de": {
+      const [common,auth,dashboardLayout,profile,notifications,apiScreen,walletScreen,companyDialog,companySettings,transactions,createPaymentLinkScreen,paymentLinks,helpAndSupport,landing,fees,apiStatus,termsConditions,privacyPolicy,amlPolicy,referrals] = await Promise.all([
+        import("./langs/locales/de/common.json"),import("./langs/locales/de/auth.json"),import("./langs/locales/de/dashboardLayout.json"),import("./langs/locales/de/profile.json"),import("./langs/locales/de/notifications.json"),import("./langs/locales/de/apiScreen.json"),import("./langs/locales/de/walletScreen.json"),import("./langs/locales/de/companyDialog.json"),import("./langs/locales/de/companySettings.json"),import("./langs/locales/de/transactions.json"),import("./langs/locales/de/createPaymentLinkScreen.json"),import("./langs/locales/de/paymentLinks.json"),import("./langs/locales/de/helpAndSupport.json"),import("./langs/locales/de/landing.json"),import("./langs/locales/de/fees.json"),import("./langs/locales/de/apiStatus.json"),import("./langs/locales/de/termsConditions.json"),import("./langs/locales/de/privacyPolicy.json"),import("./langs/locales/de/amlPolicy.json"),import("./langs/locales/de/referrals.json")
+      ]);
+      ns = {common:common.default||common,auth:auth.default||auth,dashboardLayout:dashboardLayout.default||dashboardLayout,profile:profile.default||profile,notifications:notifications.default||notifications,apiScreen:apiScreen.default||apiScreen,walletScreen:walletScreen.default||walletScreen,companyDialog:companyDialog.default||companyDialog,companySettings:companySettings.default||companySettings,transactions:transactions.default||transactions,createPaymentLinkScreen:createPaymentLinkScreen.default||createPaymentLinkScreen,paymentLinks:paymentLinks.default||paymentLinks,helpAndSupport:helpAndSupport.default||helpAndSupport,landing:landing.default||landing,fees:fees.default||fees,apiStatus:apiStatus.default||apiStatus,termsConditions:termsConditions.default||termsConditions,privacyPolicy:privacyPolicy.default||privacyPolicy,amlPolicy:amlPolicy.default||amlPolicy,referrals:referrals.default||referrals};
+      break;
+    }
+    case "nl": {
+      const [common,auth,dashboardLayout,profile,notifications,apiScreen,walletScreen,companyDialog,companySettings,transactions,createPaymentLinkScreen,paymentLinks,helpAndSupport,landing,fees,apiStatus,termsConditions,privacyPolicy,amlPolicy,referrals] = await Promise.all([
+        import("./langs/locales/nl/common.json"),import("./langs/locales/nl/auth.json"),import("./langs/locales/nl/dashboardLayout.json"),import("./langs/locales/nl/profile.json"),import("./langs/locales/nl/notifications.json"),import("./langs/locales/nl/apiScreen.json"),import("./langs/locales/nl/walletScreen.json"),import("./langs/locales/nl/companyDialog.json"),import("./langs/locales/nl/companySettings.json"),import("./langs/locales/nl/transactions.json"),import("./langs/locales/nl/createPaymentLinkScreen.json"),import("./langs/locales/nl/paymentLinks.json"),import("./langs/locales/nl/helpAndSupport.json"),import("./langs/locales/nl/landing.json"),import("./langs/locales/nl/fees.json"),import("./langs/locales/nl/apiStatus.json"),import("./langs/locales/nl/termsConditions.json"),import("./langs/locales/nl/privacyPolicy.json"),import("./langs/locales/nl/amlPolicy.json"),import("./langs/locales/nl/referrals.json")
+      ]);
+      ns = {common:common.default||common,auth:auth.default||auth,dashboardLayout:dashboardLayout.default||dashboardLayout,profile:profile.default||profile,notifications:notifications.default||notifications,apiScreen:apiScreen.default||apiScreen,walletScreen:walletScreen.default||walletScreen,companyDialog:companyDialog.default||companyDialog,companySettings:companySettings.default||companySettings,transactions:transactions.default||transactions,createPaymentLinkScreen:createPaymentLinkScreen.default||createPaymentLinkScreen,paymentLinks:paymentLinks.default||paymentLinks,helpAndSupport:helpAndSupport.default||helpAndSupport,landing:landing.default||landing,fees:fees.default||fees,apiStatus:apiStatus.default||apiStatus,termsConditions:termsConditions.default||termsConditions,privacyPolicy:privacyPolicy.default||privacyPolicy,amlPolicy:amlPolicy.default||amlPolicy,referrals:referrals.default||referrals};
+      break;
+    }
+    default: return;
+  }
+
+  // Register all namespaces with i18n
+  for (const [nsKey, data] of Object.entries(ns)) {
+    i18n.addResourceBundle(lang, nsKey, data, true, true);
+  }
+  _loadedLanguages.add(lang);
+}
+
+// ─── Initialise i18n with ONLY the detected language + English fallback ───
+const initialLang = getInitialLanguage();
+const initialResources = {};
+
+// Always load English as the fallback language (shown while other lang loads)
+initialResources.en = requireLanguage("en");
+_loadedLanguages.add("en");
+
+// If the initial language isn't English, also load it synchronously for instant first paint
+if (initialLang !== "en") {
+  initialResources[initialLang] = requireLanguage(initialLang);
+  _loadedLanguages.add(initialLang);
 }
 
 const instance = i18n.use(LanguageDetector).use(initReactI18next);
 
 instance.init({
-  lng: getInitialLanguage(),
+  lng: initialLang,
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
   debug: false,
 
-  resources: {
-    en: {
-      common: require("./langs/locales/en/common.json"),
-      auth: require("./langs/locales/en/auth.json"),
-      dashboardLayout: require("./langs/locales/en/dashboardLayout.json"),
-      profile: require("./langs/locales/en/profile.json"),
-      notifications: require("./langs/locales/en/notifications.json"),
-      apiScreen: require("./langs/locales/en/apiScreen.json"),
-      walletScreen: require("./langs/locales/en/walletScreen.json"),
-      companyDialog: require("./langs/locales/en/companyDialog.json"),
-      companySettings: require("./langs/locales/en/companySettings.json"),
-      transactions: require("./langs/locales/en/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/en/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/en/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/en/helpAndSupport.json"),
-      landing: require("./langs/locales/en/landing.json"),
-      fees: require("./langs/locales/en/fees.json"),
-      apiStatus: require("./langs/locales/en/apiStatus.json"),
-      termsConditions: require("./langs/locales/en/termsConditions.json"),
-      privacyPolicy: require("./langs/locales/en/privacyPolicy.json"),
-      amlPolicy: require("./langs/locales/en/amlPolicy.json"),
-      referrals: require("./langs/locales/en/referrals.json"),
-    },
-    pt: {
-      common: require("./langs/locales/pt/common.json"),
-      auth: require("./langs/locales/pt/auth.json"),
-      dashboardLayout: require("./langs/locales/pt/dashboardLayout.json"),
-      profile: require("./langs/locales/pt/profile.json"),
-      notifications: require("./langs/locales/pt/notifications.json"),
-      apiScreen: require("./langs/locales/pt/apiScreen.json"),
-      walletScreen: require("./langs/locales/pt/walletScreen.json"),
-      companyDialog: require("./langs/locales/pt/companyDialog.json"),
-      companySettings: require("./langs/locales/pt/companySettings.json"),
-      transactions: require("./langs/locales/pt/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/pt/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/pt/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/pt/helpAndSupport.json"),
-      landing: require("./langs/locales/pt/landing.json"),
-      fees: require("./langs/locales/pt/fees.json"),
-      apiStatus: require("./langs/locales/pt/apiStatus.json"),
-      termsConditions: require("./langs/locales/pt/termsConditions.json"),
-      privacyPolicy: require("./langs/locales/pt/privacyPolicy.json"),
-      amlPolicy: require("./langs/locales/pt/amlPolicy.json"),
-      referrals: require("./langs/locales/pt/referrals.json"),
-    },
-    fr: {
-      common: require("./langs/locales/fr/common.json"),
-      auth: require("./langs/locales/fr/auth.json"),
-      dashboardLayout: require("./langs/locales/fr/dashboardLayout.json"),
-      profile: require("./langs/locales/fr/profile.json"),
-      notifications: require("./langs/locales/fr/notifications.json"),
-      apiScreen: require("./langs/locales/fr/apiScreen.json"),
-      walletScreen: require("./langs/locales/fr/walletScreen.json"),
-      companyDialog: require("./langs/locales/fr/companyDialog.json"),
-      companySettings: require("./langs/locales/fr/companySettings.json"),
-      transactions: require("./langs/locales/fr/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/fr/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/fr/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/fr/helpAndSupport.json"),
-      landing: require("./langs/locales/fr/landing.json"),
-      fees: require("./langs/locales/fr/fees.json"),
-      apiStatus: require("./langs/locales/fr/apiStatus.json"),
-      termsConditions: require("./langs/locales/fr/termsConditions.json"),
-      privacyPolicy: require("./langs/locales/fr/privacyPolicy.json"),
-      amlPolicy: require("./langs/locales/fr/amlPolicy.json"),
-      referrals: require("./langs/locales/fr/referrals.json"),
-    },
-    es: {
-      common: require("./langs/locales/es/common.json"),
-      auth: require("./langs/locales/es/auth.json"),
-      dashboardLayout: require("./langs/locales/es/dashboardLayout.json"),
-      profile: require("./langs/locales/es/profile.json"),
-      notifications: require("./langs/locales/es/notifications.json"),
-      apiScreen: require("./langs/locales/es/apiScreen.json"),
-      walletScreen: require("./langs/locales/es/walletScreen.json"),
-      companyDialog: require("./langs/locales/es/companyDialog.json"),
-      companySettings: require("./langs/locales/es/companySettings.json"),
-      transactions: require("./langs/locales/es/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/es/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/es/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/es/helpAndSupport.json"),
-      landing: require("./langs/locales/es/landing.json"),
-      fees: require("./langs/locales/es/fees.json"),
-      apiStatus: require("./langs/locales/es/apiStatus.json"),
-      termsConditions: require("./langs/locales/es/termsConditions.json"),
-      privacyPolicy: require("./langs/locales/es/privacyPolicy.json"),
-      amlPolicy: require("./langs/locales/es/amlPolicy.json"),
-      referrals: require("./langs/locales/es/referrals.json"),
-    },
-    de: {
-      common: require("./langs/locales/de/common.json"),
-      auth: require("./langs/locales/de/auth.json"),
-      dashboardLayout: require("./langs/locales/de/dashboardLayout.json"),
-      profile: require("./langs/locales/de/profile.json"),
-      notifications: require("./langs/locales/de/notifications.json"),
-      apiScreen: require("./langs/locales/de/apiScreen.json"),
-      walletScreen: require("./langs/locales/de/walletScreen.json"),
-      companyDialog: require("./langs/locales/de/companyDialog.json"),
-      companySettings: require("./langs/locales/de/companySettings.json"),
-      transactions: require("./langs/locales/de/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/de/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/de/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/de/helpAndSupport.json"),
-      landing: require("./langs/locales/de/landing.json"),
-      fees: require("./langs/locales/de/fees.json"),
-      apiStatus: require("./langs/locales/de/apiStatus.json"),
-      termsConditions: require("./langs/locales/de/termsConditions.json"),
-      amlPolicy: require("./langs/locales/de/amlPolicy.json"),
-      privacyPolicy: require("./langs/locales/de/privacyPolicy.json"),
-      referrals: require("./langs/locales/de/referrals.json"),
-    },
-    nl: {
-      common: require("./langs/locales/nl/common.json"),
-      auth: require("./langs/locales/nl/auth.json"),
-      dashboardLayout: require("./langs/locales/nl/dashboardLayout.json"),
-      profile: require("./langs/locales/nl/profile.json"),
-      notifications: require("./langs/locales/nl/notifications.json"),
-      apiScreen: require("./langs/locales/nl/apiScreen.json"),
-      walletScreen: require("./langs/locales/nl/walletScreen.json"),
-      companyDialog: require("./langs/locales/nl/companyDialog.json"),
-      companySettings: require("./langs/locales/nl/companySettings.json"),
-      transactions: require("./langs/locales/nl/transactions.json"),
-      createPaymentLinkScreen: require("./langs/locales/nl/createPaymentLinkScreen.json"),
-      paymentLinks: require("./langs/locales/nl/paymentLinks.json"),
-      helpAndSupport: require("./langs/locales/nl/helpAndSupport.json"),
-      landing: require("./langs/locales/nl/landing.json"),
-      fees: require("./langs/locales/nl/fees.json"),
-      apiStatus: require("./langs/locales/nl/apiStatus.json"),
-      termsConditions: require("./langs/locales/nl/termsConditions.json"),
-      amlPolicy: require("./langs/locales/nl/amlPolicy.json"),
-      privacyPolicy: require("./langs/locales/nl/privacyPolicy.json"),
-      referrals: require("./langs/locales/nl/referrals.json"),
-    },
-  },
+  resources: initialResources,
 
   detection: {
     order: ["localStorage", "navigator"],
@@ -240,35 +322,32 @@ instance.init({
   },
 
   react: {
-    useSuspense: false, // safer for Next.js pages router
+    useSuspense: false,
   },
 });
 
-// Persist language on every change & log
+// ─── Runtime: lazy-load language on switch + persist ───
 if (!isServer) {
-  // Track whether this is the initial language set during init (before geo-detection)
-  let _geoDetectionDone = false;
-
-  i18n.on("languageChanged", (lng) => {
+  i18n.on("languageChanged", async (lng) => {
     console.log("[i18n] language changed →", lng);
-    try {
-      localStorage.setItem("lang", lng);
-    } catch {}
+    try { localStorage.setItem("lang", lng); } catch {}
+    // Ensure language bundle is available
+    if (!_loadedLanguages.has(lng)) {
+      await loadLanguageAsync(lng);
+    }
   });
 
-  // Run async IP-based detection after hydration
-  // Check if user has a MANUALLY saved preference (not just the init default)
   const userChoseManually = (() => {
     try { return localStorage.getItem("lang_manual") === "true"; } catch { return false; }
   })();
 
   if (!userChoseManually) {
-    // Always run geo-detection for users who haven't manually chosen a language
-    // Delay slightly so app renders first, then upgrade language if IP says differently
     setTimeout(() => {
-      detectAndApplyGeoLocale().finally(() => { _geoDetectionDone = true; });
+      detectAndApplyGeoLocale();
     }, 500);
   }
 }
 
+// Export the loader so language-switcher components can pre-load before changing
+export { loadLanguageAsync };
 export default i18n;
