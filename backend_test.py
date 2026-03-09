@@ -10,7 +10,7 @@ This test script verifies:
 5. Proper address validation (should be bc1q... format, not 1JH5...)
 
 Test Requirements:
-- Backend URL: https://a21adebb-de1d-4a59-a169-5bf700b7e9d8.preview.emergentagent.com
+- Backend URL: https://checkout-pod-setup.preview.emergentagent.com
 - Login credentials: nomadly@moxx.co / Katiekendra123@
 - Company ID: 3
 """
@@ -290,7 +290,7 @@ def main():
     print("="*80)
     
     # Configuration
-    BACKEND_URL = "https://a21adebb-de1d-4a59-a169-5bf700b7e9d8.preview.emergentagent.com"
+    BACKEND_URL = "https://checkout-pod-setup.preview.emergentagent.com"
     LOGIN_EMAIL = "nomadly@moxx.co"
     LOGIN_PASSWORD = "Katiekendra123@"
     

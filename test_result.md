@@ -55,3 +55,27 @@ When creating a payment link with only BTC selected, the "Direct Pay" section in
 - ✅ Checkout flow works correctly with pool addresses
 
 **Status**: Backend merchant pool address functionality is working correctly
+
+---
+
+## Current Task: Set up and use current pod URL for backend, frontend, checkout
+
+### Changes Made:
+1. **Created `/app/.env.local`** with:
+   - `NEXT_PUBLIC_BASE_URL=https://checkout-pod-setup.preview.emergentagent.com/` (used by `axiosConfig.ts` and `axiosAdmin.ts` for all API calls)
+   - `NEXTAUTH_URL=https://checkout-pod-setup.preview.emergentagent.com` (for NextAuth)
+   - `NEXTAUTH_SECRET` for session signing
+2. **Backend `.env`** already had correct pod URL in `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL`
+3. **Installed dependencies**: `yarn install` in `/app` (frontend) and `/app/backend`
+4. **Restarted services**: All services running
+
+### Verification Results:
+- ✅ Frontend loads at pod URL, `.env.local` loaded with correct `NEXT_PUBLIC_BASE_URL`
+- ✅ Backend API responds at `/api/status` (200 OK, all services operational)
+- ✅ Login endpoint works (`/api/user/login` returns accessToken)
+- ✅ Homepage renders correctly
+- ✅ Login page renders correctly
+- ✅ CORS configured with pod URL via `FRONTEND_URL` and `CHECKOUT_URL`
+- ✅ Payment links will use pod URL via `CHECKOUT_URL` env var
+
+**Status**: Pod URL setup complete and verified
