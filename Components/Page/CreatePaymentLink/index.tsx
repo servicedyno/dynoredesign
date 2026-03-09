@@ -905,17 +905,32 @@ const CreatePaymentLinkPage = ({
                   borderRadius: "8px",
                   border: `1px solid ${theme.palette.border.main}`,
                   display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
+                  flexDirection: "column",
+                  gap: "4px",
                   mb: 1,
                 }}
               >
-                <Typography sx={{ fontSize: 13, fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
-                  Estimated Fee
-                </Typography>
-                <Typography sx={{ fontSize: 14, fontFamily: "UrbanistSemiBold", color: theme.palette.text.primary }}>
-                  {feePreview.fee != null ? `${feePreview.fee} ${feePreview.currency || paymentSettings.currency}` : "—"}
-                </Typography>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ fontSize: 13, fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+                    Estimated Fee ({feePreview.fee_info?.final_fee_percent ?? feePreview.fee_info?.base_fee_percent ?? "—"}%)
+                  </Typography>
+                  <Typography sx={{ fontSize: 14, fontFamily: "UrbanistSemiBold", color: theme.palette.text.primary }}>
+                    {feePreview.fee != null ? `${feePreview.fee} ${feePreview.currency || paymentSettings.currency}` : "—"}
+                  </Typography>
+                </Box>
+                <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <Typography sx={{ fontSize: 12, fontFamily: "UrbanistMedium", color: theme.palette.text.secondary }}>
+                    You receive
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, fontFamily: "UrbanistSemiBold", color: theme.palette.success?.main || "#22c55e" }}>
+                    {feePreview.you_receive != null ? `${feePreview.you_receive} ${feePreview.currency || paymentSettings.currency}` : "—"}
+                  </Typography>
+                </Box>
+                {paymentSettings.blockchainFees && (
+                  <Typography sx={{ fontSize: 11, fontFamily: "UrbanistRegular", color: theme.palette.text.secondary, opacity: 0.7 }}>
+                    Fee paid by: {paymentSettings.blockchainFees === "customer" ? "Customer" : "Company"}
+                  </Typography>
+                )}
               </Box>
             )}
 

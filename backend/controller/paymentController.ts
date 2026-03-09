@@ -8178,6 +8178,8 @@ const getFeePreview = async (req: express.Request, res: express.Response) => {
     return successResponseHelper(res, 200, "Fee preview retrieved successfully", {
       amount: amountNum,
       currency: currency || 'USD',
+      fee: parseFloat(discountedFeeAmount.toFixed(2)),
+      you_receive: parseFloat((amountNum - discountedFeeAmount).toFixed(2)),
       fee_info: {
         base_fee_percent: baseFeePercent,
         final_fee_percent: finalFeePercent,
