@@ -122,7 +122,7 @@ const HomeFooter: FC = () => {
         </TopSection>
 
         <BottomSection>
-          <CopyrightText>{t("footerCopyright")}</CopyrightText>
+          <CopyrightText>{t("footerCopyright", { year: new Date().getFullYear() })}</CopyrightText>
           <SocialsWrapper>{socialItems}</SocialsWrapper>
         </BottomSection>
       </FooterContainer>

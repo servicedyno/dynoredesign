@@ -72,6 +72,6 @@
   "footerPrivacy": "Politique de Confidentialité",
   "footerApiStatus": "Statut API",
   "footerSupport": "Support",
-  "footerCopyright": "© 2024 DynoPay. Tous droits réservés",
+  "footerCopyright": "© {{year}} Dynotech Innovations, LDA. Tous droits réservés",
   "headerFees": "Frais"
 }
