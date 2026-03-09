@@ -5940,15 +5940,16 @@ ${refereeCodeSection}
           userData.user_id,
           company_id || 0,
           normalizedAmount || 0
-        );
+        ) as any;
 
         if (poolAddress) {
-          directPayAddress = poolAddress.dataValues.wallet_address;
-          directPayTempId = poolAddress.dataValues.temp_address_id;
+          directPayAddress = poolAddress.dataValues?.wallet_address || poolAddress.wallet_address;
+          directPayTempId = poolAddress.dataValues?.temp_address_id || poolAddress.temp_address_id;
 
           // Generate QR code for the pool address
-          const qrPayload = poolAddress.dataValues.destination_tag
-            ? `${directPayAddress}?dt=${poolAddress.dataValues.destination_tag}`
+          const destTag = poolAddress.dataValues?.destination_tag || poolAddress.destination_tag;
+          const qrPayload = destTag
+            ? `${directPayAddress}?dt=${destTag}`
             : directPayAddress;
           directPayQrCode = await generateQRCodeWithLogo(qrPayload, singleCrypto, 400);
 
