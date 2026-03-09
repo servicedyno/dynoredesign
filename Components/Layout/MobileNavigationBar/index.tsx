@@ -1,6 +1,7 @@
 import AddIcon from "@mui/icons-material/Add";
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
 import ErrorIcon from "@mui/icons-material/Error";
+import HelpOutlineRounded from "@mui/icons-material/HelpOutlineRounded";
 import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import KeyboardArrowUpIcon from "@mui/icons-material/KeyboardArrowUp";
 import LanguageIcon from "@mui/icons-material/Language";
@@ -116,12 +117,17 @@ const MobileNavigationBar = () => {
 
   // Second row items (expanded) - shown when expanded
   const secondRowItems = [
-    { label: t("language"), icon: "language", path: null, id: "language" },
     {
-      label: t("referrals") || "Referrals",
-      icon: "referrals",
-      path: "/referrals",
-      id: "referrals",
+      label: t("invoicesTax"),
+      icon: "invoices",
+      path: "/invoices",
+      id: "invoices",
+    },
+    {
+      label: t("customers") || "Customers",
+      icon: "customers",
+      path: "/customers",
+      id: "customers",
     },
     {
       label: t("payLinks"),
@@ -130,11 +136,28 @@ const MobileNavigationBar = () => {
       id: "pay-links",
     },
     { label: t("api"), icon: "api", path: "/developer-keys", id: "api" },
+  ];
+
+  // Third row items (expanded) - additional nav items
+  const thirdRowItems = [
+    {
+      label: t("referrals") || "Referrals",
+      icon: "referrals",
+      path: "/referrals",
+      id: "referrals",
+    },
     {
       label: t("notifications"),
       icon: "notifications",
       path: "/notifications",
       id: "notifications",
+    },
+    { label: t("language"), icon: "language", path: null, id: "language" },
+    {
+      label: t("helpSupport") || "Help",
+      icon: "help",
+      path: "/help-support",
+      id: "help-support",
     },
   ];
 
@@ -145,7 +168,7 @@ const MobileNavigationBar = () => {
   };
 
   const handleNavClick = (
-    item: (typeof firstRowItems)[0] | (typeof secondRowItems)[0],
+    item: (typeof firstRowItems)[0] | (typeof secondRowItems)[0] | (typeof thirdRowItems)[0],
   ) => {
     if (item.id === "more") {
       setIsExpanded(!isExpanded);
@@ -229,6 +252,8 @@ const MobileNavigationBar = () => {
                   "notifications",
                   "payment-links",
                   "referrals",
+                  "invoices",
+                  "customers",
                 ];
                 const useSidebarIcon = supportedIcons.includes(item.icon);
                 return (
@@ -258,10 +283,41 @@ const MobileNavigationBar = () => {
               })}
             </FirstRow>
 
-            {/* Second row - 3 items (shown when expanded, centered) */}
+            {/* Second row - expanded nav items */}
             {isExpanded && (
               <SecondRow>
                 {secondRowItems.map((item) => {
+                  const active = isActiveRoute(item.path);
+                  const isCreate = item.id === "create";
+
+                  return (
+                    <NavItem
+                      key={item.id}
+                      active={active}
+                      onClick={() => handleNavClick(item)}
+                    >
+                      <IconButton active={active || isCreate}>
+                        <SidebarIcon
+                          name={item.icon}
+                          size={16}
+                          color={
+                            active
+                              ? theme.palette.primary.main
+                              : theme.palette.text.primary
+                          }
+                        />
+                      </IconButton>
+                      <NavLabel active={active}>{item.label}</NavLabel>
+                    </NavItem>
+                  );
+                })}
+              </SecondRow>
+            )}
+
+            {/* Third row - more nav items */}
+            {isExpanded && (
+              <SecondRow>
+                {thirdRowItems.map((item) => {
                   const active = isActiveRoute(item.path);
                   const isCreate = item.id === "create";
                   const currentLang = i18n.language || "en";
@@ -286,6 +342,15 @@ const MobileNavigationBar = () => {
                           >
                             {currentLang.toUpperCase()}
                           </Box>
+                        ) : item.id === "help-support" ? (
+                          <HelpOutlineRounded
+                            sx={{
+                              fontSize: 20,
+                              color: active
+                                ? theme.palette.primary.main
+                                : theme.palette.text.primary,
+                            }}
+                          />
                         ) : (
                           <SidebarIcon
                             name={item.icon}

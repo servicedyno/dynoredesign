@@ -292,7 +292,7 @@ const DashboardLeftSection = () => {
   const transactionChange = stats.transactionChange || 0;
   const volumeChange = stats.volumeChange || 0;
 
-  const maxWalletsToShow = isMobile ? 2 : 3;
+  const maxWalletsToShow = 3;
   const walletsToDisplay = showAllWallets
     ? activeWalletsData
     : activeWalletsData.slice(0, maxWalletsToShow);

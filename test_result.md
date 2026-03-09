@@ -860,3 +860,29 @@ backend:
 - **Frontend Fix**: Added safety net in `axiosConfig.ts` response interceptor — when on checkout pages (`/pay`), 401 errors no longer trigger redirect to login.
 - **Files changed**: `backend/routes/paymentRouter.ts`, `backend/middleware/csrfMiddleware.ts`, `helpers/createEncryption.ts`, `axiosConfig.ts`
 - **Verified**: ETH selection on checkout page now works correctly — shows payment address, QR code, and amount without redirect.
+
+
+## Changes Made - Session 12 (Mobile Responsiveness Fixes)
+
+### 1. Mobile Navigation - Added Missing Pages (Critical)
+- Added **Invoices & Tax**, **Customers**, **Help & Support** to mobile bottom nav expanded section
+- Restructured into 3 rows: primary nav, secondary nav (Invoices, Customers, Pay Links, API), tertiary nav (Referrals, Notifications, Language, Help)
+- Added translation keys (`customers`, `helpSupport`) to all 6 locale files (en, pt, fr, de, nl, es)
+- **File**: `Components/Layout/MobileNavigationBar/index.tsx`, `langs/locales/*/dashboardLayout.json`
+
+### 2. Invoices Table - Customer Column on Mobile
+- Removed `!isMobile` conditions hiding the Customer column on mobile
+- Customer name now visible in table on all screen sizes
+- **File**: `pages/invoices.tsx`
+
+### 3. Company Selector - Name Visible on Mobile
+- Changed `display: isMobile ? "none" : "block"` to `display: "block"` so company name shows on mobile
+- **File**: `Components/UI/CompanySelector/index.tsx`
+
+### 4. Dashboard - Active Wallets Count
+- Changed `maxWalletsToShow = isMobile ? 2 : 3` to `maxWalletsToShow = 3` for consistency
+- **File**: `Components/Page/Dashboard/DashboardLeftSection.tsx`
+
+### 5. Tax Report - Button Labels on Mobile
+- Changed Export CSV and Print buttons from icon-only on mobile to showing full labels
+- **File**: `pages/invoices.tsx`

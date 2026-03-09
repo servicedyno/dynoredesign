@@ -358,18 +358,16 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                       >
                         Date
                       </TableCell>
-                      {!isMobile && (
-                        <TableCell
-                          sx={{
-                            fontFamily: "UrbanistMedium",
-                            fontWeight: 600,
-                            color: muiTheme.palette.text.secondary,
-                            fontSize: 13,
-                          }}
-                        >
-                          Customer
-                        </TableCell>
-                      )}
+                      <TableCell
+                        sx={{
+                          fontFamily: "UrbanistMedium",
+                          fontWeight: 600,
+                          color: muiTheme.palette.text.secondary,
+                          fontSize: isMobile ? 11 : 13,
+                        }}
+                      >
+                        Customer
+                      </TableCell>
                       <TableCell
                         align="right"
                         sx={{
@@ -415,11 +413,9 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                             <TableCell>
                               <Skeleton width={80} />
                             </TableCell>
-                            {!isMobile && (
-                              <TableCell>
-                                <Skeleton width={120} />
-                              </TableCell>
-                            )}
+                            <TableCell>
+                              <Skeleton width={120} />
+                            </TableCell>
                             <TableCell align="right">
                               <Skeleton width={60} />
                             </TableCell>
@@ -439,7 +435,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                         ? (
                           <TableRow>
                             <TableCell
-                              colSpan={isMobile ? 5 : 6}
+                              colSpan={6}
                               align="center"
                               sx={{ py: 6, border: "none" }}
                             >
@@ -507,19 +503,17 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                                 {formatDate(inv.invoice_date)}
                               </Typography>
                             </TableCell>
-                            {!isMobile && (
-                              <TableCell>
-                                <Typography
-                                  sx={{
-                                    fontFamily: "UrbanistMedium",
-                                    fontSize: 13,
-                                    color: muiTheme.palette.text.primary,
-                                  }}
-                                >
-                                  {inv.customer_name}
-                                </Typography>
-                              </TableCell>
-                            )}
+                            <TableCell>
+                              <Typography
+                                sx={{
+                                  fontFamily: "UrbanistMedium",
+                                  fontSize: isMobile ? 11 : 13,
+                                  color: muiTheme.palette.text.primary,
+                                }}
+                              >
+                                {inv.customer_name}
+                              </Typography>
+                            </TableCell>
                             <TableCell align="right">
                               {parseFloat(String(inv.vat_amount)) > 0 ? (
                                 <Chip
@@ -674,7 +668,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
               </Box>
               <Box sx={{ display: "flex", gap: 1 }}>
                 <CustomButton
-                  label={isMobile ? "" : "Export CSV"}
+                  label="Export CSV"
                   startIcon={<FileDownloadRounded sx={{ fontSize: 16 }} />}
                   variant="secondary"
                   size="small"
@@ -682,7 +676,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
                   sx={{ fontSize: 13 }}
                 />
                 <CustomButton
-                  label={isMobile ? "" : "Print"}
+                  label="Print"
                   startIcon={<PrintRounded sx={{ fontSize: 16 }} />}
                   variant="secondary"
                   size="small"

@@ -295,7 +295,7 @@ export default function CompanySelector() {
           >
             <Typography
               sx={{
-                display: isMobile ? "none" : "block",
+                display: "block",
                 padding: "0px 6px",
                 fontSize: "15px",
                 color: theme.palette.text.secondary,
