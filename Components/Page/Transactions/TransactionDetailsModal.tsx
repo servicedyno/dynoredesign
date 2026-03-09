@@ -314,24 +314,14 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                   <DetailRow>
                     <TitleLabel>Total Fees</TitleLabel>
                     <TitleValue>
-                      {(() => {
-                        const total = Number(transaction.fees) || 0;
-                        if (total === 0) return "0";
-                        return total < 0.01
-                          ? total.toFixed(8).replace(/0+$/, "").replace(/\.$/, "")
-                          : total.toFixed(6).replace(/0+$/, "").replace(/\.$/, "");
-                      })()}{" "}
-                      {transaction.crypto}
+                      ${Number(transaction.fees).toFixed(2)} USD
                     </TitleValue>
                   </DetailRow>
                   {transaction.feesBreakdown && transaction.feesBreakdown.platform > 0 && (
                     <DetailRow>
                       <TitleLabel sx={{ pl: 2 }}>Platform Fee</TitleLabel>
                       <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        {transaction.feesBreakdown.platform < 0.01
-                          ? transaction.feesBreakdown.platform.toFixed(8).replace(/0+$/, "").replace(/\.$/, "")
-                          : transaction.feesBreakdown.platform.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}{" "}
-                        {transaction.crypto}
+                        ${transaction.feesBreakdown.platform.toFixed(2)} USD
                       </TitleValue>
                     </DetailRow>
                   )}
@@ -339,10 +329,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                     <DetailRow>
                       <TitleLabel sx={{ pl: 2 }}>Blockchain Fee</TitleLabel>
                       <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        {transaction.feesBreakdown.blockchain < 0.01
-                          ? transaction.feesBreakdown.blockchain.toFixed(8).replace(/0+$/, "").replace(/\.$/, "")
-                          : transaction.feesBreakdown.blockchain.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}{" "}
-                        {transaction.crypto}
+                        ${transaction.feesBreakdown.blockchain.toFixed(2)} USD
                       </TitleValue>
                     </DetailRow>
                   )}
@@ -350,8 +337,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                     <DetailRow>
                       <TitleLabel sx={{ pl: 2 }}>Fixed Fee</TitleLabel>
                       <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        {transaction.feesBreakdown.fixed.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}{" "}
-                        {transaction.crypto}
+                        ${transaction.feesBreakdown.fixed.toFixed(2)} USD
                       </TitleValue>
                     </DetailRow>
                   )}

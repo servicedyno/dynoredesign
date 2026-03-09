@@ -156,3 +156,11 @@ a {
   font-weight: 800;
   font-style: normal;
 }
+/* NProgress bar styling */
+#nprogress .bar {
+  background: #6C5CE7 !important;
+  height: 3px !important;
+}
+#nprogress .peg {
+  box-shadow: 0 0 10px #6C5CE7, 0 0 5px #6C5CE7 !important;
+}

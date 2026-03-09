@@ -1,10 +1,12 @@
 import "@/styles/globals.css";
+import "nprogress/nprogress.css";
 import "../i18n";
 
 import type { NextPage } from "next";
 import type { AppProps } from "next/app";
 import { useRouter } from "next/router";
-import React, { ReactNode, useMemo, useState } from "react";
+import React, { ReactNode, useEffect, useMemo, useState } from "react";
+import NProgress from "nprogress";
 
 import type { SxProps, Theme } from "@mui/material";
 import { ThemeProvider as MuiThemeProvider } from "@mui/material";
@@ -55,6 +57,21 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
   const router = useRouter();
   const pathname = router.pathname;
   const { isDark } = useThemeMode();
+
+  // NProgress for route transitions
+  useEffect(() => {
+    NProgress.configure({ showSpinner: false, speed: 300, minimum: 0.2 });
+    const handleStart = () => NProgress.start();
+    const handleDone = () => NProgress.done();
+    router.events.on("routeChangeStart", handleStart);
+    router.events.on("routeChangeComplete", handleDone);
+    router.events.on("routeChangeError", handleDone);
+    return () => {
+      router.events.off("routeChangeStart", handleStart);
+      router.events.off("routeChangeComplete", handleDone);
+      router.events.off("routeChangeError", handleDone);
+    };
+  }, [router]);
 
   const [pageName, setPageName] = useState<string>("");
   const [pageDescription, setPageDescription] = useState<string>("");

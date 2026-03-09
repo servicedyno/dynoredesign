@@ -133,12 +133,35 @@ const TransactionPage = () => {
             const txFee = Number((item as any).transaction_fee) || 0;
             const fixedFee = Number((item as any).fixed_fee) || 0;
             const blockchainFee = Number((item as any).blockchain_buffer_fee) || 0;
-            return txFee + fixedFee + blockchainFee;
+            const totalFeeCrypto = txFee + fixedFee + blockchainFee;
+            // Convert fee to USD using the same rate as the transaction
+            const cryptoAmt = Number((item as any).crypto_amount) || 0;
+            const usdVal = Number((item as any).usd_value) || 0;
+            const rate = cryptoAmt > 0 ? usdVal / cryptoAmt : 0;
+            return Math.round(totalFeeCrypto * rate * 100) / 100;
           })(),
           feesBreakdown: {
-            platform: Number((item as any).transaction_fee) || 0,
-            blockchain: Number((item as any).blockchain_buffer_fee) || 0,
-            fixed: Number((item as any).fixed_fee) || 0,
+            platform: (() => {
+              const fee = Number((item as any).transaction_fee) || 0;
+              const cryptoAmt = Number((item as any).crypto_amount) || 0;
+              const usdVal = Number((item as any).usd_value) || 0;
+              const rate = cryptoAmt > 0 ? usdVal / cryptoAmt : 0;
+              return Math.round(fee * rate * 100) / 100;
+            })(),
+            blockchain: (() => {
+              const fee = Number((item as any).blockchain_buffer_fee) || 0;
+              const cryptoAmt = Number((item as any).crypto_amount) || 0;
+              const usdVal = Number((item as any).usd_value) || 0;
+              const rate = cryptoAmt > 0 ? usdVal / cryptoAmt : 0;
+              return Math.round(fee * rate * 100) / 100;
+            })(),
+            fixed: (() => {
+              const fee = Number((item as any).fixed_fee) || 0;
+              const cryptoAmt = Number((item as any).crypto_amount) || 0;
+              const usdVal = Number((item as any).usd_value) || 0;
+              const rate = cryptoAmt > 0 ? usdVal / cryptoAmt : 0;
+              return Math.round(fee * rate * 100) / 100;
+            })(),
           },
           confirmations: (item as any).confirmations
             ? `${(item as any).confirmations}/${(item as any).required_confirmations || 0}`

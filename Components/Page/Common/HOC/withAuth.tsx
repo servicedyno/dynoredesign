@@ -1,27 +1,36 @@
 import { useRouter } from "next/router";
-import { useEffect, useState } from "react";
-import jwt from "jsonwebtoken";
+import { useEffect, useRef, useState } from "react";
 
-import { TokenData } from "@/utils/types";
 import Loading from "@/Components/UI/Loading";
+
 const withAuth = (WrappedComponent: any) => {
   const AuthChecker = (props: any) => {
     const Router = useRouter();
-    const [accessToken, setAccessToken] = useState<any>("");
+    const [isReady, setIsReady] = useState(false);
+    const checkedRef = useRef(false);
+
     useEffect(() => {
-      if (localStorage.getItem("token")) {
-        const token = localStorage.getItem("token");
-        const tokenData = jwt.decode(token ?? "") as TokenData;
-        const pathname = Router.pathname.split("/");
-        setAccessToken(token);
+      if (checkedRef.current) return;
+      checkedRef.current = true;
+
+      const token = localStorage.getItem("token");
+      if (token) {
+        setIsReady(true);
       } else {
         Router.replace("/auth/login");
       }
+    }, []);
 
-      // Router.replace("/maintenance");
-    }, [Router.pathname]);
+    // On subsequent navigations, just verify token still exists
+    useEffect(() => {
+      if (!isReady) return;
+      const token = localStorage.getItem("token");
+      if (!token) {
+        Router.replace("/auth/login");
+      }
+    }, [Router.pathname, isReady]);
 
-    return accessToken ? <WrappedComponent {...props} /> : <Loading />;
+    return isReady ? <WrappedComponent {...props} /> : <Loading />;
   };
   return AuthChecker;
 };

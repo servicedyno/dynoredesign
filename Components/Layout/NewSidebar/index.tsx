@@ -4,6 +4,7 @@ import AddIcon from "@mui/icons-material/Add";
 import GroupAddRounded from "@mui/icons-material/GroupAddRounded";
 import { Box, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import ReferralAndKnowledge from "../ReferralAndKnowledge";
 import {
@@ -18,6 +19,16 @@ const NewSidebar = () => {
   const isMobile = useIsMobile("md");
   const router = useRouter();
   const theme = useTheme();
+
+  // Prefetch all menu routes for instant navigation
+  useEffect(() => {
+    const paths = [
+      "/dashboard", "/transactions", "/invoices", "/pay-links",
+      "/wallet", "/customers", "/developer-keys", "/referrals",
+      "/notifications", "/create-pay-link"
+    ];
+    paths.forEach((p) => router.prefetch(p));
+  }, []);
   const { t } = useTranslation("dashboardLayout");
 
   const menuItems = [
