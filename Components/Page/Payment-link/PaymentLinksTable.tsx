@@ -13,7 +13,9 @@ import {
   useTheme,
 } from "@mui/material";
 import React, { useCallback, useRef, useState } from "react";
+import { useDispatch } from "react-redux";
 import { useTranslation } from "react-i18next";
+import { PaymentLinkAction, PAYLINK_DELETE } from "@/Redux/Actions/PaymentLinkAction";
 import {
   FooterText,
   StatusChip,
@@ -121,6 +123,7 @@ const PaymentLinksTable = ({
   rowsPerPage = 10,
 }: PaymentLinksTableProps) => {
   const router = useRouter();
+  const dispatch = useDispatch();
   const [page, setPage] = useState(0);
   const [rows, setRows] = useState(rowsPerPage);
   const { t } = useTranslation("paymentLinks");
@@ -155,8 +158,8 @@ const PaymentLinksTable = ({
 
   const paginatedData = paymentLinks.slice(start, end);
 
-  const handleCopy = (id: string) => {
-    navigator.clipboard.writeText(id);
+  const handleCopy = (url: string) => {
+    navigator.clipboard.writeText(url);
     setOpenToast(false);
 
     setTimeout(() => {
@@ -217,6 +220,7 @@ const PaymentLinksTable = ({
       blockchainFees: row.status,
       linkId: row.id,
     });
+    setPaymentLink(row.paymentUrl);
     setOpenViewModel(true);
   };
 
@@ -321,7 +325,7 @@ const PaymentLinksTable = ({
                     </Typography>
                     <Box sx={{ display: "flex", gap: "6px" }}>
                       {row.status !== "expired" && (
-                        <CopyButton onClick={() => handleCopy(row.id)} sx={{ width: 28, height: 28, minWidth: 28, p: "5px" }}>
+                        <CopyButton onClick={() => handleCopy(row.paymentUrl)} sx={{ width: 28, height: 28, minWidth: 28, p: "5px" }}>
                           <Image src={CopyIcon} alt="Copy" width={12} height={12} draggable={false} />
                         </CopyButton>
                       )}
@@ -483,7 +487,7 @@ const PaymentLinksTable = ({
                       }}
                     >
                       {row.status !== "expired" && (
-                        <CopyButton onClick={() => handleCopy(row.id)}>
+                        <CopyButton onClick={() => handleCopy(row.paymentUrl)}>
                           <Image
                             src={CopyIcon}
                             alt="Copy Icon"
@@ -789,6 +793,9 @@ const PaymentLinksTable = ({
             variant="danger"
             size={isMobile ? "small" : "medium"}
             onClick={() => {
+              if (deleteId) {
+                dispatch(PaymentLinkAction(PAYLINK_DELETE, { id: deleteId }));
+              }
               setDeleteModel(false);
               setDeletId("");
             }}

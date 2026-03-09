@@ -43,6 +43,7 @@ export interface PaymentLinkData {
   expiresAt: string;
   status: PaymentLinkStatus;
   timesUsed: number;
+  paymentUrl: string;
 }
 
 export interface PaymentLinksTableProps {

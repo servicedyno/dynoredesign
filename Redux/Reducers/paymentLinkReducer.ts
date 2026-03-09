@@ -35,7 +35,7 @@ const paymentLinkReducer = (
     case PAYLINK_INIT:
       return {
         ...state,
-        loading: true,
+        loading: state.paymentLinks.length === 0,
       };
 
     case PAYLINK_FETCH:

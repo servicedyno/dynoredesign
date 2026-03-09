@@ -56,6 +56,7 @@ const PaymentLinksPage = ({
       expiresAt: link.expires || link.expires_at || link.expiresAt || "",
       status: link.status || "pending",
       timesUsed: link.times_used || link.timesUsed || 0,
+      paymentUrl: link.payment_link || link.paymentUrl || link.payment_url || "",
     }));
   }, [paymentLinkState.paymentLinks]);
 
