@@ -61,7 +61,7 @@ function buildTransactionFilters(
     replacements.search = `%${filters.search}%`;
   }
   if (filters.company_id) {
-    whereConditions += ` AND cm.company_id = :company_id`;
+    whereConditions += ` AND (ut.company_id = :company_id OR cm.company_id = :company_id)`;
     replacements.company_id = parseInt(filters.company_id as string, 10);
   }
   return { whereConditions, replacements };

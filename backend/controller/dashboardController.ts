@@ -148,12 +148,13 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       WHERE ut.user_id = :userId ${companyFilter}
     `;
 
-    // ── 2. Volume: Use stored usd_value (historical value at time of transaction) ──
+    // ── 2. Volume: Use stored usd_value with fallback to base_amount for USD-like currencies ──
+    const USD_FALLBACK_EXPR = `COALESCE(NULLIF(ut.usd_value, 0), CASE WHEN UPPER(ut.base_currency) IN ('USD','USDT','USDC','USDT-TRC20','USDT-ERC20','USDC-ERC20','BUSD','DAI','USDT_TRC20','USDT_ERC20','USDC_ERC20','USDT-POLYGON') THEN ut.base_amount ELSE 0 END)`;
     const volumeQuery = `
       SELECT 
-        COALESCE(SUM(ut.usd_value), 0) as total_usd_value,
-        COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
-        COALESCE(SUM(ut.usd_value) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value
+        COALESCE(SUM(${USD_FALLBACK_EXPR}), 0) as total_usd_value,
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
@@ -339,13 +340,16 @@ const getChartData = async (req: express.Request, res: express.Response) => {
     else if (groupBy === 'week') dateTrunc = `DATE_TRUNC('week', ut."createdAt")`;
     else dateTrunc = `DATE_TRUNC('month', ut."createdAt")`;
 
+    // Reuse the same USD fallback expression for chart queries
+    const USD_FALLBACK_EXPR_CHART = `COALESCE(NULLIF(ut.usd_value, 0), CASE WHEN UPPER(ut.base_currency) IN ('USD','USDT','USDC','USDT-TRC20','USDT-ERC20','USDC-ERC20','BUSD','DAI','USDT_TRC20','USDT_ERC20','USDC_ERC20','USDT-POLYGON') THEN ut.base_amount ELSE 0 END)`;
+
     const chartQuery = `
       SELECT 
         ${dateTrunc} as date,
         ut.base_currency,
         COUNT(*) as transaction_count,
         COALESCE(SUM(ut.base_amount), 0) as volume,
-        COALESCE(SUM(ut.usd_value), 0) as usd_volume
+        COALESCE(SUM(${USD_FALLBACK_EXPR_CHART}), 0) as usd_volume
       FROM tbl_user_transaction ut
       ${companyJoinChart}
       WHERE ut.user_id = :userId 
@@ -361,7 +365,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
         ut.base_currency,
         COUNT(*) as count,
         COALESCE(SUM(ut.base_amount), 0) as volume,
-        COALESCE(SUM(ut.usd_value), 0) as usd_volume
+        COALESCE(SUM(${USD_FALLBACK_EXPR_CHART}), 0) as usd_volume
        FROM tbl_user_transaction ut
        ${companyJoinChart}
        WHERE ut.user_id = :userId 
@@ -533,8 +537,10 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     const companyJoinFee = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
     const companyFilterFee = company_id ? 'AND (ut.company_id = :companyId OR c.company_id = :companyId)' : '';
 
+    const feeUsdFallback = `COALESCE(NULLIF(ut.usd_value, 0), CASE WHEN UPPER(ut.base_currency) IN ('USD','USDT','USDC','USDT-TRC20','USDT-ERC20','USDC-ERC20','BUSD','DAI','USDT_TRC20','USDT_ERC20','USDC_ERC20','USDT-POLYGON') THEN ut.base_amount ELSE 0 END)`;
+
     const volumeResult = await sequelize.query(
-      `SELECT COALESCE(SUM(ut.usd_value), 0) as total_usd_volume
+      `SELECT COALESCE(SUM(${feeUsdFallback}), 0) as total_usd_volume
        FROM tbl_user_transaction ut
        ${companyJoinFee}
        WHERE ut.user_id = :userId 
