@@ -12,7 +12,7 @@
   "EmptyTransactionTitle": "There is no transactions",
   "EmptyTransactionDescription": "Start accepting payments to see transactions",
   "createPaymentLink": "Create Payment Link",
-  "EmptyWalletTitle": "There is no wallets",
+  "EmptyWalletTitle": "There are no wallets",
   "EmptyWalletDescription": "Let’s add the first one",
   "addWallet": "Add wallet",
   "EmptyApiKeyTitle": "There is no API keys",

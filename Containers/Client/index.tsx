@@ -9,7 +9,10 @@ import useIsMobile from "@/hooks/useIsMobile";
 import { LayoutProps, rootReducer } from "@/utils/types";
 import { Box, SxProps, Theme, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
-import { useSelector } from "react-redux";
+import { useSelector, useDispatch } from "react-redux";
+import { useEffect, useRef } from "react";
+import { CompanyAction } from "@/Redux/Actions";
+import { COMPANY_FETCH } from "@/Redux/Actions/CompanyAction";
 import {
   MainPageHeader,
   PageHeader,
@@ -28,6 +31,17 @@ const ClientLayout = ({
   const router = useRouter();
   const theme = useTheme();
   const isMobile = useIsMobile("md");
+  const dispatch = useDispatch();
+  const companyState = useSelector((state: rootReducer) => (state as any).companyReducer);
+  const hasFetchedRef = useRef(false);
+
+  // Fetch companies ONCE at the layout level — all in-app pages benefit
+  useEffect(() => {
+    if (!hasFetchedRef.current && !companyState?.fetched && !companyState?.loading) {
+      hasFetchedRef.current = true;
+      dispatch(CompanyAction(COMPANY_FETCH));
+    }
+  }, [dispatch, companyState?.fetched, companyState?.loading]);
   const ToastState = useSelector((state: rootReducer) => state.toastReducer);
   const isDashboard =
     router.pathname === "/dashboard" ||

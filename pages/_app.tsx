@@ -221,7 +221,7 @@ export default function App(props: AppPropsWithLayout) {
   return (
     <Provider store={store}>
       <LanguageBootstrap />
-      <SessionProvider session={props.pageProps.session}>
+      <SessionProvider session={props.pageProps.session} refetchInterval={0} refetchOnWindowFocus={false}>
         <AppThemeProvider>
           <AppInner {...props} />
         </AppThemeProvider>

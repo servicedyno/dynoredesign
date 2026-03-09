@@ -1,4 +1,4 @@
-import { call, put } from "redux-saga/effects";
+import { call, put, all } from "redux-saga/effects";
 import axiosBaseApi from "@/axiosConfig";
 import {
   DASHBOARD_FETCH,
@@ -24,17 +24,25 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
         const params: any = {};
         if (payload?.company_id) params.company_id = payload.company_id;
 
-        // Fetch both dashboard summary and analytics in parallel
-        const [response, analyticsResponse] = yield call(function* () {
-          const r1: any = yield call(axiosBaseApi.get, "/dashboard", { params });
-          let r2: any = null;
-          try {
-            r2 = yield call(axiosBaseApi.post, "/wallet/getUserAnalytics", { company_id: payload?.company_id });
-          } catch (e) {
-            // Analytics is supplementary - don't fail if it errors
-          }
-          return [r1, r2];
-        });
+        // Fetch dashboard summary and analytics IN PARALLEL (not sequential)
+        let response: any = null;
+        let analyticsResponse: any = null;
+        
+        const results: any[] = yield all([
+          call(function* () {
+            try {
+              return yield call(axiosBaseApi.get, "/dashboard", { params });
+            } catch (e) { return null; }
+          }),
+          call(function* () {
+            try {
+              return yield call(axiosBaseApi.post, "/wallet/getUserAnalytics", { company_id: payload?.company_id });
+            } catch (e) { return null; }
+          }),
+        ]);
+
+        response = results[0];
+        analyticsResponse = results[1];
 
         const apiData = response?.data?.data;
         const analytics = analyticsResponse?.data?.data;

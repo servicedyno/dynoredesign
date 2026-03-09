@@ -227,4 +227,27 @@ async def app(scope, receive, send):
     elif scope['type'] == 'http':
         # Lazy initialization if lifespan wasn't supported
         await ensure_services_started()
+        
+        # Intercept NextAuth routes — these should NOT reach the Node.js backend
+        # K8s routes all /api/* to this proxy, but /api/auth/* is NextAuth (frontend)
+        path = scope.get('path', '')
+        if path.startswith('/api/auth/'):
+            # Return a valid empty session JSON so NextAuth client doesn't error
+            if path == '/api/auth/session':
+                body = b'{"user":null}'
+            elif path == '/api/auth/_log':
+                body = b'{"ok":true}'
+            else:
+                body = b'{}'
+            await send({
+                'type': 'http.response.start',
+                'status': 200,
+                'headers': [
+                    (b'content-type', b'application/json'),
+                    (b'content-length', str(len(body)).encode()),
+                ],
+            })
+            await send({ 'type': 'http.response.body', 'body': body })
+            return
+        
         await proxy_request(scope, receive, send)

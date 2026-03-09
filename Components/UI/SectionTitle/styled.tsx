@@ -77,6 +77,8 @@ export const SubText = styled(Typography)(({ theme }) => ({
   fontFamily: "OutfitRegular",
   color: theme.palette.text.secondary,
   textAlign: "center",
+  // Render as <div> to allow block-level children without DOM nesting warnings
+  display: "block",
   "&[data-align='start']": {
     textAlign: "left",
   },

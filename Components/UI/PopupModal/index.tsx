@@ -80,9 +80,10 @@ const PopupModal = ({
             alignItems: "flex-start",
             justifyContent: "space-between",
           }}
+          component="div"
         >
           <>
-            <Typography sx={{ fontSize: "30px", fontWeight: 600 }}>
+            <Typography component="div" sx={{ fontSize: "30px", fontWeight: 600 }}>
               {headerText}
             </Typography>
             {showClose && (

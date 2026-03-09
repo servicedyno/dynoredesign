@@ -18,7 +18,7 @@ const LoadingIcon = ({ fill, size = 15 }: IconProps) => {
         stroke={fill ?? "#1034a6"}
         strokeDasharray="54.97787143782138 54.97787143782138"
         fill="none"
-        stroke-linecap="round"
+        strokeLinecap="round"
       >
         <animateTransform
           attributeName="transform"

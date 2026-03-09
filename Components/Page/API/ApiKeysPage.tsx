@@ -183,12 +183,11 @@ const ApiKeyCard = ({ title, apiRow, onCopy, onDelete, onRegenerate, onToggleSta
         {t("currency.baseCurrency")}
         <span className="flag">
           <Image
-            src={`/assets/Icons/flag/${baseCurrency.toUpperCase()}.png`}
+            src={UnitedStatesFlag}
             alt={`${baseCurrency} Flag`}
             width={16}
             height={16}
             draggable={false}
-            onError={(e: any) => { e.target.style.display = 'none'; }}
           />
         </span>
         {baseCurrency}

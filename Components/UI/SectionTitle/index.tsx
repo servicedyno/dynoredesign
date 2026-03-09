@@ -49,7 +49,7 @@ const HomeSectionTitle: React.FC<HomeSectionTitleProps> = ({
         {renderedTitle}
       </Heading>
 
-      <SubText variant="body1" data-type={type} data-align={align}>
+      <SubText component="div" variant="body1" data-type={type} data-align={align}>
         {subtitle}
       </SubText>
     </Wrapper>
