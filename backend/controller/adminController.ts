@@ -33,14 +33,7 @@ import {
   userTransactionModel,
 } from "../models/userModels";
 import { adminUnlockAccount } from "../services/accountLockoutService";
-import {
-  customerModel,
-  customerWalletModel,
-  customerTransactionModel,
-  companyModel,
-} from "../models";
 import crypto from "crypto";
-import { Op } from "sequelize";
 
 const getTransactionFee = async (
   _req: express.Request,
