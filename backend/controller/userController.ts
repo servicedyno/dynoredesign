@@ -1148,7 +1148,7 @@ const forgotPassword = async (req: express.Request, res: express.Response) => {
     const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email.toLowerCase())}`;
 
     // Send reset email
-    const emailMessage = `You requested a password reset for your Dynocash account.
+    const emailMessage = `You requested a password reset for your Dynopay account.
 
 Click the link below to reset your password:
 ${resetUrl}
@@ -1160,7 +1160,7 @@ If you didn't request this, please ignore this email. Your password will remain 
     await sendEmail(
       email.toLowerCase(),
       user.dataValues.name || "User",
-      "Password Reset Request - Dynocash",
+      "Password Reset Request - Dynopay",
       emailMessage
     );
 

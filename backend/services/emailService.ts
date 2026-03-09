@@ -656,6 +656,254 @@ export const sendAddWalletReminderEmail = async (
   }
 };
 
+/**
+ * Wallet Added Confirmation
+ * Sent when a new payout wallet is successfully verified and added
+ */
+export const sendWalletAddedEmail = async (
+  email: string,
+  name: string,
+  walletAddressMasked: string,
+  network: string,
+  companyName: string,
+  walletName?: string
+) => {
+  try {
+    const subject = `Wallet added - ${network}`;
+    const content = `${p(`Hey ${name},`)}
+    ${p(`A new payout wallet has been successfully added to your company <strong>${companyName}</strong>.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Address', `<span style="font-family: monospace; font-size: 13px;">${walletAddressMasked}</span>`)}
+        ${dataRow('Blockchain', network)}
+        ${walletName ? dataRow('Wallet Name', walletName) : ''}
+        ${dataRow('Status', statusBadge('Active', 'success'), true)}
+      </table>
+    `, '#22c55e')}
+    ${p(`All payments in ${network} will be forwarded to this wallet. You can manage your wallets in the dashboard.`)}
+    ${p(`<strong>Didn't do this?</strong><br />If you didn't add this wallet, please secure your account immediately.`, `color: #991b1b;`)}`;
+
+    const html = dynoPayEmailTemplate("Wallet Added", content, true, "View Wallets", `${FRONTEND_BASE_URL}/dashboard/wallets`);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Wallet added email sent to ${email} for ${network}`);
+  } catch (e) {
+    apiLogger.error("Wallet added email error:", e);
+  }
+};
+
+/**
+ * Wallet Updated Confirmation
+ * Sent when a wallet address is successfully changed
+ */
+export const sendWalletUpdatedEmail = async (
+  email: string,
+  name: string,
+  walletAddressMasked: string,
+  network: string,
+  companyName: string,
+  walletName?: string
+) => {
+  try {
+    const subject = `Wallet updated - ${network}`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your payout wallet for <strong>${companyName}</strong> has been updated.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('New Address', `<span style="font-family: monospace; font-size: 13px;">${walletAddressMasked}</span>`)}
+        ${dataRow('Blockchain', network)}
+        ${walletName ? dataRow('Wallet Name', walletName) : ''}
+        ${dataRow('Updated', `${dateStr} at ${timeStr}`, true)}
+      </table>
+    `, '#f59e0b')}
+    ${p(`Future payments in ${network} will be forwarded to the new address.`)}
+    ${p(`<strong>Didn't do this?</strong><br />If you didn't update this wallet, please secure your account immediately and contact support.`, `color: #991b1b;`)}`;
+
+    const html = dynoPayEmailTemplate("Wallet Updated", content, true, "View Wallets", `${FRONTEND_BASE_URL}/dashboard/wallets`);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Wallet updated email sent to ${email} for ${network}`);
+  } catch (e) {
+    apiLogger.error("Wallet updated email error:", e);
+  }
+};
+
+/**
+ * Withdrawal OTP Email
+ * Sent when user requests a crypto withdrawal
+ */
+export const sendWithdrawalOTPEmail = async (
+  email: string,
+  name: string,
+  otpCode: string,
+  amount: string,
+  currency: string,
+  destinationAddress: string
+) => {
+  try {
+    const subject = "Confirm your withdrawal";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're about to withdraw <strong>${amount} ${currency}</strong>. Please verify this action with the code below:`)}
+    ${otpBlock(otpCode)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${dataRow('To Address', `<span style="font-family: monospace; font-size: 13px;">${destinationAddress}</span>`, true)}
+      </table>
+    `, '#f59e0b')}
+    ${p(`This code expires in <strong>5 minutes</strong>. If you didn't request this withdrawal, please ignore this email and secure your account.`, `color: #991b1b;`)}`;
+
+    const html = dynoPayEmailTemplate("Confirm Withdrawal", content);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Withdrawal OTP email sent to ${email}`);
+  } catch (e) {
+    apiLogger.error("Withdrawal OTP email error:", e);
+  }
+};
+
+/**
+ * Withdrawal Success Email
+ * Sent when a crypto withdrawal is submitted to the blockchain
+ */
+export const sendWithdrawalSuccessEmail = async (
+  email: string,
+  name: string,
+  amount: string,
+  currency: string,
+  destinationAddress: string,
+  transactionReference: string
+) => {
+  try {
+    const subject = `Withdrawal submitted - ${amount} ${currency}`;
+    const now = new Date();
+    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    const content = `${p(`Hey ${name},`)}
+    ${p(`Your withdrawal of <strong>${amount} ${currency}</strong> has been submitted and is being processed.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>${amount} ${currency}</strong>`)}
+        ${dataRow('Status', statusBadge('In Progress', 'pending'))}
+        ${dataRow('To Address', `<span style="font-family: monospace; font-size: 13px;">${destinationAddress}</span>`)}
+        ${dataRow('Reference', `<span style="font-family: monospace; font-size: 13px;">${transactionReference}</span>`)}
+        ${dataRow('Date', `${dateStr} at ${timeStr}`, true)}
+      </table>
+    `, '#3b82f6')}
+    ${p(`The transfer is being broadcast to the blockchain. It may take a few minutes to confirm depending on network conditions.`)}
+    ${p(`You can track the transaction status in your dashboard.`)}`;
+
+    const html = dynoPayEmailTemplate("Withdrawal Submitted", content, true, "View Transactions", `${FRONTEND_BASE_URL}/dashboard/transactions`);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Withdrawal success email sent to ${email}`);
+  } catch (e) {
+    apiLogger.error("Withdrawal success email error:", e);
+  }
+};
+
+/**
+ * Exchange OTP Email
+ * Sent when user initiates a currency exchange with another user
+ */
+export const sendExchangeOTPEmail = async (
+  email: string,
+  name: string,
+  otpCode: string,
+  amountUsd: string,
+  fromCurrency: string,
+  toCurrency: string,
+  otherPartyName: string
+) => {
+  try {
+    const subject = "Confirm your exchange";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're about to exchange currencies with <strong>${otherPartyName}</strong>. Please verify this action with the code below:`)}
+    ${otpBlock(otpCode)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Amount', `<strong>$${amountUsd}</strong>`)}
+        ${dataRow('From', fromCurrency)}
+        ${dataRow('To', toCurrency)}
+        ${dataRow('With', otherPartyName, true)}
+      </table>
+    `, '#3b82f6')}
+    ${p(`This code expires in <strong>5 minutes</strong>. If you didn't request this exchange, please ignore this email.`)}`;
+
+    const html = dynoPayEmailTemplate("Confirm Exchange", content);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Exchange OTP email sent to ${email}`);
+  } catch (e) {
+    apiLogger.error("Exchange OTP email error:", e);
+  }
+};
+
+/**
+ * Wallet Edit OTP Email (new wallet system)
+ * Sent when user requests to edit a wallet address
+ */
+export const sendWalletEditOTPEmail = async (
+  email: string,
+  name: string,
+  otpCode: string,
+  walletAddressMasked: string,
+  network: string
+) => {
+  try {
+    const subject = "Confirm wallet edit";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're about to edit a wallet address. Please verify this action with the code below:`)}
+    ${otpBlock(otpCode)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Wallet', `<span style="font-family: monospace; font-size: 13px;">${walletAddressMasked}</span>`)}
+        ${dataRow('Network', network, true)}
+      </table>
+    `)}
+    ${p(`This code expires in <strong>10 minutes</strong>. If you didn't request this, please ignore this email or contact support.`)}`;
+
+    const html = dynoPayEmailTemplate("Confirm Wallet Edit", content);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Wallet edit OTP email sent to ${email}`);
+  } catch (e) {
+    apiLogger.error("Wallet edit OTP email error:", e);
+  }
+};
+
+/**
+ * Wallet Delete OTP Email (new wallet system)
+ * Sent when user requests to delete a wallet address permanently
+ */
+export const sendWalletDeleteOTPEmail = async (
+  email: string,
+  name: string,
+  otpCode: string,
+  walletAddressMasked: string,
+  network: string
+) => {
+  try {
+    const subject = "Confirm wallet deletion";
+    const content = `${p(`Hey ${name},`)}
+    ${p(`You're about to <strong>permanently delete</strong> a wallet address. This action cannot be undone.`)}
+    ${otpBlock(otpCode)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Wallet', `<span style="font-family: monospace; font-size: 13px;">${walletAddressMasked}</span>`)}
+        ${dataRow('Network', network)}
+        ${dataRow('Action', statusBadge('Permanent Deletion', 'error'), true)}
+      </table>
+    `, '#ef4444')}
+    ${p(`This code expires in <strong>10 minutes</strong>. If you didn't request this, please ignore this email or contact support immediately.`, `color: #991b1b;`)}`;
+
+    const html = dynoPayEmailTemplate("Confirm Wallet Deletion", content);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`Wallet delete OTP email sent to ${email}`);
+  } catch (e) {
+    apiLogger.error("Wallet delete OTP email error:", e);
+  }
+};
+
 // ============================================================
 // SECTION 6: PAYMENT LIFECYCLE EMAILS
 // ============================================================
@@ -2089,6 +2337,22 @@ export const sendWeeklySummaryEmail = async (
   try {
     const currencySymbol = getCurrencySymbol(baseCurrency);
     const subject = "Your weekly Dynopay summary";
+    const totalVolumeNum = parseFloat(totalVolume);
+    const hasActivity = transactionCount > 0;
+    const hasCompleted = completedCount > 0;
+
+    // Smart contextual message based on actual activity
+    let contextMessage = '';
+    if (!hasActivity) {
+      contextMessage = p(`No transactions were recorded this week. When you're ready, create a payment link or share your checkout page to start receiving payments.`);
+    } else if (hasCompleted && totalVolumeNum > 0) {
+      contextMessage = p(`Great week! You processed <strong>${currencySymbol}${totalVolume} ${baseCurrency}</strong> across ${completedCount} completed transaction${completedCount > 1 ? 's' : ''}. Keep up the momentum!`);
+    } else if (pendingCount > 0 && !hasCompleted) {
+      contextMessage = p(`You have <strong>${pendingCount} pending</strong> transaction${pendingCount > 1 ? 's' : ''} awaiting confirmation. Check your dashboard for details.`);
+    } else {
+      contextMessage = p(`You had ${transactionCount} transaction${transactionCount > 1 ? 's' : ''} this week. Log in to your dashboard for the full breakdown.`);
+    }
+
     const content = `${p(`Hey ${name},`)}
     ${p(`Here's your weekly activity summary for <strong>${periodStart}</strong> to <strong>${periodEnd}</strong>:`)}
     ${infoBox(`
@@ -2097,10 +2361,10 @@ export const sendWeeklySummaryEmail = async (
         ${dataRow('Total Volume', `<strong>${currencySymbol}${totalVolume} ${baseCurrency}</strong>`)}
         ${dataRow('Completed', statusBadge(String(completedCount), 'success'))}
         ${dataRow('Pending', statusBadge(String(pendingCount), 'pending'))}
-        ${dataRow('Top Currency', topCurrency, true)}
+        ${dataRow('Top Currency', topCurrency === 'None' ? 'No completed transactions' : topCurrency, true)}
       </table>
     `)}
-    ${p(`Keep up the great work! Log in to your dashboard for detailed analytics and insights.`)}`;
+    ${contextMessage}`;
 
     const html = dynoPayEmailTemplate("Your Weekly Summary", content, true, "View Full Analytics", `${FRONTEND_BASE_URL}/dashboard/analytics`);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -2347,6 +2611,13 @@ export default {
   sendWalletUpdateOTPEmail,
   sendWalletDeletedEmail,
   sendAddWalletReminderEmail,
+  sendWalletAddedEmail,
+  sendWalletUpdatedEmail,
+  sendWithdrawalOTPEmail,
+  sendWithdrawalSuccessEmail,
+  sendExchangeOTPEmail,
+  sendWalletEditOTPEmail,
+  sendWalletDeleteOTPEmail,
   // Payment lifecycle
   sendPaymentReceivedEmail,
   sendPaymentPendingEmail,

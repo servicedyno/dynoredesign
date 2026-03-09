@@ -17,6 +17,17 @@ import {
   successResponseHelper,
   generateWalletName,
 } from "../helper";
+import {
+  sendWithdrawalOTPEmail,
+  sendWithdrawalSuccessEmail,
+  sendExchangeOTPEmail,
+  sendWalletAddedEmail,
+  sendWalletUpdatedEmail,
+  sendWalletUpdateOTPEmail,
+  sendWalletDeletedEmail,
+  sendWalletEditOTPEmail,
+  sendWalletDeleteOTPEmail,
+} from "../services/emailService";
 import { handleControllerError, handleControllerErrorReturn } from "../helper/controllerErrorHandler";
 import { parseSortAndPagination } from "../helper/queryHelpers";
 import { incrementAdminFee, incrementUserWallet } from "../helper/walletHelpers";
@@ -1479,14 +1490,14 @@ const sendConfirmationOTP = async (
       .then((isExists) => isExists);
     if (isExists) {
       const randomNumberOTP = Math.floor(100000 + Math.random() * 900000);
-      await sendEmail(
+      const maskAddr = (a: string) => a ? `${a.substring(0, 8)}...${a.substring(a.length - 6)}` : address;
+      await sendWithdrawalOTPEmail(
         email,
         userData.name,
-        "OTP for withdrawal",
-        `You are about to withdraw ${amount} ${currency} \n 
-        to following wallet address: ${address}.\n
-        To proceed further please provide this code: ${randomNumberOTP} \n
-        this code will expire in 5 minutes.`
+        String(randomNumberOTP),
+        String(amount),
+        String(currency),
+        maskAddr(address)
       );
 
       await setRedisItem(email + "-withdrawal-otp", {
@@ -1922,13 +1933,14 @@ const withdrawAssets = async (req: express.Request, res: express.Response) => {
         }
       }
       await deleteRedisItem(userData.email + "-withdrawal-otp");
-      await sendEmail(
+      const maskAddr2 = (a: string) => a ? `${a.substring(0, 8)}...${a.substring(a.length - 6)}` : address;
+      await sendWithdrawalSuccessEmail(
         userData.email,
         userData.name,
-        "Withdrawal success!",
-        `You're withdrawal of ${amount} ${currency} \n 
-          to following wallet address: ${address} is in progress. \n
-          for further details please check this transaction reference: ${transactionRefrenceIds} \n`
+        String(amount),
+        String(currency),
+        maskAddr2(address),
+        String(transactionRefrenceIds)
       );
       successResponseHelper(res, 200, "Amount withdrawed!", transactionIds);
     }
@@ -2207,24 +2219,24 @@ const exchangeCreate = async (req: express.Request, res: express.Response) => {
 
         const randomNumberOTP1 = Math.floor(100000 + Math.random() * 900000);
         const randomNumberOTP2 = Math.floor(100000 + Math.random() * 900000);
-        await sendEmail(
+        await sendExchangeOTPEmail(
           userData.email,
           userData.name,
-          "OTP for Exchange",
-          `You are about to exchange ${amount_in_usd}$ from ${exchange_currency} \n
-          to ${amount_in_usd}$ in ${req_currency} with following user: ${secondUser?.dataValues?.name}.\n
-          To proceed further please provide this code: ${randomNumberOTP1} \n
-          this code will expire in 5 minutes.`
+          String(randomNumberOTP1),
+          String(amount_in_usd),
+          String(exchange_currency),
+          String(req_currency),
+          secondUser?.dataValues?.name || "another user"
         );
 
-        await sendEmail(
+        await sendExchangeOTPEmail(
           secondUser?.dataValues.email,
           secondUser?.dataValues.name,
-          "OTP for Exchange",
-          `You are about to exchange ${amount_in_usd}$ from ${req_currency} \n
-          to ${amount_in_usd}$ in ${exchange_currency} with following user: ${userData.name}.\n
-          To proceed further please provide this code: ${randomNumberOTP2} \n
-          this code will expire in 5 minutes.`
+          String(randomNumberOTP2),
+          String(amount_in_usd),
+          String(req_currency),
+          String(exchange_currency),
+          userData.name
         );
         const id = crypto.randomUUID();
         const expiresAt = new Date().getTime() + 5 * 60 * 1000;
@@ -3036,23 +3048,13 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
       walletLogger.warn(`[verifyOtp] ⚠️ Merchant pool initialization skipped:`, poolError.message);
     }
     
-    await sendEmail(
+    await sendWalletAddedEmail(
       userData.email,
       userData.name,
-      `Wallet Added - ${currency}`,
-      `
-        <div style="margin: 24px 0;">
-          <h3 style="color: #1034a6; margin: 0 0 16px 0;">✅ Wallet Successfully Added</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(currency)}</p>
-          <p style="margin: 8px 0;"><strong>Wallet Address:</strong> ${escapeHtml(maskAddress(wallet_address))}</p>
-          ${wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${escapeHtml(wallet_name)}</p>` : ''}
-          <div style="margin-top: 20px; padding: 12px; background-color: #f0f7ff; border-left: 4px solid #1034a6; border-radius: 4px;">
-            <p style="margin: 0; font-size: 13px; color: #666;">If you did not perform this action, please contact support immediately.</p>
-          </div>
-        </div>
-      `,
-      false
+      maskAddress(wallet_address),
+      currency,
+      companyName,
+      wallet_name || undefined
     );
 
     // Invalidate wallet cache so getWallet returns fresh data
@@ -3234,11 +3236,14 @@ const sendUpdateWalletOTP = async (
     );
 
     // Send OTP email
-    await sendEmail(
+    const maskWalletAddr = (a: string) => a ? `${a.substring(0, 8)}...${a.substring(a.length - 6)}` : 'N/A';
+    await sendWalletUpdateOTPEmail(
       userData.email,
       userData.name,
-      "Update Wallet Address - OTP Verification",
-      `Your OTP for updating wallet address is: ${randomNumberOTP}. Valid for 5 minutes.`
+      String(randomNumberOTP),
+      maskWalletAddr(wallet.dataValues.wallet_address),
+      "Pending update",
+      wallet.dataValues.wallet_type
     );
 
     walletLogger.info(
@@ -3393,23 +3398,13 @@ const updateWalletWithOTP = async (
     const companyName = companyData?.dataValues.company_name || "Your Company";
     const maskAddress = (addr: string) => addr ? `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}` : 'N/A';
     
-    await sendEmail(
+    await sendWalletUpdatedEmail(
       userData.email,
       userData.name,
-      `Wallet Updated - ${updatedWallet.dataValues.wallet_type}`,
-      `
-        <div style="margin: 24px 0;">
-          <h3 style="color: #1034a6; margin: 0 0 16px 0;">✏️ Wallet Successfully Updated</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(updatedWallet.dataValues.wallet_type)}</p>
-          <p style="margin: 8px 0;"><strong>New Wallet Address:</strong> ${escapeHtml(maskAddress(updatedWallet.dataValues.wallet_address))}</p>
-          ${updatedWallet.dataValues.wallet_name ? `<p style="margin: 8px 0;"><strong>Wallet Name:</strong> ${escapeHtml(updatedWallet.dataValues.wallet_name)}</p>` : ''}
-          <div style="margin-top: 20px; padding: 12px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
-            <p style="margin: 0; font-size: 13px; color: #666;">⚠️ Your wallet address has been changed. If you did not perform this action, please contact support immediately.</p>
-          </div>
-        </div>
-      `,
-      false
+      maskAddress(updatedWallet.dataValues.wallet_address),
+      updatedWallet.dataValues.wallet_type,
+      companyName,
+      updatedWallet.dataValues.wallet_name || undefined
     );
 
     return successResponseHelper(res, 200, "Wallet address updated successfully!", {
@@ -3481,11 +3476,13 @@ const sendDeletePaymentWalletOTP = async (
     );
 
     // Send OTP email
-    await sendEmail(
+    const maskDelAddr = (a: string) => a ? `${a.substring(0, 8)}...${a.substring(a.length - 6)}` : 'N/A';
+    await sendWalletDeleteOTPEmail(
       userData.email,
       userData.name,
-      "Delete Wallet Address - OTP Verification",
-      `Your OTP for deleting wallet address is: ${randomNumberOTP}. This action is permanent. Valid for 5 minutes.`
+      String(randomNumberOTP),
+      maskDelAddr(wallet.dataValues.wallet_address),
+      wallet.dataValues.wallet_type
     );
 
     walletLogger.info(
@@ -3612,22 +3609,13 @@ const deletePaymentWalletWithOTP = async (
     const companyName = companyData?.dataValues.company_name || "Your Company";
     const maskAddress = (addr: string) => `${addr.substring(0, 8)}...${addr.substring(addr.length - 6)}`;
     
-    await sendEmail(
+    await sendWalletDeletedEmail(
       userData.email,
       userData.name,
-      `Wallet Removed - ${wallet.dataValues.wallet_type}`,
-      `
-        <div style="margin: 24px 0;">
-          <h3 style="color: #dc3545; margin: 0 0 16px 0;">🗑️ Wallet Successfully Removed</h3>
-          <p style="margin: 8px 0;"><strong>Company:</strong> ${escapeHtml(companyName)}</p>
-          <p style="margin: 8px 0;"><strong>Blockchain:</strong> ${escapeHtml(wallet.dataValues.wallet_type)}</p>
-          <p style="margin: 8px 0;"><strong>Removed Address:</strong> ${escapeHtml(maskAddress(wallet.dataValues.wallet_address))}</p>
-          <div style="margin-top: 20px; padding: 12px; background-color: #f8d7da; border-left: 4px solid: #dc3545; border-radius: 4px;">
-            <p style="margin: 0; font-size: 13px; color: #721c24;">🚨 This wallet address has been removed from your account. If you did not perform this action, please contact support immediately.</p>
-          </div>
-        </div>
-      `,
-      false
+      maskAddress(wallet.dataValues.wallet_address),
+      wallet.dataValues.wallet_type,
+      new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' }),
+      new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
     );
 
     return successResponseHelper(res, 200, "Wallet address removed successfully!", {
@@ -3689,19 +3677,13 @@ const sendEditWalletOTP = async (req: express.Request, res: express.Response) =>
     }); // TTL managed by Redis key expiry
 
     // Send OTP email
-    const emailMessage = `You requested to edit your wallet address.
-
-Your verification code is: ${otp}
-
-This code will expire in 10 minutes.
-
-If you didn't request this, please ignore this email or contact support.`;
-
-    await sendEmail(
+    const walletAddrDisplay = address_id ? `...${String(address_id).slice(-6)}` : 'your wallet';
+    await sendWalletEditOTPEmail(
       user.dataValues.email,
       user.dataValues.name || "User",
-      "Wallet Edit Verification Code - Dynocash",
-      emailMessage
+      otp,
+      walletAddrDisplay,
+      "Crypto"
     );
 
     walletLogger.info(`Edit wallet OTP sent for address ${address_id} to user ${user_id}`);
@@ -3898,22 +3880,15 @@ const sendDeleteWalletOTP = async (req: express.Request, res: express.Response) 
     });
 
     // Send OTP email
-    const walletInfo = `${walletAddress.dataValues.wallet_name || walletAddress.dataValues.currency} (${walletAddress.dataValues.wallet_address?.substring(0, 10)}...)`;
-    const emailMessage = `You requested to DELETE your wallet address: ${walletInfo}
-
-Your verification code is: ${otp}
-
-This code will expire in 10 minutes.
-
-⚠️ WARNING: This action is IRREVERSIBLE. The wallet address will be permanently removed from your account.
-
-If you didn't request this, please ignore this email or contact support immediately.`;
-
-    await sendEmail(
+    const walletAddrMask = walletAddress.dataValues.wallet_address
+      ? `${walletAddress.dataValues.wallet_address.substring(0, 8)}...${walletAddress.dataValues.wallet_address.substring(walletAddress.dataValues.wallet_address.length - 6)}`
+      : 'your wallet';
+    await sendWalletDeleteOTPEmail(
       user.dataValues.email,
       user.dataValues.name || "User",
-      "⚠️ Wallet Deletion Verification Code - Dynopay",
-      emailMessage
+      otp,
+      walletAddrMask,
+      walletAddress.dataValues.currency || "Crypto"
     );
 
     walletLogger.info(`Delete wallet OTP sent for address ${address_id} to user ${user_id}`);

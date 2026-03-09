@@ -42,21 +42,25 @@ export const setupWeeklySummaryCron = () => {
 
       for (const user of usersWithWeeklySummary) {
         try {
-          // Get transaction summary for this user
+          // Get transaction summary for this user's company
           const summary = await sequelize.query(
             `SELECT 
               COUNT(*) as transaction_count,
               COALESCE(SUM(CASE WHEN status = 'done' THEN base_amount ELSE 0 END), 0) as total_volume,
               COALESCE(SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END), 0) as completed_count,
               COALESCE(SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END), 0) as pending_count,
-              COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed_count
+              COALESCE(SUM(CASE WHEN status = 'failed' THEN 1 ELSE 0 END), 0) as failed_count,
+              (SELECT currency FROM tbl_user_transaction 
+               WHERE company_id = :companyId AND status = 'done'
+               AND "createdAt" >= :startDate AND "createdAt" <= :endDate
+               GROUP BY currency ORDER BY COUNT(*) DESC LIMIT 1) as top_currency
              FROM tbl_user_transaction 
-             WHERE user_id = :userId 
+             WHERE company_id = :companyId 
              AND "createdAt" >= :startDate
              AND "createdAt" <= :endDate`,
             {
               replacements: { 
-                userId: user.user_id, 
+                companyId: user.company_id,
                 startDate: startDate.toISOString(),
                 endDate: endDate.toISOString()
               },
@@ -121,11 +125,11 @@ export const setupWeeklySummaryCron = () => {
               String(user.name || ''),
               periodStart,
               periodEnd,
-              Number(typedStats.total_count || typedStats.transaction_count || 0),
+              Number(typedStats.transaction_count || 0),
               totalVolume.toFixed(2),
               Number(typedStats.completed_count || 0),
               Number(typedStats.pending_count || 0),
-              String(typedStats.top_currency || "N/A")
+              String(typedStats.top_currency || "None")
             );
             log(`Weekly summary email sent to ${user.email}`, "info");
           } catch (emailError) {
