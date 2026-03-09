@@ -1,10 +1,10 @@
 # DynoPay - Test Results
 
 ## Pod URL Setup
-- **Pod URL**: `https://pod-integration-hub-2.preview.emergentagent.com`
-- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://pod-integration-hub-2.preview.emergentagent.com/`
-- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://pod-integration-hub-2.preview.emergentagent.com`
-- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://pod-integration-hub-2.preview.emergentagent.com`
+- **Pod URL**: `https://36b500c4-9d34-4324-8735-ea706cca8530.preview.emergentagent.com`
+- **Frontend** (`/app/.env.local`): `NEXT_PUBLIC_BASE_URL=https://36b500c4-9d34-4324-8735-ea706cca8530.preview.emergentagent.com/`
+- **Frontend** (`/app/frontend/.env`): `REACT_APP_BACKEND_URL=https://36b500c4-9d34-4324-8735-ea706cca8530.preview.emergentagent.com`
+- **Backend** (`/app/backend/.env`): `SERVER_URL`, `CHECKOUT_URL`, `FRONTEND_URL` all set to `https://36b500c4-9d34-4324-8735-ea706cca8530.preview.emergentagent.com`
 
 ## Changes Made - Session (Dashboard Data Fix)
 
