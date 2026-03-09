@@ -29,6 +29,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import * as yup from "yup";
+import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
 import axiosBaseApi from "@/axiosConfig";
 
 type RegisterErrorKey =
@@ -121,7 +122,9 @@ const Register = () => {
 
   const handlePhoneRegisterStep1 = async () => {
     if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
-    if (!phone.trim() || phone.length < 8) { setPhoneError("Valid phone number is required (include country code, e.g. +1...)"); return; }
+    // Strip all non-digit characters for validation and API call
+    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
+    if (!cleanMobile || cleanMobile.length < 10) { setPhoneError("Valid mobile number is required (select country code and enter number)"); return; }
     if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError(t("passwordValidationError")); return; }
     setPhoneNameError("");
     setPhoneError("");
@@ -130,7 +133,7 @@ const Register = () => {
     try {
       const phonePayload: any = {
         name: phoneName.trim(),
-        mobile: phone.trim(),
+        mobile: cleanMobile,
         password: phonePassword,
       };
       if (referralCode.trim()) {
@@ -141,7 +144,7 @@ const Register = () => {
       setPhoneOtpDialog(true);
       setPhoneOtpCountdown(60);
     } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to send OTP. Please check your phone number.";
+      const msg = err?.response?.data?.message || "Failed to send OTP. Please check your mobile number.";
       setPhoneError(msg);
     } finally {
       setPhoneLoading(false);
@@ -151,10 +154,13 @@ const Register = () => {
   const handlePhoneOtpVerify = async (otp: string) => {
     setPhoneOtpError("");
     setPhoneLoading(true);
+    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
     try {
       const res = await axiosBaseApi.post("/user/registerPhone/verify", {
-        mobile: phone.trim(),
+        mobile: cleanMobile,
         otp: otp.trim(),
+        name: phoneName.trim(),
+        password: phonePassword,
       });
       // If successful, user is created — redirect to login
       if (res.data?.data?.token) {
@@ -176,10 +182,11 @@ const Register = () => {
 
   const handlePhoneResend = async () => {
     setPhoneOtpError("");
+    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
     try {
       await axiosBaseApi.post("/user/registerPhone", {
         name: phoneName.trim(),
-        mobile: phone.trim(),
+        mobile: cleanMobile,
         password: phonePassword,
       });
       setPhoneOtpCountdown(60);
@@ -502,16 +509,38 @@ const Register = () => {
               error={!!phoneNameError}
               helperText={phoneNameError}
             />
-            <InputField
-              label={t("phoneNumber")}
-              type="tel"
-              placeholder={t("phoneNumberPlaceholder")}
-              value={phone}
-              onChange={(e) => { setPhone(e.target.value); setPhoneError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
-              error={!!phoneError}
-              helperText={phoneError}
-            />
+            <Box>
+              <Typography
+                sx={{
+                  fontSize: isMobile ? "10px" : "13px",
+                  fontFamily: "UrbanistMedium",
+                  fontWeight: 500,
+                  color: muiTheme.palette.text.primary,
+                  mb: "6px",
+                }}
+              >
+                {t("phoneNumber")}
+              </Typography>
+              <CountryPhoneInput
+                value={phone}
+                onChange={(value) => { setPhone(value); setPhoneError(""); }}
+                placeholder="Enter mobile number"
+                defaultCountry="US"
+                error={!!phoneError}
+              />
+              {phoneError && (
+                <Typography
+                  sx={{
+                    fontSize: "11px",
+                    fontFamily: "UrbanistMedium",
+                    color: muiTheme.palette.error.main,
+                    mt: "4px",
+                  }}
+                >
+                  {phoneError}
+                </Typography>
+              )}
+            </Box>
             <InputField
               type={showPhonePassword ? "text" : "password"}
               value={phonePassword}

@@ -169,16 +169,20 @@ const registerUser = async (req: express.Request, res: express.Response) => {
  */
 const registerPhoneStep1 = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, mobile, password } = req.body;
+    const { name, password } = req.body;
+    let { mobile } = req.body;
     
     if (!name || !mobile || !password) {
-      return errorResponseHelper(res, 400, "Name, mobile, and password are required");
+      return errorResponseHelper(res, 400, "Name, mobile number, and password are required");
     }
     
-    // Validate phone format
+    // Strip + prefix if present (Telnyx expects digits only, we add + when calling API)
+    mobile = mobile.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
+    
+    // Validate mobile format (digits only, 10-15 chars)
     const phoneRegex = /^\d{10,15}$/;
     if (!phoneRegex.test(mobile)) {
-      return errorResponseHelper(res, 400, "Invalid phone number format. Use 10-15 digits only");
+      return errorResponseHelper(res, 400, "Invalid mobile number format. Use 10-15 digits with country code (e.g. 13025141000)");
     }
     
     // Check if mobile already registered
@@ -187,13 +191,13 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
     });
     
     if (mobileExists) {
-      return errorResponseHelper(res, 400, "Phone number already registered");
+      return errorResponseHelper(res, 400, "Mobile number already registered");
     }
     
     // Send OTP via Telnyx (with retry logic)
     const smsSent = await sendTelnyxSMS(mobile);
     if (smsSent) {
-      return successResponseHelper(res, 200, "OTP sent to your phone. Please verify to complete registration.");
+      return successResponseHelper(res, 200, "OTP sent to your mobile number. Please verify to complete registration.");
     }
     return errorResponseHelper(res, 503, "Failed to send OTP. Please try again shortly.");
     
@@ -211,11 +215,15 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
  */
 const registerPhoneStep2 = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, mobile, password, otp } = req.body;
+    const { name, password, otp } = req.body;
+    let { mobile } = req.body;
     
     if (!name || !mobile || !password || !otp) {
-      return errorResponseHelper(res, 400, "All fields are required: name, mobile, password, otp");
+      return errorResponseHelper(res, 400, "All fields are required: name, mobile number, password, otp");
     }
+    
+    // Strip + prefix if present
+    mobile = mobile.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
     
     // Verify OTP with Telnyx
     try {
@@ -255,7 +263,7 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
     });
     
     if (mobileExists) {
-      return errorResponseHelper(res, 400, "Phone number already registered");
+      return errorResponseHelper(res, 400, "Mobile number already registered");
     }
     
     // Download default user image
