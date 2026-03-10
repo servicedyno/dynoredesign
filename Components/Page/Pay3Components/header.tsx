@@ -8,9 +8,6 @@ import {
   IconButton,
   Drawer,
   Stack,
-  Select,
-  MenuItem,
-  FormControl,
   Button,
   useMediaQuery,
   useTheme
@@ -19,10 +16,9 @@ import MenuIcon from '@mui/icons-material/Menu';
 import WbSunnyIcon from '@mui/icons-material/WbSunny';
 import BedtimeIcon from '@mui/icons-material/Bedtime';
 import { Icon } from '@iconify/react/dist/iconify.js';
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import { useTranslation } from 'react-i18next';
-import { useRouter } from 'next/router';
 import Logo from "@/assets/Icons/Logo";
+import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 
 const Header = ({
   darkMode,
@@ -35,17 +31,8 @@ const Header = ({
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(false);
   const { t } = useTranslation('common');
-  const router = useRouter();
-  const [open, setOpen] = useState(false);
 
   const toggleDrawer = () => setDrawerOpen(!drawerOpen);
-
-  const handleLanguageChange = (event: any) => {
-    const newLocale = event.target.value as string;
-    document.cookie = `NEXT_LOCALE=${newLocale}; path=/; max-age=31536000; SameSite=Lax`;
-    const { pathname, asPath, query } = router;
-    router.replace({ pathname, query }, asPath, { locale: newLocale });
-  };
 
   return (
     <>
@@ -105,44 +92,8 @@ const Header = ({
                 {t('header.wallet')}
               </Button>
 
-              {/* Language */}
-              <FormControl variant="standard" size="small">
-                <Select
-                  value={router.locale || 'en'}
-                  onChange={handleLanguageChange}
-                  onOpen={() => setOpen(true)}
-                  onClose={() => setOpen(false)}
-                  disableUnderline
-                  IconComponent={() => (
-                    <KeyboardArrowDownIcon
-                      sx={{
-                        color: 'white',
-                        fontSize: 18,
-                        transform: open ? 'rotate(180deg)' : 'rotate(0deg)',
-                        transition: 'transform 0.3s ease',
-                      }}
-                    />
-                  )}
-                  sx={{
-                    color: 'white',
-                    fontWeight: 600,
-                    fontSize: '13px',
-                    '& .MuiSelect-select': { py: 0.5 },
-                  }}
-                  MenuProps={{
-                    PaperProps: {
-                      sx: { mt: 1, borderRadius: 2 },
-                    },
-                  }}
-                >
-                  <MenuItem value="en">EN</MenuItem>
-                  <MenuItem value="fr">FR</MenuItem>
-                  <MenuItem value="es">ES</MenuItem>
-                  <MenuItem value="pt">PT</MenuItem>
-                  <MenuItem value="de">DE</MenuItem>
-                  <MenuItem value="nl">NL</MenuItem>
-                </Select>
-              </FormControl>
+              {/* Language Switcher with flag icons */}
+              <LanguageSwitcher />
 
               {/* Theme Toggle — compact */}
               <Box
@@ -224,22 +175,8 @@ const Header = ({
             {t('header.wallet')}
           </Button>
 
-          <FormControl variant='standard' size='small' sx={{ minWidth: 100 }}>
-            <Select
-              value={router.locale || 'en'}
-              onChange={(e) => {
-                handleLanguageChange(e);
-                toggleDrawer();
-              }}
-            >
-              <MenuItem value='en'>EN</MenuItem>
-              <MenuItem value='fr'>FR</MenuItem>
-              <MenuItem value='es'>ES</MenuItem>
-              <MenuItem value='pt'>PT</MenuItem>
-              <MenuItem value='de'>DE</MenuItem>
-              <MenuItem value='nl'>NL</MenuItem>
-            </Select>
-          </FormControl>
+          {/* Language Switcher with flag icons */}
+          <LanguageSwitcher showBig />
 
           <Box
             onClick={() => { toggleDarkMode(); toggleDrawer(); }}

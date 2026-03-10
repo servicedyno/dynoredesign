@@ -217,23 +217,59 @@ backend:
         agent: "testing"
         comment: "COMPREHENSIVE REVIEW REQUEST TESTING: All 3 main requirements verified. (1) Health Check: GET /api/status returns 200 OK with overall_status='operational' and detailed service status for 5 services (API Gateway, Payment Processing, Wallet Services, Webhook Delivery, Dashboard) all operational with 99.99% uptime. (2) Login OTP Flow: Two-step authentication working correctly - POST /api/user/login returns login_otp_session, requires real email OTP via POST /api/user/verify-login-otp (test OTP correctly rejected). (3) Dashboard & Auto-Convert APIs exist, properly secured (401 without auth), and follow consistent response patterns. API structure validation: 7/7 tests passed. Backend fully functional and properly configured."
 
+frontend:
+  - task: "Language Switcher with Flag Icons"
+    implemented: true
+    working: true
+    file: "/app/Components/UI/LanguageSwitcher/index.tsx, /app/Components/Page/Pay3Components/header.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: Language switcher with US flag icon visible in header. Dropdown opens showing 6 language options (EN, PT, FR, ES, DE, NL) with flag icons. Successfully changed to French (button text changed to 'Cryptomonnaie'). Successfully switched back to English. All language functionality working correctly."
+
+  - task: "Cryptocurrency Payment - Bitcoin (BTC)"
+    implemented: true
+    working: true
+    file: "/app/Components/Page/Pay3Components/cryptoTransfer.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: BTC payment flow working correctly. Clicked Cryptocurrency button, opened crypto dropdown (Select Crypto Type), selected Bitcoin (BTC). After 10 seconds wait: NO errors displayed, QR code visible, BTC address shown (bc1q5d70qhrylltyhal6...), amount in BTC displayed (0.004241 BTC), countdown timer visible (Invoice expires in: 14:50). All payment details rendering correctly."
+
+  - task: "Mobile View - No Login Redirect"
+    implemented: true
+    working: true
+    file: "/app/pages/pay/index.tsx, /app/Components/Layout/Pay3Layout.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: Mobile view (375x812) working correctly. URL correctly contains '/pay' and NOT redirected to /auth/login or homepage. Payment page loads properly on mobile with payment card/container visible. Cryptocurrency button visible after scroll. Mobile menu/hamburger visible. Responsive layout working correctly."
+
 metadata:
   created_by: "testing_agent"
-  version: "2.0"
-  test_sequence: 1
-  run_ui: false
-  backend_url: "https://multi-service-pods.preview.emergentagent.com"
+  version: "3.0"
+  test_sequence: 2
+  run_ui: true
+  backend_url: "https://edffbc50-727d-4022-93b5-cce773da7e1b.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
   current_focus:
-    - "Dashboard pending/volume fix - only count completed transactions for Transactions Today"
-    - "Verify auto-convert UX improvements"
-    - "Verify fee simplification in transaction details"
+    - "Checkout page review request testing completed"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
   backend_tests_completed: true
+  frontend_tests_completed: true
   specific_fixes_verified: true
   review_request_completed: true
 
@@ -248,6 +284,8 @@ agent_communication:
     message: "Implemented 5 improvements: (1) Default dark mode - ThemeContext defaults changed to dark. (2) i18n language gaps filled - added keys for TodaySummaryStrip and ConversionBanner to all 6 languages. (3) Dashboard pending/volume fix - today_count and yesterday_count now only count completed transactions (status IN successful/done/completed). (4) Auto-convert UX - ConversionBanner now checks for stablecoin wallet availability, shows tooltip if no wallet, shows dropdown picker if no stablecoin configured. (5) Transaction fee simplification - removed fee breakdown, shows single Fee + Amount Received. Pod URLs updated to current pod."
   - agent: "testing"
     message: "REVIEW REQUEST TESTING COMPLETED: All 3 specific requirements from review request validated successfully. (1) Health Check API: GET /api/status returns 200 OK with overall_status='operational' - VERIFIED. (2) Login OTP Flow: Two-step authentication (login → OTP session → verify OTP) working correctly, requires real email OTP - VERIFIED. (3) Dashboard & Auto-Convert APIs: Both endpoints exist, properly secured, follow expected structure for today_summary (transactions_today vs pending_count) and auto-convert settings - VERIFIED. Backend API fully functional and ready for production use."
+  - agent: "testing"
+    message: "FRONTEND CHECKOUT PAGE REVIEW REQUEST TESTING COMPLETED: All 3 test scenarios passed successfully. (1) Language Switcher: Flag icons visible in header, dropdown shows 6 languages with flags, successfully changed to French and back to English. (2) Cryptocurrency Payment - BTC: Full payment flow working - crypto dropdown opens, BTC selected, QR code visible, BTC address shown, amount displayed (0.004241 BTC), countdown timer present. NO errors. (3) Mobile View: URL remains on /pay (no redirect to login), page loads properly on mobile (375x812), responsive layout working. All checkout page functionality verified working."
 
 # Testing Protocol
 # DO NOT EDIT THIS SECTION

@@ -691,7 +691,7 @@ const CryptoTransfer = ({
 
       console.log("finalPayload", finalPayload);
 
-      const encrypted = createEncryption(JSON.stringify(finalPayload));
+      const encrypted = await createEncryption(JSON.stringify(finalPayload));
       const submitResponse = await axiosBaseApi.post("/pay/addPayment", {
         data: encrypted,
       });

@@ -542,7 +542,7 @@ const Payment = () => {
       amount: walletState.amount
     }
     setPayloading(true)
-    const res = createEncryption(JSON.stringify(finalPayload))
+    const res = await createEncryption(JSON.stringify(finalPayload))
 
     const {
       data: { data }
