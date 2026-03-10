@@ -120,6 +120,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
+      - working: true
+        agent: "main"
+        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://current-pod-config-2.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -216,7 +219,7 @@ metadata:
   version: "2.0"
   test_sequence: 1
   run_ui: false
-  backend_url: "https://09e78656-0184-4e03-ad96-a0eac8bd5a3e.preview.emergentagent.com"
+  backend_url: "https://current-pod-config-2.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
@@ -237,7 +240,7 @@ agent_communication:
   - agent: "testing"
     message: "COMPREHENSIVE TESTING COMPLETED: All 5 specific fixes tested and verified working correctly."
   - agent: "main"
-    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://fee-simplification.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
+    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://current-pod-config-2.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
   - agent: "main"
     message: "Implemented 5 improvements: (1) Default dark mode - ThemeContext defaults changed to dark. (2) i18n language gaps filled - added keys for TodaySummaryStrip and ConversionBanner to all 6 languages. (3) Dashboard pending/volume fix - today_count and yesterday_count now only count completed transactions (status IN successful/done/completed). (4) Auto-convert UX - ConversionBanner now checks for stablecoin wallet availability, shows tooltip if no wallet, shows dropdown picker if no stablecoin configured. (5) Transaction fee simplification - removed fee breakdown, shows single Fee + Amount Received. Pod URLs updated to current pod."
   - agent: "testing"

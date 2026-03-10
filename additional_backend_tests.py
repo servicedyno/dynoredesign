@@ -8,7 +8,7 @@ import requests
 import json
 import sys
 
-BACKEND_URL = "https://fee-simplification.preview.emergentagent.com"
+BACKEND_URL = "https://current-pod-config-2.preview.emergentagent.com"
 
 def test_additional_scenarios():
     """Test additional scenarios and edge cases"""

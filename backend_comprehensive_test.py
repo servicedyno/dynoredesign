@@ -15,7 +15,7 @@ from typing import Dict, Any, Optional
 
 class DynoPayComprehensiveTester:
     def __init__(self):
-        self.backend_url = "https://09e78656-0184-4e03-ad96-a0eac8bd5a3e.preview.emergentagent.com"
+        self.backend_url = "https://current-pod-config-2.preview.emergentagent.com"
         self.session = requests.Session()
         self.access_token: Optional[str] = None
         self.login_otp_session: Optional[str] = None
