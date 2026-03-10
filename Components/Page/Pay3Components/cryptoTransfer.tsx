@@ -810,8 +810,14 @@ const CryptoTransfer = ({
   function formatAmount(amount: any, currency: string): string {
     const lowerCurrency = currency?.toLowerCase();
 
-    const cryptoCurrencies = new Set(["btc", "eth", "usdc", "bnb", "matic", "sol", "xrp", "polygon"]);
-    const fiatCurrencies = new Set(["usd", "eur", "inr", "usdt", "rlusd"]);
+    // All crypto currencies (including stablecoins pegged to fiat)
+    // Stablecoins need 6 decimals to show exact blockchain amounts
+    const cryptoCurrencies = new Set([
+      "btc", "eth", "usdc", "bnb", "matic", "sol", "xrp", "polygon",
+      "ltc", "doge", "bch", "trx", "usdt", "rlusd",
+      "usdt-trc20", "usdt-erc20", "usdc-erc20", "rlusd-xrpl",
+    ]);
+    const fiatCurrencies = new Set(["usd", "eur", "inr", "gbp", "ngn", "kes", "zar", "cad", "aud"]);
 
     if (cryptoCurrencies.has(lowerCurrency)) {
       return amount?.toFixed(6);

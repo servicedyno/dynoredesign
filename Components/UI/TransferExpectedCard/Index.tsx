@@ -49,6 +49,20 @@ export default function TransferExpectedCard({
   const [copySnackbar, setCopySnackbar] = useState(false)
 
   // Auto-redirect after 5 seconds if redirectUrl is provided and payment is successful
+  const handleRedirect = useCallback(() => {
+    if (!redirectUrl || !transactionId) return
+    
+    try {
+      const url = new URL(redirectUrl)
+      url.searchParams.set('transaction_id', transactionId)
+      url.searchParams.set('status', 'success')
+      window.location.href = url.toString()
+    } catch (e) {
+      const separator = redirectUrl.includes('?') ? '&' : '?'
+      window.location.href = `${redirectUrl}${separator}transaction_id=${transactionId}&status=success`
+    }
+  }, [redirectUrl, transactionId])
+
   useEffect(() => {
     if (isTrue && redirectUrl && transactionId) {
       setIsAutoRedirecting(true)
@@ -66,21 +80,7 @@ export default function TransferExpectedCard({
 
       return () => clearInterval(timer)
     }
-  }, [isTrue, redirectUrl, transactionId])
-
-  const handleRedirect = useCallback(() => {
-    if (!redirectUrl || !transactionId) return
-    
-    try {
-      const url = new URL(redirectUrl)
-      url.searchParams.set('transaction_id', transactionId)
-      url.searchParams.set('status', 'success')
-      window.location.href = url.toString()
-    } catch (e) {
-      const separator = redirectUrl.includes('?') ? '&' : '?'
-      window.location.href = `${redirectUrl}${separator}transaction_id=${transactionId}&status=success`
-    }
-  }, [redirectUrl, transactionId])
+  }, [isTrue, redirectUrl, transactionId, handleRedirect])
 
   const handleCopyTransactionId = useCallback(async () => {
     if (transactionId) {
