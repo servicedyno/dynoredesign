@@ -5,7 +5,7 @@ const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
 console.log("url for base", apiBaseUrl);
 
 const axiosBaseApi = axios.create({
-  baseURL: apiBaseUrl + "api/",
+  baseURL: apiBaseUrl + "/api/",
   headers: {
     "Content-Type": "application/json",
   },
@@ -108,7 +108,7 @@ axiosBaseApi.interceptors.response.use(
 
       try {
         const { data: refreshResponse } = await axios.post(
-          `${apiBaseUrl}api/user/refresh-token`,
+          `${apiBaseUrl}/api/user/refresh-token`,
           { refresh_token: refreshToken },
           { headers: { "Content-Type": "application/json" } }
         );
