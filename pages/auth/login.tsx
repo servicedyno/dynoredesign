@@ -17,11 +17,7 @@ import {
   AuthContainer,
   CardWrapper,
   ImageCenter,
-  SplitLayoutWrapper,
-  BrandPanel,
-  FormPanel,
 } from "@/Containers/Login/styled";
-import LiveBrandContent from "@/Components/UI/AuthLayout/BrandContent/LiveBrandContent";
 import useIsMobile from "@/hooks/useIsMobile";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import {
@@ -923,17 +919,12 @@ export default function Login() {
         display: "flex",
         flexDirection: "column",
         justifyContent: { xs: "flex-start", sm: "center" },
+        alignItems: "center",
         background: (t: any) => t.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
-        padding: { xs: "0", sm: "32px 24px" },
+        padding: { xs: "16px", sm: "32px 24px" },
         boxSizing: "border-box",
       }}
     >
-    <SplitLayoutWrapper>
-      <BrandPanel>
-        <LiveBrandContent />
-      </BrandPanel>
-
-      <FormPanel>
     <AuthContainer>
       <CardWrapper
         sx={{
@@ -1997,8 +1988,6 @@ export default function Login() {
         }
       />
     </AuthContainer>
-      </FormPanel>
-    </SplitLayoutWrapper>
     </Box>
   );
 }

@@ -122,10 +122,10 @@ backend:
         comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://init-flow.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
+        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://getting-started-107.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://init-flow.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
+        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://getting-started-107.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -358,7 +358,7 @@ metadata:
   version: "3.0"
   test_sequence: 3
   run_ui: true
-  backend_url: "https://d5473f70-03af-4cf7-9076-a0fd0426d756.preview.emergentagent.com"
+  backend_url: "https://getting-started-107.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
@@ -375,6 +375,8 @@ agent_communication:
     message: "Backend endpoints all verified: checkPhone (200, validPhone:false for unknown), checkEmail (200, validEmail:true for nomadly@moxx.co), status (operational), login (returns login_otp_session), addEmail/addPhone/verifyAddEmail/verifyAddPhone all return 403 without auth. All working. Now running comprehensive frontend testing."
   - agent: "testing"
     message: "CRITICAL BUG FIXED: axiosConfig.ts was missing '/' in baseURL construction (line 8 and 111). Changed 'apiBaseUrl + \"api/\"' to 'apiBaseUrl + \"/api/\"'. This was causing all API calls to fail with ERR_NAME_NOT_RESOLVED. After fix: email check API working, phone check API working, login flow functional. Comprehensive frontend testing completed successfully."
+  - agent: "main"
+    message: "Removed BrandPanel animation (LiveBrandContent carousel) from login.tsx and register.tsx. Removed SplitLayoutWrapper/BrandPanel/FormPanel wrappers. Forms now render centered using AuthContainer within a full-page flex Box with alignItems:center. Verified via screenshots: both login and register pages show centered forms with no left-side animation."
 
 # Testing Protocol
 # DO NOT EDIT THIS SECTION
