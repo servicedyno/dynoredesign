@@ -2804,6 +2804,9 @@ const Crypto = async (
       status: "pending",
       customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
       company_id: (companyId && !isNaN(Number(companyId))) ? Number(companyId) : null,
+      // FIX: Populate crypto fields at creation time so records are complete even if verification fails
+      crypto_currency: currency,
+      crypto_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
     };
     cronLogger.info("[Crypto] Merchant pool userPayload:", JSON.stringify(userPayload));
     
@@ -2953,6 +2956,9 @@ const Crypto = async (
       status: "pending",
       customer_id: (tokenData.customer_id && !isNaN(Number(tokenData.customer_id))) ? Number(tokenData.customer_id) : null,
       company_id: (tokenData.company_id && !isNaN(Number(tokenData.company_id))) ? Number(tokenData.company_id) : null,
+      // FIX: Populate crypto fields at creation time so records are complete even if verification fails
+      crypto_currency: currency,
+      crypto_amount: isNaN(Number(data.amount)) ? 0 : Number(data.amount),
     };
     cronLogger.info("Crypto userPayload:", JSON.stringify(userPayload));
 
@@ -4784,6 +4790,13 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
             // Store USD value at time of receipt (historical value)
             usd_value: await convertToUSD(Number(userAmountToSend), tempCurrency),
+            // FIX: Populate crypto fields for complete transaction records
+            // crypto_amount = total crypto the customer sent (before fees)
+            // crypto_currency = the cryptocurrency type (ETH, BTC, LTC, etc.)
+            // transaction_fee = the platform fee deducted (in crypto)
+            crypto_amount: Number(totalAmountReceived),
+            crypto_currency: tempCurrency,
+            transaction_fee: Number(adminAmountToSend),
           };
 
           // FIX: Use user_tx_id for user transaction updates (separate from payment_id which is for payment link)
@@ -4809,6 +4822,25 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
                 cronLogger.warn(`[cryptoVerification] ⚠️  No user transaction updated for ID ${transactionRecordId} - record may not exist`);
               }
             }
+          }
+        } else {
+          // FIX: Even when userAmountToSend is 0 (under-threshold or auto-convert),
+          // still update the user_transaction with crypto fields and mark as successful
+          const transactionRecordId = tempData.user_tx_id || tempData.unique_tx_id || tempData.payment_id;
+          if (transactionRecordId) {
+            const zeroPayoutPayload = {
+              status: autoConvertEnabled ? "successful" : "successful",
+              crypto_amount: Number(totalAmountReceived),
+              crypto_currency: tempCurrency,
+              transaction_fee: Number(adminAmountToSend),
+              transaction_reference: allTxIds,
+              usd_value: await convertToUSD(Number(totalAmountReceived), tempCurrency),
+            };
+            const updateResult = await userTransactionModel.update(
+              zeroPayoutPayload,
+              { where: { id: transactionRecordId }, transaction }
+            );
+            cronLogger.info(`[cryptoVerification] Updated user transaction ${transactionRecordId} (zero merchant payout - ${autoConvertEnabled ? 'auto-convert' : 'under threshold'}), affected rows: ${updateResult[0]}`);
           }
         }
 
