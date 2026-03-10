@@ -45,11 +45,10 @@ const SOCIALS: readonly SocialItemType[] = [
 
 const ROUTES: readonly RouteItemType[] = [
   { labelKey: "documentation", link: "/documentation" },
-  { labelKey: "footerSandbox", link: "#" },
   { labelKey: "footerTerms", link: "/terms-conditions" },
   { labelKey: "footerPrivacy", link: "/privacy-policy" },
   { labelKey: "footerApiStatus", link: "/system-status" },
-  { labelKey: "footerSupport", link: "#" },
+  { labelKey: "footerSupport", link: "/help-support" },
 ] as const;
 
 const HomeFooter: FC = () => {

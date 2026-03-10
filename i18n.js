@@ -283,24 +283,19 @@ async function loadLanguageAsync(lang) {
   _loadedLanguages.add(lang);
 }
 
-// ─── Initialise i18n with ONLY the detected language + English fallback ───
-const initialLang = getInitialLanguage();
+// ─── Initialise i18n with ONLY English for SSR-safe hydration ───
+// We always start with "en" to match server rendering.
+// The actual detected language is applied AFTER hydration via applyDetectedLanguage().
 const initialResources = {};
 
-// Always load English as the fallback language (shown while other lang loads)
+// Always load English as the initial + fallback language
 initialResources.en = requireLanguage("en");
 _loadedLanguages.add("en");
-
-// If the initial language isn't English, also load it synchronously for instant first paint
-if (initialLang !== "en") {
-  initialResources[initialLang] = requireLanguage(initialLang);
-  _loadedLanguages.add(initialLang);
-}
 
 const instance = i18n.use(LanguageDetector).use(initReactI18next);
 
 instance.init({
-  lng: initialLang,
+  lng: "en", // Always start with English to match SSR and prevent hydration mismatch
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
   debug: false,
@@ -336,7 +331,30 @@ if (!isServer) {
       await loadLanguageAsync(lng);
     }
   });
+}
 
+/**
+ * Apply the user's detected language AFTER React hydration completes.
+ * Call this from _app.tsx useEffect to avoid hydration mismatches.
+ */
+async function applyDetectedLanguage() {
+  if (isServer) return;
+
+  const detectedLang = getInitialLanguage();
+
+  if (detectedLang && detectedLang !== "en" && SUPPORTED_LANGUAGES.includes(detectedLang)) {
+    // Load the language bundle if needed
+    if (!_loadedLanguages.has(detectedLang)) {
+      const ns = requireLanguage(detectedLang);
+      for (const [nsKey, data] of Object.entries(ns)) {
+        i18n.addResourceBundle(detectedLang, nsKey, data, true, true);
+      }
+      _loadedLanguages.add(detectedLang);
+    }
+    await i18n.changeLanguage(detectedLang);
+  }
+
+  // Also run geo-detection if user hasn't manually chosen
   const userChoseManually = (() => {
     try { return localStorage.getItem("lang_manual") === "true"; } catch { return false; }
   })();
@@ -344,10 +362,10 @@ if (!isServer) {
   if (!userChoseManually) {
     setTimeout(() => {
       detectAndApplyGeoLocale();
-    }, 500);
+    }, 1000);
   }
 }
 
 // Export the loader so language-switcher components can pre-load before changing
-export { loadLanguageAsync };
+export { loadLanguageAsync, applyDetectedLanguage };
 export default i18n;
