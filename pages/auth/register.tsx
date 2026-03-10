@@ -7,7 +7,7 @@ import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import OtpDialog from "@/Components/UI/OtpDialog";
-import { AuthContainer, CardWrapper, SplitLayoutWrapper, BrandPanel, FormPanel } from "@/Containers/Login/styled";
+import { AuthContainer, CardWrapper, SplitLayoutWrapper, BrandPanel, FormPanel, ImageCenter } from "@/Containers/Login/styled";
 import LiveBrandContent from "@/Components/UI/AuthLayout/BrandContent/LiveBrandContent";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
@@ -32,6 +32,11 @@ import { useDispatch, useSelector } from "react-redux";
 import * as yup from "yup";
 import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
 import axiosBaseApi from "@/axiosConfig";
+import GoogleIcon from "@/assets/Images/googleIcon.svg";
+import { signIn } from "next-auth/react";
+import { Divider } from "@mui/material";
+import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
+import { USER_LOGIN } from "@/Redux/Actions/UserAction";
 
 type RegisterErrorKey =
   | ""
@@ -120,6 +125,48 @@ const Register = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [phoneOtpCountdown]);
+
+  // Handle Google social login
+  const handleGoogleLogin = async () => {
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (!clientId) {
+      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+      return;
+    }
+
+    try {
+      if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
+          client_id: clientId,
+          scope: "openid email profile",
+          callback: async (tokenResponse: any) => {
+            if (tokenResponse?.access_token) {
+              try {
+                const res = await axiosBaseApi.post("user/google-signin", {
+                  accessToken: tokenResponse.access_token,
+                });
+                const { data, message } = res?.data || {};
+                if (data?.userData && data?.accessToken) {
+                  dispatch({ type: TOAST_SHOW, payload: { message: message || "Login successful" } });
+                  dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });
+                } else {
+                  throw new Error("Invalid response");
+                }
+              } catch (e: any) {
+                const msg = e.response?.data?.message ?? e.message ?? "Google login failed";
+                dispatch({ type: TOAST_SHOW, payload: { message: msg, severity: "error" } });
+              }
+            }
+          },
+        });
+        tokenClient.requestAccessToken();
+      } else {
+        signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+      }
+    } catch {
+      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+    }
+  };
 
   const handlePhoneRegisterStep1 = async () => {
     if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
@@ -963,6 +1010,88 @@ const Register = () => {
               {t("login")}
             </Typography>
           </Typography>
+        </Box>
+
+        {/* Divider with "Or" */}
+        <Box sx={{ marginTop: isMobile ? "16px" : "20px" }}>
+          <Divider
+            sx={{
+              "&::before, &::after": {
+                borderColor: "divider",
+              },
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: isMobile ? "12px" : "14px",
+                fontFamily: "UrbanistMedium",
+                color: "#676768",
+                fontWeight: 500,
+                lineHeight: "1.2",
+                letterSpacing: 0,
+              }}
+            >
+              {t("or")}
+            </Typography>
+          </Divider>
+        </Box>
+
+        {/* Google Sign-in */}
+        <Box
+          sx={{
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "16px",
+            padding: 0,
+            marginTop: isMobile ? "16px" : "20px",
+          }}
+        >
+          <Typography
+            variant="body2"
+            sx={{
+              fontSize: isMobile ? "13px" : "15px",
+              fontFamily: "UrbanistMedium",
+              color: "#676768",
+              fontWeight: 500,
+              lineHeight: "1.2",
+              letterSpacing: 0,
+            }}
+          >
+            {t("registerLogin")}
+          </Typography>
+
+          <Box
+            sx={{
+              height: isMobile ? "32px" : "40px",
+              width: isMobile ? "32px" : "40px",
+              borderRadius: "100%",
+              border: "1px solid",
+              borderColor: "divider",
+              backgroundColor: "action.hover",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              transition: "all 0.2s ease",
+              "&:hover": {
+                backgroundColor: "action.selected",
+                borderColor: "#D0D5DD",
+              },
+            }}
+            onClick={handleGoogleLogin}
+          >
+            <ImageCenter>
+              <Image
+                src={GoogleIcon}
+                alt="google login"
+                width={24}
+                height={24}
+                draggable={false}
+              />
+            </ImageCenter>
+          </Box>
         </Box>
       </CardWrapper>
 
