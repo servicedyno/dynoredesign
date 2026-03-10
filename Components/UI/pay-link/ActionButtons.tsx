@@ -11,6 +11,7 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
   handleCreatePaymentLink,
   paymentSettingsErrors,
   paymentSettings,
+  isCreating,
 }) => {
   const router = useRouter();
 
@@ -33,12 +34,13 @@ const ActionButtons: React.FC<ActionButtonsProps> = ({
       )}
       {!disabled && (
         <CustomButton
-          label={tPaymentLink(hasPaymentLinkData ? "saveChanges" : "createPaymentLink")}
+          label={isCreating ? tPaymentLink("creating") || "Creating..." : tPaymentLink(hasPaymentLinkData ? "saveChanges" : "createPaymentLink")}
           variant="primary"
           size="medium"
           fullWidth={true}
           onClick={handleCreatePaymentLink}
           disabled={
+            isCreating ||
             Boolean(paymentSettingsErrors.value) ||
             Boolean(paymentSettingsErrors.currency) ||
             Boolean(paymentSettingsErrors.description) ||

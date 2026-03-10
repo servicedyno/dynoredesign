@@ -85,7 +85,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
   const toastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Determine if single crypto is selected and find its wallet address
-  // Priority: 1) Pool address from backend (directPayAddress), 2) Merchant wallet (fallback)
+  // Only use the pool address from backend (directPayAddress) — no fallback to merchant wallet
   const singleCryptoWallet = useMemo(() => {
     const accepted = paymentSettings.acceptedCryptoCurrency;
     if (!accepted || accepted.length !== 1) {
@@ -93,7 +93,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
     }
     const selectedCrypto = accepted[0];
     
-    // Use merchant pool address from backend if available (correct behavior)
+    // Only show the pool address from backend (prevents flashing merchant wallet)
     if (directPayAddress) {
       return {
         cryptoType: selectedCrypto,
@@ -101,17 +101,9 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
       };
     }
     
-    // Fallback to merchant wallet (legacy behavior)
-    if (!walletList || walletList.length === 0) return null;
-    const wallet = walletList.find(
-      (w) => w.wallet_type === selectedCrypto && w.wallet_address
-    );
-    if (!wallet) return null;
-    return {
-      cryptoType: selectedCrypto,
-      address: wallet.wallet_address,
-    };
-  }, [paymentSettings.acceptedCryptoCurrency, walletList, directPayAddress]);
+    // No pool address yet — don't show anything (modal waits for API response)
+    return null;
+  }, [paymentSettings.acceptedCryptoCurrency, directPayAddress]);
 
   const getExpireText = () => {
     if (paymentSettings.expire === "no") return tPaymentLink("noExpiration");

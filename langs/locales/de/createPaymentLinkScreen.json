@@ -15,6 +15,7 @@
   "companyPaysFees": "Unternehmen (wir übernehmen die Gebühren)",
   "description": "Beschreibung",
   "createPaymentLink": "Zahlungslink erstellen",
+  "creating": "Creating...",
   "createPayment": "Zahlung erstellen",
   "callbackUrl": "Callback-URL",
   "callbackUrlPlaceholder": "https://api.beispiel.de/callback",

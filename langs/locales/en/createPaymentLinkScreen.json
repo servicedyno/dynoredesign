@@ -15,6 +15,7 @@
   "companyPaysFees": "Company (we pay the fees)",
   "description": "Description",
   "createPaymentLink": "Create Payment Link",
+  "creating": "Creating...",
   "createPayment": "Create Payment",
   "callbackUrl": "Callback URL",
   "callbackUrlPlaceholder": "https://api.example.com/callback",

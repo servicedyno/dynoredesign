@@ -15,6 +15,7 @@
   "companyPaysFees": "Entreprise (nous payons les frais)",
   "description": "Description",
   "createPaymentLink": "Créer un Lien de Paiement",
+  "creating": "Creating...",
   "createPayment": "Créer le Paiement",
   "callbackUrl": "URL de Callback",
   "callbackUrlPlaceholder": "https://api.exemple.com/callback",

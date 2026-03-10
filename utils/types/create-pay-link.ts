@@ -19,6 +19,7 @@ export interface ActionButtonsProps {
   handleCreatePaymentLink: () => void;
   paymentSettingsErrors: any;
   paymentSettings: any;
+  isCreating?: boolean;
 }
 
 export interface ICryptoItem {

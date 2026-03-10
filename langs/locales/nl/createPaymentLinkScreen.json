@@ -15,6 +15,7 @@
   "companyPaysFees": "Bedrijf (wij betalen de kosten)",
   "description": "Beschrijving",
   "createPaymentLink": "Betaallink aanmaken",
+  "creating": "Creating...",
   "createPayment": "Betaling aanmaken",
   "callbackUrl": "Callback-URL",
   "callbackUrlPlaceholder": "https://api.voorbeeld.nl/callback",

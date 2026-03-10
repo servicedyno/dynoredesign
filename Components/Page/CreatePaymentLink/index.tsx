@@ -89,13 +89,15 @@ const CreatePaymentLinkPage = ({
   const [paymentLink, setPaymentLink] = useState("");
   const [directPayAddress, setDirectPayAddress] = useState<string | null>(null);
   const [directPayQrCode, setDirectPayQrCode] = useState<string | null>(null);
+  const [isCreating, setIsCreating] = useState<boolean>(false);
   const prevPaymentLinksLengthRef = useRef(paymentLinkState?.paymentLinks?.length || 0);
 
   // Watch for newly created payment link from backend response
+  // Only open the success modal AFTER data arrives (fixes URL delay + wallet flash)
   useEffect(() => {
     const currentLinks = paymentLinkState?.paymentLinks || [];
     const currentLength = currentLinks.length;
-    if (currentLength > prevPaymentLinksLengthRef.current && successModalOpen) {
+    if (currentLength > prevPaymentLinksLengthRef.current && isCreating) {
       const newestLink = currentLinks[0];
       if (newestLink?.payment_link) {
         setPaymentLink(newestLink.payment_link);
@@ -112,9 +114,23 @@ const CreatePaymentLinkPage = ({
       if (newLinkId) {
         setPaymentSettings((prev) => ({ ...prev, linkId: newLinkId }));
       }
+      // All data is ready — NOW open the modal
+      setIsCreating(false);
+      setSuccessModalOpen(true);
     }
     prevPaymentLinksLengthRef.current = currentLength;
-  }, [paymentLinkState?.paymentLinks, successModalOpen]);
+  }, [paymentLinkState?.paymentLinks, isCreating]);
+
+  // Reset creating state on error (saga dispatches PAYLINK_ERROR → createLoading: false)
+  useEffect(() => {
+    if (isCreating && paymentLinkState?.createLoading === false && !successModalOpen) {
+      // If createLoading turned false but we didn't open the modal, an error occurred
+      const links = paymentLinkState?.paymentLinks || [];
+      if (links.length <= prevPaymentLinksLengthRef.current) {
+        setIsCreating(false);
+      }
+    }
+  }, [paymentLinkState?.createLoading, isCreating, successModalOpen]);
   const currencyTriggerRef = useRef<HTMLButtonElement | null>(null);
   const currencyAnchorEl = useRef<HTMLButtonElement | null>(null);
   const [includeTax, setIncludeTax] = useState<boolean>(
@@ -411,15 +427,20 @@ const CreatePaymentLinkPage = ({
         })
       );
     } else {
+      // Clear stale data and start creation
+      setPaymentLink("");
+      setDirectPayAddress(null);
+      setDirectPayQrCode(null);
+      setIsCreating(true);
       dispatch(PaymentLinkAction(PAYLINK_CREATE, apiPayload));
     }
 
-    // Payment link URL will be set from Redux state when backend responds
-    setSuccessModalOpen(true);
+    // Modal will open automatically when backend responds (via useEffect above)
   };
 
   const handleCloseSuccessModal = () => {
     setSuccessModalOpen(false);
+    setIsCreating(false);
     // Reset form for new creation
     if (!hasPaymentLinkData) {
       setPaymentSettings({
@@ -953,6 +974,7 @@ const CreatePaymentLinkPage = ({
                 }
                 paymentSettingsErrors={paymentSettingsErrors}
                 paymentSettings={paymentSettings}
+                isCreating={isCreating}
               />
             </Box>
           </TabContentContainer>
@@ -972,6 +994,7 @@ const CreatePaymentLinkPage = ({
               showCreateButton={true}
               onCreate={handleCreatePaymentLink}
               createDisabled={
+                isCreating ||
                 !paymentSettings.value ||
                 paymentSettings.value.trim() === "" ||
                 !paymentSettings.currency ||
