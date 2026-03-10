@@ -809,7 +809,9 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
                             sx={{
                               "& .MuiOutlinedInput-root": {
                                 borderRadius: "6px !important",
-                                backgroundColor: "#fff !important",
+                                backgroundColor: theme.palette.mode === 'dark'
+                                  ? "rgba(255,255,255,0.08) !important"
+                                  : "#fff !important",
                                 "& fieldset": {
                                   borderColor:
                                     theme.palette.border.main + " !important",
@@ -832,7 +834,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
                                 fontFamily: "UrbanistBold",
                                 padding: "0 !important",
                                 letterSpacing: "0.5px",
-                                color: "text.primary",
+                                color: theme.palette.text.primary,
                                 height: "100%",
                                 lineHeight: inputSize,
                               },
