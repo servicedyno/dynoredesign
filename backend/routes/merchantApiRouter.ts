@@ -53,6 +53,55 @@ const getAvailableCurrencies = async (userId: number, companyId: number): Promis
 };
 
 /**
+ * Find customer by UUID, or auto-recreate if deleted.
+ * When a merchant's customer JWT is valid but the DB record was deleted,
+ * this re-inserts the customer so payments can proceed without a 400.
+ */
+const findOrRecreateCustomer = async (
+  userUuid: string,
+  email: string | undefined,
+  companyId: number,
+  baseCurrency: string
+): Promise<{ customer_id: number }> => {
+  // 1. Try to find the existing customer
+  const existing = await sequelize.query<{ customer_id: number }>(
+    `SELECT customer_id FROM tbl_customer WHERE id = $1`,
+    { bind: [userUuid], type: QueryTypes.SELECT }
+  );
+  if (existing.length > 0) return existing[0];
+
+  // 2. Customer was deleted — recreate the record with the same UUID
+  const fallbackEmail = email || `recovered-${userUuid.slice(0, 8)}@dynopay.internal`;
+  apiLogger.info(`[MerchantAPI] Auto-recreating deleted customer ${userUuid} for company ${companyId}`);
+
+  await sequelize.query(
+    `INSERT INTO tbl_customer (id, customer_name, email, company_id, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+    { bind: [userUuid, 'Recovered Customer', fallbackEmail, companyId], type: QueryTypes.INSERT }
+  );
+
+  const created = await sequelize.query<{ customer_id: number }>(
+    `SELECT customer_id FROM tbl_customer WHERE id = $1`,
+    { bind: [userUuid], type: QueryTypes.SELECT }
+  );
+
+  if (created.length === 0) {
+    throw new Error('Failed to recreate customer record');
+  }
+
+  // 3. Create a wallet for the recovered customer
+  const walletId = Crypto.randomUUID();
+  await sequelize.query(
+    `INSERT INTO tbl_customer_wallet (id, customer_id, wallet_type, amount, "createdAt", "updatedAt")
+     VALUES ($1, $2, $3, 0, NOW(), NOW())`,
+    { bind: [walletId, created[0].customer_id, baseCurrency], type: QueryTypes.INSERT }
+  );
+
+  apiLogger.info(`[MerchantAPI] Recreated customer ${userUuid} → customer_id ${created[0].customer_id}`);
+  return created[0];
+};
+
+/**
  * API Key validation middleware (for endpoints that don't need customer auth)
  */
 const apiKeyOnlyMiddleware = async (
@@ -267,17 +316,9 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
       });
     }
     
-    const customerData = await sequelize.query<{ customer_id: number }>(
-      `SELECT customer_id FROM tbl_customer WHERE id = $1`,
-      {
-        bind: [userData.id],
-        type: QueryTypes.SELECT
-      }
+    const customerData = await findOrRecreateCustomer(
+      userData.id, userData.email, data.company_id, data.base_currency || 'USD'
     );
-    
-    if (customerData.length === 0) {
-      return res.status(400).json({ success: false, message: "Customer not found" });
-    }
     
     // Direct currency conversion (no HTTP self-call)
     const localCurrency = normalizedCurrency.includes("USDT") ? "usdt" : normalizedCurrency.toLowerCase();
@@ -310,7 +351,7 @@ router.post("/cryptoPayment", legacyApiAuthMiddleware, async (req, res) => {
     apiLogger.info(`[MerchantAPI] callback_url: ${callback_url || 'NOT PROVIDED'}`);
     
     const redisPayload = {
-      customer_id: customerData[0].customer_id,
+      customer_id: customerData.customer_id,
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency || 'USD',
@@ -456,17 +497,9 @@ router.post("/createPayment", legacyApiAuthMiddleware, async (req, res) => {
       effectiveAvailableCurrencies = requestedCurrencies;
     }
     
-    const customerData = await sequelize.query<{ customer_id: number }>(
-      `SELECT customer_id FROM tbl_customer WHERE id = $1`,
-      {
-        bind: [userData.id],
-        type: QueryTypes.SELECT
-      }
+    const customerData = await findOrRecreateCustomer(
+      userData.id, userData.email, data.company_id, data.base_currency || 'USD'
     );
-    
-    if (customerData.length === 0) {
-      return res.status(400).json({ success: false, message: "Customer not found" });
-    }
     
     const effectiveWebhookUrl = webhook_url || data.webhook_url || null;
     const effectiveWebhookSecret = data.webhook_secret || null;
@@ -474,7 +507,7 @@ router.post("/createPayment", legacyApiAuthMiddleware, async (req, res) => {
     apiLogger.info(`[MerchantAPI] createPayment - Company: ${data.company_id}, Amount: ${amount}`);
     
     const redisPayload = {
-      customer_id: customerData[0].customer_id,
+      customer_id: customerData.customer_id,
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency || 'USD',
@@ -551,20 +584,12 @@ router.post("/addFunds", legacyApiAuthMiddleware, async (req, res) => {
       });
     }
     
-    const customerData = await sequelize.query<{ customer_id: number }>(
-      `SELECT customer_id FROM tbl_customer WHERE id = $1`,
-      {
-        bind: [userData.id],
-        type: QueryTypes.SELECT
-      }
+    const customerData = await findOrRecreateCustomer(
+      userData.id, userData.email, data.company_id, data.base_currency || 'USD'
     );
     
-    if (customerData.length === 0) {
-      return res.status(400).json({ success: false, message: "Customer not found" });
-    }
-    
     const redisPayload = {
-      customer_id: customerData[0].customer_id,
+      customer_id: customerData.customer_id,
       company_id: data.company_id,
       adm_id: data.adm_id,
       base_currency: data.base_currency || 'USD',
@@ -618,19 +643,11 @@ router.post("/useWallet", legacyApiAuthMiddleware, async (req, res) => {
       });
     }
     
-    const customerData = await sequelize.query<{ customer_id: number }>(
-      `SELECT customer_id FROM tbl_customer WHERE id = $1`,
-      {
-        bind: [userData.id],
-        type: QueryTypes.SELECT
-      }
+    const customerResult = await findOrRecreateCustomer(
+      userData.id, userData.email, data.company_id, data.base_currency || 'USD'
     );
     
-    if (customerData.length === 0) {
-      return res.status(400).json({ success: false, message: "Customer not found" });
-    }
-    
-    const customerId = customerData[0].customer_id;
+    const customerId = customerResult.customer_id;
     
     // Get wallet balance
     const walletData = await sequelize.query<{ amount: number; wallet_type: string }>(

@@ -160,6 +160,18 @@ backend:
         agent: "main"
         comment: "Created /settings page with 8 cards (Wallet Addresses, Company Profile, Payment Settings, API Keys, Profile & Security, Notifications, Webhook Configuration, My Account). Each links to existing functionality pages. Added Settings to sidebar navigation with SettingsRounded icon."
 
+  - task: "Auto-Recreate Deleted Customer for Payment"
+    implemented: true
+    working: true
+    file: "/backend/routes/merchantApiRouter.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added findOrRecreateCustomer() helper to merchantApiRouter.ts. When a customer JWT is valid but the DB record was deleted, the customer is auto-recreated with the same UUID, a wallet is created, and the payment proceeds. Applied to all 4 endpoints: cryptoPayment, createPayment, addFunds, useWallet. Tested: created customer, deleted via API, then cryptoPayment succeeded with auto-recreation logged."
+
 metadata:
   created_by: "testing_agent"
   version: "2.0"
