@@ -16,6 +16,7 @@ import { sendCompanyProfileCreatedEmail, sendCompanyContactWelcomeEmail, sendCom
 import { deleteRedisItem, getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
 import axios from "axios";
+import { toConversionDisplayStatus } from "../services/paymentStateMachine";
 
 const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
 const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
@@ -727,6 +728,7 @@ const getTransactions = async (req: express.Request, res: express.Response) => {
           ? {
               conversion_id: auto_convert_id,
               status: auto_convert_status,
+              display_status: toConversionDisplayStatus(auto_convert_status as string | null | undefined),
               source_currency: auto_convert_source_currency,
               source_amount: auto_convert_source_amount ? Number(auto_convert_source_amount) : null,
               source_amount_usd: auto_convert_source_amount_usd ? Number(auto_convert_source_amount_usd) : null,

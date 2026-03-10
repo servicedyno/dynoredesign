@@ -32,7 +32,7 @@ export interface PaymentLinksProps {
   setPageAction?: (v: React.ReactNode | null) => void;
 }
 
-export type PaymentLinkStatus = "active" | "expired" | "paid" | "pending";
+export type PaymentLinkStatus = "active" | "expired" | "paid" | "pending" | "completed";
 
 export interface PaymentLinkData {
   id: string;

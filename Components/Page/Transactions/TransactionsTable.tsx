@@ -271,6 +271,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 </StatusIconWrapper>
                 <StatusText status={transaction.status}>
                   {tTransactions(transaction.status)}
+                  {transaction.autoConverted && transaction.status === "done" && (
+                    <Typography component="span" sx={{ fontSize: "10px", fontFamily: "UrbanistMedium", color: "#1565C0", ml: 0.5 }}>
+                      · Converted
+                    </Typography>
+                  )}
                 </StatusText>
               </StatusBadge>
             </Box>
@@ -445,6 +450,11 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                       </StatusIconWrapper>
                       <StatusText status={transaction.status}>
                         {tTransactions(transaction.status)}
+                        {transaction.autoConverted && transaction.status === "done" && (
+                          <Typography component="span" sx={{ fontSize: "11px", fontFamily: "UrbanistMedium", color: "#1565C0", ml: 0.5 }}>
+                            · Converted
+                          </Typography>
+                        )}
                       </StatusText>
                     </StatusBadge>
                   </TransactionsTableCell>

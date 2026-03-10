@@ -6132,13 +6132,23 @@ const getPaymentLinks = async (req: express.Request, res: express.Response) => {
       const linkData = link.dataValues;
       const now = new Date();
       
-      // Calculate status
-      let status = "Active";
-      if (linkData.expires_at && new Date(linkData.expires_at as string) <= now) {
-        status = "Expired";
+      // Calculate status (normalized to lowercase for frontend consistency)
+      let status = "active";
+      
+      // Check if link is still in draft/pending state (no payment_link URL yet or amount is 0)
+      const rawDbStatus = (linkData.status || "pending").toLowerCase().trim();
+      if (rawDbStatus === "pending" && (!linkData.base_amount || Number(linkData.base_amount) === 0)) {
+        status = "pending";
       }
+      
+      // Expired overrides pending/active
+      if (linkData.expires_at && new Date(linkData.expires_at as string) <= now) {
+        status = "expired";
+      }
+      
+      // Completed overrides everything except expired
       if (parseState(linkData.status) === PaymentState.PAYOUT_COMPLETE) {
-        status = "Completed";
+        status = "completed";
       }
 
       // Format dates

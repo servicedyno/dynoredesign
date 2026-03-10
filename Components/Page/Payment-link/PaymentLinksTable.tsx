@@ -331,9 +331,11 @@ const PaymentLinksTable = ({
                       )}
                       <CopyButton
                         onClick={() => {
-                          row.status === "paid" || row.status === "completed" || row.status === "expired"
+                          row.status === "expired"
                             ? router.push(`/pay-links/${row?.id}`)
-                            : handleViewModelOpen(row);
+                            : row.status === "paid" || row.status === "completed"
+                              ? router.push(`/transactions`)
+                              : handleViewModelOpen(row);
                         }}
                         sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
                       >
@@ -347,7 +349,7 @@ const PaymentLinksTable = ({
                           <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(0%)" }} />
                         </CopyButton>
                       )}
-                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && row.status !== "active" && (
+                      {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => {
                             setDeleteModel(true);
@@ -469,7 +471,7 @@ const PaymentLinksTable = ({
                           : row.status === "expired"
                             ? "Expired"
                             : row.status === "paid" || row.status === "completed"
-                              ? "Paid"
+                              ? "Completed"
                               : "Pending"}
                       </StatusChip>
                     </TableBodyCell>
@@ -499,9 +501,11 @@ const PaymentLinksTable = ({
                       )}
                       <CopyButton
                         onClick={() => {
-                          row.status === "paid" || row.status === "completed" || row.status === "expired"
+                          row.status === "expired"
                             ? router.push(`/pay-links/${row?.id}`)
-                            : handleViewModelOpen(row);
+                            : row.status === "paid" || row.status === "completed"
+                              ? router.push(`/transactions`)
+                              : handleViewModelOpen(row);
                         }}
                         sx={{
                           borderColor: theme.palette.text.primary,
@@ -545,23 +549,14 @@ const PaymentLinksTable = ({
                       {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => {
-                            if (row.status !== "active") {
-                              setDeleteModel(true);
-                              setDeletId(row.id);
-                            }
+                            setDeleteModel(true);
+                            setDeletId(row.id);
                           }}
                           sx={{
-                            borderColor:
-                              row.status === "active"
-                                ? theme.palette.secondary.contrastText
-                                : theme.palette.text.primary,
+                            borderColor: theme.palette.text.primary,
                             "&:hover": {
                               backgroundColor: "transparent",
                               boxShadow: "none",
-                              cursor:
-                                row.status === "active"
-                                  ? "not-allowed"
-                                  : "pointer",
                             },
                           }}
                         >
@@ -572,10 +567,7 @@ const PaymentLinksTable = ({
                             height={isMobile ? 12 : 16}
                             draggable={false}
                             style={{
-                              filter:
-                                row.status === "active"
-                                  ? ""
-                                  : "brightness(0) saturate(100%) invert(0%)",
+                              filter: "brightness(0) saturate(100%) invert(0%)",
                             }}
                           />
                         </CopyButton>

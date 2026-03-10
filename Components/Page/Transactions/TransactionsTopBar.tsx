@@ -38,11 +38,12 @@ import {
   WalletSelectorButton,
 } from "./styled";
 
-const TransactionsTopBar: React.FC<TransactionsTopBarProps> = ({
+const TransactionsTopBar: React.FC<TransactionsTopBarProps & { initialWallet?: string }> = ({
   onSearch,
   onDateRangeChange,
   onWalletChange,
   onExport,
+  initialWallet,
 }) => {
   const theme = useTheme();
   const isMobile = useIsMobile("md");
@@ -60,10 +61,18 @@ const TransactionsTopBar: React.FC<TransactionsTopBarProps> = ({
     startDate: null,
     endDate: null,
   });
-  const [selectedWallet, setSelectedWallet] = useState("all");
+  const [selectedWallet, setSelectedWallet] = useState(initialWallet || "all");
   const [walletMenuAnchor, setWalletMenuAnchor] = useState<null | HTMLElement>(
     null,
   );
+
+  // Sync with external wallet selection (e.g., from URL query param)
+  useEffect(() => {
+    if (initialWallet && initialWallet !== selectedWallet) {
+      setSelectedWallet(initialWallet);
+    }
+  }, [initialWallet]);
+
 
   const handleSearch = () => {
     onSearch?.(searchTerm);

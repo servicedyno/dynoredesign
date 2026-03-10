@@ -263,6 +263,167 @@ class DynoPayTester:
         except Exception as e:
             print(f"   ❌ FAIL: Exception during checkout page check: {str(e)}")
             return False
+    
+    def test_transaction_auto_convert_display(self) -> bool:
+        """Test 6: Transaction Status with Auto-Convert Display"""
+        print("\n🔍 Test 6: Transaction Status with Auto-Convert Display")
+        
+        if not self.access_token:
+            print("   ❌ FAIL: No access token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            response = self.session.get(
+                f"{self.base_url}/api/company/getTransactions/3?page=1&limit=10",
+                headers=headers
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+                
+            data = response.json()
+            transactions = data.get('data', []) if 'data' in data else data
+            if isinstance(transactions, dict):
+                transactions = transactions.get('transactions', [])
+            
+            if not transactions:
+                print("   ❌ FAIL: No transactions found in response")
+                return False
+                
+            print(f"   Found {len(transactions)} transactions")
+            
+            # Check each transaction for required fields
+            auto_converted_found = False
+            status_issues = []
+            auto_convert_issues = []
+            
+            for i, txn in enumerate(transactions):
+                txn_id = txn.get('id') or txn.get('transaction_id') or f"Transaction {i+1}"
+                
+                # Check if status field is present
+                if 'status' not in txn:
+                    status_issues.append(f"Transaction {txn_id}: Missing 'status' field")
+                
+                # Check for auto_converted field
+                auto_converted = txn.get('auto_converted')
+                if auto_converted is True:
+                    auto_converted_found = True
+                    print(f"   Found auto-converted transaction: {txn_id}")
+                    
+                    # Check for auto_convert object with display_status
+                    auto_convert_obj = txn.get('auto_convert')
+                    if not auto_convert_obj:
+                        auto_convert_issues.append(f"Transaction {txn_id}: Missing 'auto_convert' object")
+                    elif not isinstance(auto_convert_obj, dict):
+                        auto_convert_issues.append(f"Transaction {txn_id}: 'auto_convert' is not an object")
+                    elif 'display_status' not in auto_convert_obj:
+                        auto_convert_issues.append(f"Transaction {txn_id}: 'auto_convert' object missing 'display_status' field")
+                    else:
+                        print(f"   ✓ Transaction {txn_id}: auto_convert.display_status = '{auto_convert_obj['display_status']}'")
+            
+            # Report issues
+            if status_issues:
+                print("   ❌ Status field issues:")
+                for issue in status_issues:
+                    print(f"     - {issue}")
+                return False
+                
+            if auto_convert_issues:
+                print("   ❌ Auto-convert display issues:")
+                for issue in auto_convert_issues:
+                    print(f"     - {issue}")
+                return False
+            
+            if auto_converted_found:
+                print("   ✅ PASS: Auto-converted transactions have proper display_status fields")
+            else:
+                print("   ✅ PASS: All transactions have status field (no auto-converted transactions found)")
+            
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ FAIL: Exception during auto-convert display check: {str(e)}")
+            return False
+    
+    def test_payment_link_status_normalization(self) -> bool:
+        """Test 7: Payment Link Status Normalization (lowercase)"""
+        print("\n🔍 Test 7: Payment Link Status Normalization (lowercase)")
+        
+        if not self.access_token:
+            print("   ❌ FAIL: No access token available")
+            return False
+            
+        try:
+            headers = {"Authorization": f"Bearer {self.access_token}"}
+            response = self.session.get(
+                f"{self.base_url}/api/pay/getPaymentLinks?company_id=3",
+                headers=headers
+            )
+            
+            print(f"   Status Code: {response.status_code}")
+            
+            if response.status_code != 200:
+                print(f"   ❌ FAIL: Expected 200, got {response.status_code}")
+                print(f"   Response: {response.text}")
+                return False
+                
+            data = response.json()
+            payment_links = data.get('data', []) if 'data' in data else data
+            if isinstance(payment_links, dict):
+                payment_links = payment_links.get('paymentLinks', [])
+            
+            if not payment_links:
+                print("   ❌ FAIL: No payment links found in response")
+                return False
+                
+            print(f"   Found {len(payment_links)} payment links")
+            
+            # Check each payment link for status normalization
+            status_issues = []
+            link_920_found = False
+            
+            for link in payment_links:
+                link_id = link.get('link_id') or link.get('id')
+                status = link.get('status')
+                
+                if not status:
+                    status_issues.append(f"Link {link_id}: Missing 'status' field")
+                    continue
+                
+                # Check if status is lowercase
+                if status != status.lower():
+                    status_issues.append(f"Link {link_id}: Status '{status}' is not lowercase (should be '{status.lower()}')")
+                
+                # Special check for link_id=920
+                if str(link_id) == '920':
+                    link_920_found = True
+                    print(f"   Found link_id=920 with status='{status}'")
+                    if status != 'completed':
+                        status_issues.append(f"Link 920: Status should be 'completed' (lowercase), got '{status}'")
+                    else:
+                        print("   ✓ Link 920 has correct lowercase status 'completed'")
+            
+            # Report issues
+            if status_issues:
+                print("   ❌ Status normalization issues:")
+                for issue in status_issues:
+                    print(f"     - {issue}")
+                return False
+            
+            if not link_920_found:
+                print("   ⚠️  Warning: link_id=920 not found in current results")
+            
+            print("   ✅ PASS: All payment link statuses are properly normalized to lowercase")
+            return True
+            
+        except Exception as e:
+            print(f"   ❌ FAIL: Exception during status normalization check: {str(e)}")
+            return False
 
 def main():
     # Use the backend URL from frontend/.env
@@ -283,6 +444,8 @@ def main():
         ("Payment Link #920 Status", tester.test_payment_link_920_status),
         ("Transaction History", tester.test_transaction_history),
         ("Checkout Page Status", tester.test_checkout_page_completed_payment),
+        ("Transaction Status with Auto-Convert Display", tester.test_transaction_auto_convert_display),
+        ("Payment Link Status Normalization", tester.test_payment_link_status_normalization),
     ]
     
     results = []

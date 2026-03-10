@@ -8,6 +8,7 @@ import { Box, CircularProgress } from "@mui/material";
 import { endOfDay, isWithinInterval, parseISO, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/router";
 import TransactionsTable from "./TransactionsTable";
 import TransactionsTopBar from "./TransactionsTopBar";
 
@@ -21,10 +22,26 @@ const walletMapping: { [key: string]: string } = {
   wallet6: "TRX",
   wallet7: "USDT-ERC20",
   wallet8: "USDT-TRC20",
+  wallet9: "SOL",
+  wallet10: "XRP",
+  wallet11: "USDC-ERC20",
+  wallet12: "POLYGON",
+  wallet13: "RLUSD",
+  wallet14: "USDT-POLYGON",
+  wallet15: "RLUSD-ERC20",
 };
+
+// Reverse mapping: crypto name -> wallet key
+const cryptoToWalletKey: { [key: string]: string } = {};
+Object.entries(walletMapping).forEach(([key, value]) => {
+  if (value !== "all") {
+    cryptoToWalletKey[value.toUpperCase()] = key;
+  }
+});
 
 const TransactionPage = () => {
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [dateRange, setDateRange] = useState<DateRange>({
@@ -32,6 +49,17 @@ const TransactionPage = () => {
     endDate: null,
   });
   const [selectedWallet, setSelectedWallet] = useState("all");
+
+  // Read wallet filter from query parameter (e.g., /transactions?wallet=ETH)
+  useEffect(() => {
+    if (router.isReady && router.query.wallet) {
+      const walletParam = String(router.query.wallet).toUpperCase();
+      const walletKey = cryptoToWalletKey[walletParam];
+      if (walletKey) {
+        setSelectedWallet(walletKey);
+      }
+    }
+  }, [router.isReady, router.query.wallet]);
 
   const transactionState = useSelector(
     (state: rootReducer) => state.transactionReducer,
@@ -109,7 +137,9 @@ const TransactionPage = () => {
         const cryptoCurrency = (item as any).crypto_currency || (item as any).crypto || item.base_currency;
         const cryptoAmount = Number((item as any).crypto_amount) || Number(item.base_amount) || 0;
         const autoConverted = (item as any).auto_converted === true || (item as any).auto_converted === 'true';
-        const autoConvertTarget = (item as any).auto_convert || null;
+        const autoConvertData = (item as any).auto_convert || null;
+        const autoConvertTarget = autoConvertData?.target_currency || null;
+        const autoConvertDisplayStatus = autoConvertData?.display_status || null;
 
         return {
           id: String((item as any).transaction_id || item.id || `TX-${Math.random().toString(36).substr(2, 9)}`),
@@ -123,12 +153,14 @@ const TransactionPage = () => {
             return `$${raw.toFixed(6).replace(/0+$/, "").replace(/\.$/, ".00")}`;
           })(),
           dateTime: formatDateTime(item.createdAt),
-          status:
-            item.status === "success" || item.status === "successful" || item.status === "Completed" || item.status === "completed" || item.status === "confirmed"
-              ? "done"
-              : item.status === "failed" || item.status === "expired" || item.status === "Expired"
-                ? "failed"
-                : "pending",
+          status: (() => {
+            const s = (item.status || "").toLowerCase().trim();
+            if (s === "success" || s === "successful" || s === "completed" || s === "confirmed" || s === "payout_complete" || s === "converted" || s === "recovered" || s === "done")
+              return "done" as const;
+            if (s === "failed" || s === "expired" || s === "refunded")
+              return "failed" as const;
+            return "pending" as const;
+          })(),
           fees: (() => {
             const txFee = Number((item as any).transaction_fee) || 0;
             const fixedFee = Number((item as any).fixed_fee) || 0;
@@ -172,6 +204,7 @@ const TransactionPage = () => {
           webhookResponse: (item as any).webhook_response || (item as any).webhookResponse || null,
           autoConverted,
           autoConvertTarget,
+          autoConvertDisplayStatus,
         };
       });
   }, [
@@ -243,6 +276,7 @@ const TransactionPage = () => {
         onDateRangeChange={handleDateRangeChange}
         onWalletChange={handleWalletChange}
         onExport={handleExport}
+        initialWallet={selectedWallet}
       />
       <TransactionsTable transactions={processedTransactions} rowsPerPage={10} />
     </Box>

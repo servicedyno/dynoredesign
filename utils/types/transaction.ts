@@ -26,6 +26,7 @@ export interface ExtendedTransaction {
   };
   autoConverted?: boolean;
   autoConvertTarget?: string;
+  autoConvertDisplayStatus?: string;
 }
 
 export interface ICustomerTransactions {
