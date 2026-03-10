@@ -17,10 +17,11 @@ import {
   CardWrapper,
   ImageCenter,
   SplitLayoutWrapper,
+  AuthPageBackground,
   BrandPanel,
   FormPanel,
 } from "@/Containers/Login/styled";
-import AuthBrandContent from "@/Components/UI/AuthLayout/BrandContent";
+import LiveBrandContent from "@/Components/UI/AuthLayout/BrandContent/LiveBrandContent";
 import useIsMobile from "@/hooks/useIsMobile";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import {
@@ -786,12 +787,10 @@ export default function Login() {
   };
 
   return (
+    <AuthPageBackground>
     <SplitLayoutWrapper>
       <BrandPanel>
-        <AuthBrandContent
-          headline="Accept crypto payments with confidence"
-          subtitle="Dynopay makes it simple for merchants to receive cryptocurrency payments — fast, secure, and with real-time settlement."
-        />
+        <LiveBrandContent />
       </BrandPanel>
 
       <FormPanel>
@@ -1579,5 +1578,6 @@ export default function Login() {
     </AuthContainer>
       </FormPanel>
     </SplitLayoutWrapper>
+    </AuthPageBackground>
   );
 }

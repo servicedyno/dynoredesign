@@ -30,54 +30,64 @@ export const ContentWrapper = styled(Box)(() => ({
 
 export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
   display: "flex",
+  flexDirection: "row",
+  alignItems: "stretch",
+  width: "100%",
+  maxWidth: "1060px",
+  minHeight: "min(720px, calc(100dvh - 80px))",
+  maxHeight: "calc(100dvh - 80px)",
+  margin: "auto",
+  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
+  borderRadius: "16px",
+  overflow: "hidden",
+  boxShadow:
+    theme.palette.mode === "dark"
+      ? "0 4px 40px rgba(0,0,0,0.4)"
+      : "0 4px 40px rgba(47,47,101,0.12)",
+  border: `1px solid ${theme.palette.mode === "dark" ? "#1f2237" : "#e2e5ed"}`,
+
+  [theme.breakpoints.down("lg")]: {
+    flexDirection: "column",
+    maxWidth: "520px",
+    minHeight: "auto",
+    maxHeight: "none",
+    margin: "24px auto",
+    borderRadius: "16px",
+  },
+
+  [theme.breakpoints.down("sm")]: {
+    margin: "16px auto",
+    borderRadius: "12px",
+  },
+}));
+
+/** Page-level background wrapper */
+export const AuthPageBackground = styled(Box)(({ theme }) => ({
   width: "100%",
   minHeight: "100dvh",
-  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
+  display: "flex",
+  flexDirection: "column",
+  background: theme.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
+  padding: "40px 24px",
+  boxSizing: "border-box",
 
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
+  [theme.breakpoints.down("sm")]: {
+    padding: "0",
+    background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
   },
 }));
 
 export const BrandPanel = styled(Box)(({ theme }) => ({
-  flex: "0 0 44%",
+  flex: "0 0 48%",
+  maxWidth: "48%",
   position: "relative",
   display: "flex",
   flexDirection: "column",
-  justifyContent: "center",
-  alignItems: "center",
-  padding: "60px 48px",
   overflow: "hidden",
-  background:
-    theme.palette.mode === "dark"
-      ? "linear-gradient(145deg, #0f1128 0%, #1a1040 40%, #0d2847 100%)"
-      : "linear-gradient(145deg, #1a1040 0%, #2d1b69 40%, #1e3a5f 100%)",
-  color: "#fff",
+  background: "#6C5CE7",
 
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundImage:
-      'url("https://images.unsplash.com/photo-1579547621113-e4bb2a19bdd6?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDk1Nzd8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGdlb21ldHJpY3xlbnwwfHx8Ymx1ZXwxNzczMDQ1MDE4fDA&ixlib=rb-4.1.0&q=85&w=800")',
-    backgroundSize: "cover",
-    backgroundPosition: "center",
-    opacity: 0.15,
-    zIndex: 0,
-  },
-
-  "& > *": {
-    position: "relative",
-    zIndex: 1,
-  },
-
-  [theme.breakpoints.down("md")]: {
-    flex: "none",
-    padding: "36px 24px 28px",
-    minHeight: "auto",
+  [theme.breakpoints.down("lg")]: {
+    display: "none",
   },
 }));
 
@@ -85,18 +95,19 @@ export const FormPanel = styled(Box)(({ theme }) => ({
   flex: 1,
   display: "flex",
   justifyContent: "center",
-  alignItems: "flex-start",
-  padding: "40px 48px",
+  alignItems: "center",
+  padding: "32px 40px",
   overflow: "auto",
-  minHeight: "100dvh",
-  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
+  background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
   scrollbarWidth: "none",
   "&::-webkit-scrollbar": { display: "none" },
 
   [theme.breakpoints.down("md")]: {
-    padding: "24px 16px 40px",
-    minHeight: "auto",
-    alignItems: "flex-start",
+    padding: "24px 20px",
+  },
+
+  [theme.breakpoints.down("sm")]: {
+    padding: "20px 16px",
   },
 }));
 
@@ -126,20 +137,17 @@ export const CardWrapper = styled(Card)(({ theme }) => ({
   width: "100%",
   maxWidth: "480px",
   height: "fit-content",
-  borderRadius: "16px",
+  borderRadius: "12px",
   padding: "8px",
-  background: theme.palette.background.paper,
+  background: theme.palette.mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)",
   textAlign: "center",
-  border: `1px solid ${theme.palette.mode === "dark" ? "#1f2237" : "#E9ECF2"}`,
-  boxShadow:
-    theme.palette.mode === "dark"
-      ? "0 2px 12px rgba(0,0,0,0.3)"
-      : "0 2px 12px rgba(47,47,101,0.08)",
+  border: `1px solid ${theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "#E9ECF2"}`,
+  boxShadow: "none",
 
   [theme.breakpoints.down("sm")]: {
-    padding: "16px",
+    padding: "12px",
     width: "100%",
-    borderRadius: "12px",
+    borderRadius: "10px",
   },
 }));
 
