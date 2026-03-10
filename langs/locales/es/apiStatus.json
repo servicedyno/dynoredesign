@@ -1,7 +1,7 @@
 {
   "allSystemsOperational": "Todos los Sistemas Operativos",
-  "dynoPayStatus": "Estado de DynoPay",
-  "statusSubtitle": "Estado actual de todos los servicios de DynoPay",
+  "dynoPayStatus": "Estado de Dynopay",
+  "statusSubtitle": "Estado actual de todos los servicios de Dynopay",
   "services": "Servicios",
   "service1Name": "Pasarela API",
   "service2Name": "Procesamiento de Pagos",

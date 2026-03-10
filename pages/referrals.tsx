@@ -135,7 +135,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
     if (!referralLink) return;
 
     const shareData = {
-      title: t("joinDynoPay"),
+      title: t("joinDynopay"),
       text: t("shareMessage"),
       url: referralLink,
     };
@@ -169,7 +169,7 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
   return (
     <>
       <Head>
-        <title>DynoPay - Referrals</title>
+        <title>Dynopay - Referrals</title>
         <meta name="description" content="Referral program" />
       </Head>
       <Box sx={{ px: isMobile ? "16px" : 0 }}>

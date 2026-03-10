@@ -1,11 +1,11 @@
 {
   "apiKeysTitle": "Clés API",
-  "apiKeysDescription": "Gérez les clés API pour intégrer DynoPay dans vos applications",
+  "apiKeysDescription": "Gérez les clés API pour intégrer Dynopay dans vos applications",
   "createNewKey": "Créer une Nouvelle Clé",
   "createKeyMobile": "Créer",
   "documentation": {
     "title": "Documentation API",
-    "description": "Apprenez à intégrer DynoPay dans votre application grâce à notre documentation API complète",
+    "description": "Apprenez à intégrer Dynopay dans votre application grâce à notre documentation API complète",
     "viewDocumentation": "Voir la Documentation",
     "infoIconAlt": "information"
   },
@@ -42,7 +42,7 @@
   },
   "generate": {
     "modalTitle": "Créer une Nouvelle Clé API",
-    "modalSubtitle": "Générez une nouvelle clé API pour intégrer DynoPay dans votre application",
+    "modalSubtitle": "Générez une nouvelle clé API pour intégrer Dynopay dans votre application",
     "submit": "Générer",
     "keyName": "Nom de la Clé",
     "keyNamePlaceholder": "ex. : App Production",

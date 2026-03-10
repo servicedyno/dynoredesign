@@ -1,7 +1,7 @@
 {
   "allSystemsOperational": "All Systems Operational",
-  "dynoPayStatus": "DynoPay Status",
-  "statusSubtitle": "Current status of all DynoPay services",
+  "dynoPayStatus": "Dynopay Status",
+  "statusSubtitle": "Current status of all Dynopay services",
   "services": "Services",
   "service1Name": "API Gateway",
   "service2Name": "Payment Processing",

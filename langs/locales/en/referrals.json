@@ -1,6 +1,6 @@
 {
   "pageTitle": "Referrals",
-  "pageDescription": "Earn rewards by inviting others to DynoPay",
+  "pageDescription": "Earn rewards by inviting others to Dynopay",
   "yourReferralCode": "Your Referral Code",
   "shareYourCode": "Share your unique code and earn rewards",
   "copyCode": "Copy Code",
@@ -8,8 +8,8 @@
   "copyLink": "Copy Link",
   "referralCodeCopied": "Referral code copied to clipboard!",
   "referralLinkCopied": "Referral link copied to clipboard!",
-  "joinDynoPay": "Join DynoPay",
-  "shareMessage": "Hey! Use my referral link to sign up for DynoPay and we both earn rewards: ",
+  "joinDynopay": "Join Dynopay",
+  "shareMessage": "Hey! Use my referral link to sign up for Dynopay and we both earn rewards: ",
   "totalReferrals": "Total Referrals",
   "active": "Active",
   "pending": "Pending",

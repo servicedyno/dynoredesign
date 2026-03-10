@@ -790,7 +790,7 @@ export default function Login() {
       <BrandPanel>
         <AuthBrandContent
           headline="Accept crypto payments with confidence"
-          subtitle="DynoPay makes it simple for merchants to receive cryptocurrency payments — fast, secure, and with real-time settlement."
+          subtitle="Dynopay makes it simple for merchants to receive cryptocurrency payments — fast, secure, and with real-time settlement."
         />
       </BrandPanel>
 

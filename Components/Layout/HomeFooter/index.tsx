@@ -102,7 +102,7 @@ const HomeFooter: FC = () => {
           <LogoWrapper onClick={() => router.push("/")}>
             <Image
               src={Logo}
-              alt="DynoPay logo"
+              alt="Dynopay logo"
               width={134}
               height={45}
               priority

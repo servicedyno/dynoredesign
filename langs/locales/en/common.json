@@ -51,7 +51,7 @@
     "hours": "h",
     "minutes": "m",
     "seconds": "s",
-    "securePayment": "Secure payment by DynoPay",
+    "securePayment": "Secure payment by Dynopay",
     "copied": "Copied!",
     "copyInvoice": "Copy Invoice Number",
     "remainingBalance": "Remaining Balance",
@@ -203,23 +203,23 @@
   "terms": {
     "title": "Terms of Service",
     "lastUpdated": "Last Updated",
-    "intro": "Welcome to DynoPay. By accessing or using our services, you agree to be bound by the following Terms of Service. Please read them carefully.",
+    "intro": "Welcome to Dynopay. By accessing or using our services, you agree to be bound by the following Terms of Service. Please read them carefully.",
     "sections": {
       "overview": {
         "title": "1. Overview",
-        "content": "DynoPay is a digital payment platform that provides wallet-based balance management, bank transfers, and cryptocurrency transactions. These Terms govern your use of our website, platform, and services."
+        "content": "Dynopay is a digital payment platform that provides wallet-based balance management, bank transfers, and cryptocurrency transactions. These Terms govern your use of our website, platform, and services."
       },
       "eligibility": {
         "title": "2. Eligibility",
-        "content": "To use DynoPay, you must:\n • At least 18 years old\n • Capable of entering into a legally binding agreement\n • Not located in a restricted or sanctioned jurisdiction\n\nWe reserve the right to reject or terminate any account that violates these requirements."
+        "content": "To use Dynopay, you must:\n • At least 18 years old\n • Capable of entering into a legally binding agreement\n • Not located in a restricted or sanctioned jurisdiction\n\nWe reserve the right to reject or terminate any account that violates these requirements."
       },
       "userAccount": {
         "title": "3. User Account",
-        "content": "To access certain features, you may be required to register an account. You agree to:\n • Provide accurate and complete information\n • Keep your login credentials confidential\n • Be fully responsible for all activity under your account\n\nDynoPay is not liable for any unauthorized access resulting from your failure to secure your account."
+        "content": "To access certain features, you may be required to register an account. You agree to:\n • Provide accurate and complete information\n • Keep your login credentials confidential\n • Be fully responsible for all activity under your account\n\nDynopay is not liable for any unauthorized access resulting from your failure to secure your account."
       },
       "permittedUse": {
         "title": "4. Permitted Use",
-        "content": "You agree to use DynoPay only for lawful purposes and in compliance with all applicable laws. Prohibited uses include, but are not limited to:\n • Money laundering, terrorist financing, or fraud\n • Using stolen or unauthorized payment methods\n • Engaging in activities that violate sanctions or embargoes\n • Attempting to bypass identity verification or security measures"
+        "content": "You agree to use Dynopay only for lawful purposes and in compliance with all applicable laws. Prohibited uses include, but are not limited to:\n • Money laundering, terrorist financing, or fraud\n • Using stolen or unauthorized payment methods\n • Engaging in activities that violate sanctions or embargoes\n • Attempting to bypass identity verification or security measures"
       },
       "paymentsFees": {
         "title": "5. Payments & Fees",
@@ -227,7 +227,7 @@
       },
       "riskDisclosure": {
         "title": "6. Risk Disclosure",
-        "content": "Using cryptocurrencies carries inherent risks including volatility, network errors, and regulatory changes. You acknowledge and accept these risks when using DynoPay.\nWe do not offer investment advice or financial guarantees."
+        "content": "Using cryptocurrencies carries inherent risks including volatility, network errors, and regulatory changes. You acknowledge and accept these risks when using Dynopay.\nWe do not offer investment advice or financial guarantees."
       },
       "amlKyc": {
         "title": "7. AML & KYC",
@@ -235,19 +235,19 @@
       },
       "suspension": {
         "title": "8. Account Suspension & Termination",
-        "content": "We may suspend or terminate your access to DynoPay without notice if:\n • You breach these Terms\n • We suspect unauthorized or unlawful activity\n • Required by law enforcement or regulators\n\nUpon termination, we may restrict access to funds pending investigation."
+        "content": "We may suspend or terminate your access to Dynopay without notice if:\n • You breach these Terms\n • We suspect unauthorized or unlawful activity\n • Required by law enforcement or regulators\n\nUpon termination, we may restrict access to funds pending investigation."
       },
       "intellectualProperty": {
         "title": "9. Intellectual Property",
-        "content": "All content, logos, trademarks, and code on the DynoPay platform are the property of DynoPay or its licensors. You may not copy, distribute, or reverse engineer any part of the service without permission."
+        "content": "All content, logos, trademarks, and code on the Dynopay platform are the property of Dynopay or its licensors. You may not copy, distribute, or reverse engineer any part of the service without permission."
       },
       "disclaimer": {
         "title": "10. Disclaimer of Warranties",
-        "content": "DynoPay is provided \"as is\" without warranties of any kind. We do not guarantee:\n • Continuous or error-free service\n • That any transaction will be completed\n • Accuracy of third-party data (e.g., exchange rates)"
+        "content": "Dynopay is provided \"as is\" without warranties of any kind. We do not guarantee:\n • Continuous or error-free service\n • That any transaction will be completed\n • Accuracy of third-party data (e.g., exchange rates)"
       },
       "liability": {
         "title": "11. Limitation of Liability",
-        "content": "To the maximum extent permitted by law, DynoPay is not liable for:\n • Indirect or consequential losses\n • Loss of funds due to user error (e.g., wrong wallet address)\n • Network failures or force majeure events"
+        "content": "To the maximum extent permitted by law, Dynopay is not liable for:\n • Indirect or consequential losses\n • Loss of funds due to user error (e.g., wrong wallet address)\n • Network failures or force majeure events"
       },
       "modifications": {
         "title": "12. Modifications",
@@ -266,7 +266,7 @@
   "aml": {
     "title": "Anti-Money Laundering (AML) Policy",
     "lastUpdated": "Last Updated",
-    "intro": "At DynoPay, we are committed to upholding the highest standards in preventing money laundering and the financing of terrorism. This Anti-Money Laundering (AML) Policy outlines the measures and procedures we have implemented to detect, prevent, and report any suspicious activity across our services, including:",
+    "intro": "At Dynopay, we are committed to upholding the highest standards in preventing money laundering and the financing of terrorism. This Anti-Money Laundering (AML) Policy outlines the measures and procedures we have implemented to detect, prevent, and report any suspicious activity across our services, including:",
     "services": {
       "wallet": "Wallet balance management",
       "bank": "Bank transfers",
@@ -275,11 +275,11 @@
     "sections": {
       "purpose": {
         "title": "1. Purpose",
-        "content": "The purpose of this policy is to ensure that DynoPay complies with all applicable AML and Counter-Terrorist Financing (CTF) laws and regulations. We are dedicated to identifying and mitigating risks associated with money laundering and to protecting our platform from being used for illicit purposes."
+        "content": "The purpose of this policy is to ensure that Dynopay complies with all applicable AML and Counter-Terrorist Financing (CTF) laws and regulations. We are dedicated to identifying and mitigating risks associated with money laundering and to protecting our platform from being used for illicit purposes."
       },
       "riskBased": {
         "title": "2. Risk-Based Approach",
-        "content": "DynoPay follows a risk-based approach in assessing its clients and transactions. Based on the level of risk, we apply appropriate levels of due diligence and monitoring."
+        "content": "Dynopay follows a risk-based approach in assessing its clients and transactions. Based on the level of risk, we apply appropriate levels of due diligence and monitoring."
       },
       "kyc": {
         "title": "3. Know Your Customer (KYC)",
@@ -287,11 +287,11 @@
       },
       "monitoring": {
         "title": "4. Ongoing Monitoring",
-        "content": "All transactions processed through DynoPay are subject to ongoing monitoring to detect unusual or suspicious behavior. This includes, but is not limited to:\n • Unusual movement of funds\n • Use of high-risk jurisdictions\n • Use of anonymizing services or tools\n\nWe reserve the right to delay, block, or refuse transactions that raise red flags during monitoring."
+        "content": "All transactions processed through Dynopay are subject to ongoing monitoring to detect unusual or suspicious behavior. This includes, but is not limited to:\n • Unusual movement of funds\n • Use of high-risk jurisdictions\n • Use of anonymizing services or tools\n\nWe reserve the right to delay, block, or refuse transactions that raise red flags during monitoring."
       },
       "reporting": {
         "title": "5. Reporting Suspicious Activities",
-        "content": "In accordance with applicable AML laws, DynoPay is obligated to report any suspected money laundering or suspicious activity to the relevant authorities. Users are not notified when such reports are made, in compliance with legal requirements."
+        "content": "In accordance with applicable AML laws, Dynopay is obligated to report any suspected money laundering or suspicious activity to the relevant authorities. Users are not notified when such reports are made, in compliance with legal requirements."
       },
       "training": {
         "title": "6. Employee Training",
@@ -299,15 +299,15 @@
       },
       "records": {
         "title": "7. Record Keeping",
-        "content": "DynoPay maintains detailed records of all user identification data, transactions, and AML reviews for a minimum period of 5 years, or as otherwise required by law."
+        "content": "Dynopay maintains detailed records of all user identification data, transactions, and AML reviews for a minimum period of 5 years, or as otherwise required by law."
       },
       "crypto": {
         "title": "8. Cryptocurrency-Specific Measures",
-        "content": "Given the unique nature of digital assets, DynoPay implements enhanced due diligence and blockchain analysis tools to monitor the flow of crypto assets. We do not support or tolerate the use of our platform for mixing/tumbling services or privacy coins designed to obscure the source of funds."
+        "content": "Given the unique nature of digital assets, Dynopay implements enhanced due diligence and blockchain analysis tools to monitor the flow of crypto assets. We do not support or tolerate the use of our platform for mixing/tumbling services or privacy coins designed to obscure the source of funds."
       },
       "userResponsibility": {
         "title": "9. User Responsibility",
-        "content": "By using DynoPay, users agree to comply with this AML Policy and cooperate with any compliance-related requests. Failure to do so may result in account suspension, reporting to authorities, or permanent termination."
+        "content": "By using Dynopay, users agree to comply with this AML Policy and cooperate with any compliance-related requests. Failure to do so may result in account suspension, reporting to authorities, or permanent termination."
       }
     }
   },

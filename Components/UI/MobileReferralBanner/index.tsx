@@ -34,8 +34,8 @@ const MobileReferralBanner: React.FC = () => {
 
   const handleShare = async () => {
     const shareData = {
-      title: "Join DynoPay",
-      text: "Accept crypto payments with DynoPay. Use my referral code for 50% off fees!",
+      title: "Join Dynopay",
+      text: "Accept crypto payments with Dynopay. Use my referral code for 50% off fees!",
       url: referralLink || `https://dynopay.com/signup?ref=${referralCode}`,
     };
     try {

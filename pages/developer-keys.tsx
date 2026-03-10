@@ -31,7 +31,7 @@ const APIs = ({
       setPageDescription(
         tApi(
           "apiKeysDescription",
-          "Manage API keys for integrating DynoPay into your applications",
+          "Manage API keys for integrating Dynopay into your applications",
         ),
       );
     }

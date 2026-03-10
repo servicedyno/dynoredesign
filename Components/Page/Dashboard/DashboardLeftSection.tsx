@@ -430,7 +430,7 @@ const DashboardLeftSection = () => {
         >
           <Box>
             <Typography sx={{ fontSize: isMobile ? "16px" : "18px", fontFamily: "UrbanistSemibold", fontWeight: 600, color: theme.palette.text.primary, mb: 0.5 }}>
-              Welcome to DynoPay! 🚀
+              Welcome to Dynopay! 🚀
             </Typography>
             <Typography sx={{ fontSize: isMobile ? "13px" : "14px", fontFamily: "UrbanistMedium", color: theme.palette.text.secondary, lineHeight: 1.5 }}>
               Start accepting crypto payments in minutes. Create your first payment link and share it with your customers.

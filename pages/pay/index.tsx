@@ -712,7 +712,7 @@ const Payment = () => {
                 {/* Gradient accent bar */}
                 <Box sx={{ height: '3px', background: 'linear-gradient(90deg, #0004FF 0%, #3D40FF 40%, #6C6FFF 100%)' }} />
                 <Box px={{ xs: 2, sm: 2.5 }} py={{ xs: 2, sm: 2.5 }}>
-                {/* Logo Section - Merchant logo or DynoPay */}
+                {/* Logo Section - Merchant logo or Dynopay */}
                 <Box display='flex' justifyContent='center' mb={1}>
                   {merchantInfo?.company_logo ? (
                     <Box

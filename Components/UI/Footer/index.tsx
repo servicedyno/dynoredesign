@@ -66,7 +66,7 @@ export default function Footer() {
             letterSpacing: '0.2px',
           }}
         >
-          Powered by DynoPay
+          Powered by Dynopay
         </Typography>
       </Box>
     </Box>

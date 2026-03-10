@@ -1,7 +1,7 @@
 {
   "allSystemsOperational": "Alle Systeme betriebsbereit",
-  "dynoPayStatus": "DynoPay-Status",
-  "statusSubtitle": "Aktueller Status aller DynoPay-Dienste",
+  "dynoPayStatus": "Dynopay-Status",
+  "statusSubtitle": "Aktueller Status aller Dynopay-Dienste",
   "services": "Dienste",
   "service1Name": "API-Gateway",
   "service2Name": "Zahlungsverarbeitung",

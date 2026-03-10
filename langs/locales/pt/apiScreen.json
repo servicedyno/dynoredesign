@@ -1,11 +1,11 @@
 {
   "apiKeysTitle": "Chaves de API",
-  "apiKeysDescription": "Gerencie as chaves de API para integrar o DynoPay aos seus aplicativos.",
+  "apiKeysDescription": "Gerencie as chaves de API para integrar o Dynopay aos seus aplicativos.",
   "createNewKey": "Criar nova chave",
   "createKeyMobile": "Criar",
   "documentation": {
     "title": "Documentação da API",
-    "description": "Aprenda como integrar o DynoPay em sua aplicação com nossa documentação completa da API.",
+    "description": "Aprenda como integrar o Dynopay em sua aplicação com nossa documentação completa da API.",
     "viewDocumentation": "Ver documentação",
     "infoIconAlt": "informação"
   },
@@ -42,7 +42,7 @@
   },
   "generate": {
     "modalTitle": "Criar nova chave de API",
-    "modalSubtitle": "Gere uma nova chave de API para integrar o DynoPay ao seu aplicativo.",
+    "modalSubtitle": "Gere uma nova chave de API para integrar o Dynopay ao seu aplicativo.",
     "submit": "Gerar",
     "keyName": "Nome da chave",
     "baseCurrency": "Moeda base",

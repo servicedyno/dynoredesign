@@ -17,22 +17,22 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
 
     const helpData = [
         {
-            title: "Step 1. Create Your DynoPay Account",
-            description: "Sign up using your business email and complete the initial account setup. Once registered, you’ll get access to the DynoPay dashboard where all payments, wallets, and settings are managed."
+            title: "Step 1. Create Your Dynopay Account",
+            description: "Sign up using your business email and complete the initial account setup. Once registered, you’ll get access to the Dynopay dashboard where all payments, wallets, and settings are managed."
         },
         {
             title: "Step 2. Complete Basic Business Setup",
-            description: "Add your business details, such as company name and operating country. Depending on your use case and volume, DynoPay may request additional verification later, but you can start testing payments right away."
+            description: "Add your business details, such as company name and operating country. Depending on your use case and volume, Dynopay may request additional verification later, but you can start testing payments right away."
         },
         {
             title: "Step 3. Choose Supported Cryptocurrencies",
-            description: "Select which cryptocurrencies and networks you want to accept. DynoPay supports multiple assets and chains, allowing you to choose options that best fit your customers and transaction fees."
+            description: "Select which cryptocurrencies and networks you want to accept. Dynopay supports multiple assets and chains, allowing you to choose options that best fit your customers and transaction fees."
         },
         {
             title: "Step 4. Set Up Your First Payment",
             bulletPoints: {
                 heading: "You can accept payments in several ways:",
-                points: ["Create a payment link", "Generate an invoice", "Use a hosted checkout page", "Integrate DynoPay via API"]
+                points: ["Create a payment link", "Generate an invoice", "Use a hosted checkout page", "Integrate Dynopay via API"]
             },
             footer: "For most businesses, payment links or invoices are the fastest way to get started."
         },
@@ -58,14 +58,14 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
             bulletPoints: {
                 points: ["Customize checkout experience", "Add team members", "Enable API integrations", "Review fees and settlement options"]
             },
-            footer: "If you need help at any step, DynoPay support is always available through the dashboard."
+            footer: "If you need help at any step, Dynopay support is always available through the dashboard."
         }
     ]
 
     const articleData = [
         {
             title: "Supported Cryptocurrencies & Networks",
-            description: "See which cryptocurrencies and blockchain networks DynoPay supports and how to choose the right one.",
+            description: "See which cryptocurrencies and blockchain networks Dynopay supports and how to choose the right one.",
             slug: "supported-cryptocurrencies-and-networks"
         },
         {
@@ -110,7 +110,7 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
             >
                 <Image src={BackArrow} alt="Back Arrow" style={{ width: "16px", height: "16px", color: "#242428", cursor: "pointer" }} onClick={() => router.push("/help-support")} />
                 <TextDecoration style={{ fontSize: isMobile ? "16px" : "24px", color: "#242428" }}>
-                    Getting Started with DynoPay
+                    Getting Started with Dynopay
                 </TextDecoration>
                 <Box sx={{ width: "100%", height: { xs: "200px", sm: "303px" }, position: "relative", flexShrink: 0 }}>
                     <Image
@@ -122,7 +122,7 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
                 </Box>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: "20px" }}>
                     <TextDecoration style={{ fontSize: isMobile ? "13px" : "16px", color: "#242428" }}>
-                        DynoPay helps businesses accept crypto payments without dealing with complex blockchain mechanics. This guide walks you through the basic steps to get up and running.
+                        Dynopay helps businesses accept crypto payments without dealing with complex blockchain mechanics. This guide walks you through the basic steps to get up and running.
                     </TextDecoration>
                     {helpData.map((item) => (
                         <Box key={item.title} sx={{ display: "flex", flexDirection: "column", gap: "20px" }}>

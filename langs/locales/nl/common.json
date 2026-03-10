@@ -30,7 +30,7 @@
     "hours": "u",
     "minutes": "m",
     "seconds": "s",
-    "securePayment": "Veilige betaling door DynoPay",
+    "securePayment": "Veilige betaling door Dynopay",
     "copied": "Gekopieerd!",
     "copyInvoice": "Factuur nummer kopiëren",
     "remainingBalance": "Resterend Saldo",
@@ -182,23 +182,23 @@
   "terms": {
     "title": "Servicevoorwaarden",
     "lastUpdated": "Laatst bijgewerkt",
-    "intro": "Welkom bij DynoPay. Door toegang te krijgen tot of gebruik te maken van onze diensten, gaat u akkoord met de volgende Servicevoorwaarden. Lees deze aandachtig door.",
+    "intro": "Welkom bij Dynopay. Door toegang te krijgen tot of gebruik te maken van onze diensten, gaat u akkoord met de volgende Servicevoorwaarden. Lees deze aandachtig door.",
     "sections": {
       "overview": {
         "title": "1. Overzicht",
-        "content": "DynoPay is een digitaal betalingsplatform dat portemonnee-gebaseerd saldobeheer, bankoverschrijvingen en cryptovaluta-transacties biedt. Deze Voorwaarden regelen uw gebruik van onze website, platform en diensten."
+        "content": "Dynopay is een digitaal betalingsplatform dat portemonnee-gebaseerd saldobeheer, bankoverschrijvingen en cryptovaluta-transacties biedt. Deze Voorwaarden regelen uw gebruik van onze website, platform en diensten."
       },
       "eligibility": {
         "title": "2. Geschiktheid",
-        "content": "Om DynoPay te gebruiken, moet u:\n • Minstens 18 jaar oud zijn\n • In staat zijn om een juridisch bindende overeenkomst aan te gaan\n • Niet gevestigd zijn in een beperkt of gesanctioneerd rechtsgebied\n\nWij behouden ons het recht voor om elk account dat deze vereisten schendt te weigeren of te beëindigen."
+        "content": "Om Dynopay te gebruiken, moet u:\n • Minstens 18 jaar oud zijn\n • In staat zijn om een juridisch bindende overeenkomst aan te gaan\n • Niet gevestigd zijn in een beperkt of gesanctioneerd rechtsgebied\n\nWij behouden ons het recht voor om elk account dat deze vereisten schendt te weigeren of te beëindigen."
       },
       "userAccount": {
         "title": "3. Gebruikersaccount",
-        "content": "Om toegang te krijgen tot bepaalde functies, moet u mogelijk een account registreren. U gaat ermee akkoord:\n • Nauwkeurige en volledige informatie te verstrekken\n • Uw inloggegevens vertrouwelijk te houden\n • Volledig verantwoordelijk te zijn voor alle activiteit onder uw account\n\nDynoPay is niet aansprakelijk voor ongeautoriseerde toegang als gevolg van uw nalaten om uw account te beveiligen."
+        "content": "Om toegang te krijgen tot bepaalde functies, moet u mogelijk een account registreren. U gaat ermee akkoord:\n • Nauwkeurige en volledige informatie te verstrekken\n • Uw inloggegevens vertrouwelijk te houden\n • Volledig verantwoordelijk te zijn voor alle activiteit onder uw account\n\nDynopay is niet aansprakelijk voor ongeautoriseerde toegang als gevolg van uw nalaten om uw account te beveiligen."
       },
       "permittedUse": {
         "title": "4. Toegestaan Gebruik",
-        "content": "U gaat ermee akkoord DynoPay alleen voor wettige doeleinden te gebruiken en in overeenstemming met alle toepasselijke wetten. Verboden gebruik omvat, maar is niet beperkt tot:\n • Witwassen, terrorismefinanciering of fraude\n • Gebruik van gestolen of ongeautoriseerde betaalmethoden\n • Deelname aan activiteiten die sancties of embargo's schenden\n • Poging om identiteitsverificatie of beveiligingsmaatregelen te omzeilen"
+        "content": "U gaat ermee akkoord Dynopay alleen voor wettige doeleinden te gebruiken en in overeenstemming met alle toepasselijke wetten. Verboden gebruik omvat, maar is niet beperkt tot:\n • Witwassen, terrorismefinanciering of fraude\n • Gebruik van gestolen of ongeautoriseerde betaalmethoden\n • Deelname aan activiteiten die sancties of embargo's schenden\n • Poging om identiteitsverificatie of beveiligingsmaatregelen te omzeilen"
       },
       "paymentsFees": {
         "title": "5. Betalingen & Kosten",
@@ -206,7 +206,7 @@
       },
       "riskDisclosure": {
         "title": "6. Risicomelding",
-        "content": "Het gebruik van cryptovaluta's brengt inherente risico's met zich mee, waaronder volatiliteit, netwerkfouten en regelgevingswijzigingen. U erkent en accepteert deze risico's bij het gebruik van DynoPay.\nWij bieden geen beleggingsadvies of financiële garanties."
+        "content": "Het gebruik van cryptovaluta's brengt inherente risico's met zich mee, waaronder volatiliteit, netwerkfouten en regelgevingswijzigingen. U erkent en accepteert deze risico's bij het gebruik van Dynopay.\nWij bieden geen beleggingsadvies of financiële garanties."
       },
       "amlKyc": {
         "title": "7. AML & KYC",
@@ -214,19 +214,19 @@
       },
       "suspension": {
         "title": "8. Accountopschorting & Beëindiging",
-        "content": "Wij kunnen uw toegang tot DynoPay zonder voorafgaande kennisgeving opschorten of beëindigen als:\n • U deze Voorwaarden schendt\n • Wij ongeautoriseerde of onwettige activiteit vermoeden\n • Dit vereist wordt door wetshandhaving of toezichthouders\n\nNa beëindiging kunnen we de toegang tot fondsen beperken in afwachting van onderzoek."
+        "content": "Wij kunnen uw toegang tot Dynopay zonder voorafgaande kennisgeving opschorten of beëindigen als:\n • U deze Voorwaarden schendt\n • Wij ongeautoriseerde of onwettige activiteit vermoeden\n • Dit vereist wordt door wetshandhaving of toezichthouders\n\nNa beëindiging kunnen we de toegang tot fondsen beperken in afwachting van onderzoek."
       },
       "intellectualProperty": {
         "title": "9. Intellectueel Eigendom",
-        "content": "Alle inhoud, logo's, handelsmerken en code op het DynoPay-platform zijn eigendom van DynoPay of zijn licentiegevers. U mag geen enkel deel van de dienst kopiëren, distribueren of reverse-engineeren zonder toestemming."
+        "content": "Alle inhoud, logo's, handelsmerken en code op het Dynopay-platform zijn eigendom van Dynopay of zijn licentiegevers. U mag geen enkel deel van de dienst kopiëren, distribueren of reverse-engineeren zonder toestemming."
       },
       "disclaimer": {
         "title": "10. Disclaimer van Garanties",
-        "content": "DynoPay wordt geleverd \"zoals het is\" zonder garanties van welke aard dan ook. Wij garanderen niet:\n • Continue of foutloze dienst\n • Dat elke transactie zal worden voltooid\n • Nauwkeurigheid van gegevens van derden (bijv. wisselkoersen)"
+        "content": "Dynopay wordt geleverd \"zoals het is\" zonder garanties van welke aard dan ook. Wij garanderen niet:\n • Continue of foutloze dienst\n • Dat elke transactie zal worden voltooid\n • Nauwkeurigheid van gegevens van derden (bijv. wisselkoersen)"
       },
       "liability": {
         "title": "11. Beperking van Aansprakelijkheid",
-        "content": "Voor zover maximaal toegestaan door de wet, is DynoPay niet aansprakelijk voor:\n • Indirecte of gevolgschade\n • Verlies van fondsen door gebruikersfout (bijv. verkeerd portemonnee-adres)\n • Netwerkstoringen of overmacht"
+        "content": "Voor zover maximaal toegestaan door de wet, is Dynopay niet aansprakelijk voor:\n • Indirecte of gevolgschade\n • Verlies van fondsen door gebruikersfout (bijv. verkeerd portemonnee-adres)\n • Netwerkstoringen of overmacht"
       },
       "modifications": {
         "title": "12. Wijzigingen",
@@ -245,7 +245,7 @@
   "aml": {
     "title": "Anti-Witwasbeleid (AML)",
     "lastUpdated": "Laatst bijgewerkt",
-    "intro": "Bij DynoPay zijn we toegewijd aan het handhaven van de hoogste normen bij het voorkomen van witwassen en terrorismefinanciering. Dit Anti-Witwasbeleid (AML) beschrijft de maatregelen en procedures die we hebben geïmplementeerd om verdachte activiteiten in onze diensten te detecteren, voorkomen en melden, waaronder:",
+    "intro": "Bij Dynopay zijn we toegewijd aan het handhaven van de hoogste normen bij het voorkomen van witwassen en terrorismefinanciering. Dit Anti-Witwasbeleid (AML) beschrijft de maatregelen en procedures die we hebben geïmplementeerd om verdachte activiteiten in onze diensten te detecteren, voorkomen en melden, waaronder:",
     "services": {
       "wallet": "Portemonnee saldobeheer",
       "bank": "Bankoverschrijvingen",
@@ -254,11 +254,11 @@
     "sections": {
       "purpose": {
         "title": "1. Doel",
-        "content": "Het doel van dit beleid is ervoor te zorgen dat DynoPay voldoet aan alle toepasselijke AML- en Anti-Terrorismefinancieringswetten (CTF). We zijn toegewijd aan het identificeren en beperken van risico's die verband houden met witwassen en het beschermen van ons platform tegen misbruik voor illegale doeleinden."
+        "content": "Het doel van dit beleid is ervoor te zorgen dat Dynopay voldoet aan alle toepasselijke AML- en Anti-Terrorismefinancieringswetten (CTF). We zijn toegewijd aan het identificeren en beperken van risico's die verband houden met witwassen en het beschermen van ons platform tegen misbruik voor illegale doeleinden."
       },
       "riskBased": {
         "title": "2. Risicogebaseerde Aanpak",
-        "content": "DynoPay volgt een risicogebaseerde aanpak bij het beoordelen van zijn klanten en transacties. Op basis van het risiconiveau passen we passende niveaus van due diligence en monitoring toe."
+        "content": "Dynopay volgt een risicogebaseerde aanpak bij het beoordelen van zijn klanten en transacties. Op basis van het risiconiveau passen we passende niveaus van due diligence en monitoring toe."
       },
       "kyc": {
         "title": "3. Ken Uw Klant (KYC)",
@@ -266,11 +266,11 @@
       },
       "monitoring": {
         "title": "4. Doorlopende Monitoring",
-        "content": "Alle transacties die via DynoPay worden verwerkt, zijn onderworpen aan doorlopende monitoring om ongebruikelijk of verdacht gedrag te detecteren. Dit omvat, maar is niet beperkt tot:\n • Ongebruikelijke beweging van fondsen\n • Gebruik van rechtsgebieden met hoog risico\n • Gebruik van anonimiseringsdiensten of -tools\n\nWij behouden ons het recht voor transacties die tijdens monitoring alarmsignalen afgeven te vertragen, blokkeren of weigeren."
+        "content": "Alle transacties die via Dynopay worden verwerkt, zijn onderworpen aan doorlopende monitoring om ongebruikelijk of verdacht gedrag te detecteren. Dit omvat, maar is niet beperkt tot:\n • Ongebruikelijke beweging van fondsen\n • Gebruik van rechtsgebieden met hoog risico\n • Gebruik van anonimiseringsdiensten of -tools\n\nWij behouden ons het recht voor transacties die tijdens monitoring alarmsignalen afgeven te vertragen, blokkeren of weigeren."
       },
       "reporting": {
         "title": "5. Rapportage van Verdachte Activiteiten",
-        "content": "In overeenstemming met toepasselijke AML-wetten is DynoPay verplicht elk vermoeden van witwassen of verdachte activiteit te melden aan de relevante autoriteiten. Gebruikers worden niet geïnformeerd wanneer dergelijke meldingen worden gedaan, in overeenstemming met wettelijke vereisten."
+        "content": "In overeenstemming met toepasselijke AML-wetten is Dynopay verplicht elk vermoeden van witwassen of verdachte activiteit te melden aan de relevante autoriteiten. Gebruikers worden niet geïnformeerd wanneer dergelijke meldingen worden gedaan, in overeenstemming met wettelijke vereisten."
       },
       "training": {
         "title": "6. Werknemerstraining",
@@ -278,15 +278,15 @@
       },
       "records": {
         "title": "7. Administratie",
-        "content": "DynoPay houdt gedetailleerde gegevens bij van alle gebruikersidentificatiegegevens, transacties en AML-beoordelingen voor een minimumperiode van 5 jaar, of zoals anders wettelijk vereist."
+        "content": "Dynopay houdt gedetailleerde gegevens bij van alle gebruikersidentificatiegegevens, transacties en AML-beoordelingen voor een minimumperiode van 5 jaar, of zoals anders wettelijk vereist."
       },
       "crypto": {
         "title": "8. Cryptovaluta-Specifieke Maatregelen",
-        "content": "Gezien de unieke aard van digitale activa implementeert DynoPay versterkte due diligence en blockchain-analysetools om de stroom van crypto-activa te monitoren. We ondersteunen of tolereren niet het gebruik van ons platform voor mixing/tumbling-diensten of privacy-munten die ontworpen zijn om de bron van fondsen te verhullen."
+        "content": "Gezien de unieke aard van digitale activa implementeert Dynopay versterkte due diligence en blockchain-analysetools om de stroom van crypto-activa te monitoren. We ondersteunen of tolereren niet het gebruik van ons platform voor mixing/tumbling-diensten of privacy-munten die ontworpen zijn om de bron van fondsen te verhullen."
       },
       "userResponsibility": {
         "title": "9. Gebruikersverantwoordelijkheid",
-        "content": "Door DynoPay te gebruiken, stemmen gebruikers ermee in dit AML-beleid na te leven en mee te werken aan alle compliance-gerelateerde verzoeken. Niet-naleving kan resulteren in accountopschorting, melding aan autoriteiten of permanente beëindiging."
+        "content": "Door Dynopay te gebruiken, stemmen gebruikers ermee in dit AML-beleid na te leven en mee te werken aan alle compliance-gerelateerde verzoeken. Niet-naleving kan resulteren in accountopschorting, melding aan autoriteiten of permanente beëindiging."
       }
     }
   },

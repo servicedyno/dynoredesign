@@ -1,11 +1,11 @@
 {
   "apiKeysTitle": "API-sleutels",
-  "apiKeysDescription": "Beheer API-sleutels voor het integreren van DynoPay in uw applicaties",
+  "apiKeysDescription": "Beheer API-sleutels voor het integreren van Dynopay in uw applicaties",
   "createNewKey": "Nieuwe sleutel aanmaken",
   "createKeyMobile": "Aanmaken",
   "documentation": {
     "title": "API-documentatie",
-    "description": "Leer hoe u DynoPay integreert in uw applicatie met onze volledige API-documentatie",
+    "description": "Leer hoe u Dynopay integreert in uw applicatie met onze volledige API-documentatie",
     "viewDocumentation": "Documentatie bekijken",
     "infoIconAlt": "Informatie"
   },
@@ -42,7 +42,7 @@
   },
   "generate": {
     "modalTitle": "Nieuwe API-sleutel aanmaken",
-    "modalSubtitle": "Genereer een nieuwe API-sleutel om DynoPay te integreren in uw app",
+    "modalSubtitle": "Genereer een nieuwe API-sleutel om Dynopay te integreren in uw app",
     "submit": "Genereren",
     "keyName": "Sleutelnaam",
     "keyNamePlaceholder": "bijv.: App Productie",

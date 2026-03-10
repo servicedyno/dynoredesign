@@ -1,7 +1,7 @@
 {
   "allSystemsOperational": "Alle systemen operationeel",
-  "dynoPayStatus": "DynoPay-status",
-  "statusSubtitle": "Huidige status van alle DynoPay-diensten",
+  "dynoPayStatus": "Dynopay-status",
+  "statusSubtitle": "Huidige status van alle Dynopay-diensten",
   "services": "Diensten",
   "service1Name": "API-gateway",
   "service2Name": "Betalingsverwerking",

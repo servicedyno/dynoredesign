@@ -51,7 +51,7 @@ const WhyChooseDynopaySection = () => {
         margin: "0 auto",
       }}
     >
-      {/* Why Choose DynoPay Section Title */}
+      {/* Why Choose Dynopay Section Title */}
       <HomeSectionTitle
         type="small"
         badgeText={t("whyChooseBadge")}
@@ -60,7 +60,7 @@ const WhyChooseDynopaySection = () => {
         subtitle={t("whyChooseSubtitle")}
         sx={{ maxWidth: "100%" }}
       />
-      {/* Why Choose DynoPay Section Cards */}
+      {/* Why Choose Dynopay Section Cards */}
       <Box
         sx={{
           paddingTop: isMobile ? 5 : 8,

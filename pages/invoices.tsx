@@ -290,7 +290,7 @@ const InvoicesPage = ({ setPageName, setPageDescription }: pageProps) => {
   return (
     <>
       <Head>
-        <title>Invoices & Tax - DynoPay</title>
+        <title>Invoices & Tax - Dynopay</title>
       </Head>
       <Box sx={{ px: { xs: "16px", md: 0 } }}>
         {/* Tabs */}

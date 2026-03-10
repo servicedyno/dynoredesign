@@ -423,7 +423,7 @@ const Register = () => {
       <BrandPanel>
         <AuthBrandContent
           headline="Start accepting crypto payments today"
-          subtitle="Join thousands of merchants using DynoPay to accept Bitcoin, Ethereum, USDT, and more with instant settlement and low fees."
+          subtitle="Join thousands of merchants using Dynopay to accept Bitcoin, Ethereum, USDT, and more with instant settlement and low fees."
         />
       </BrandPanel>
 

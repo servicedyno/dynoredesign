@@ -10,7 +10,7 @@
   "webhookNotificationUrl": "URL de Notificación",
   "webhookNotificationUrlHelper": "¿Dónde debemos enviar las notificaciones de pago?",
   "webhookSecretKey": "Clave Secreta",
-  "webhookSecretKeyHelper": "Úsala para verificar que las notificaciones realmente provienen de DynoPay.",
+  "webhookSecretKeyHelper": "Úsala para verificar que las notificaciones realmente provienen de Dynopay.",
   "webhookCopy": "Copiar",
   "webhookReveal": "Revelar clave secreta",
   "webhookHide": "Ocultar clave secreta",

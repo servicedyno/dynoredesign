@@ -10,7 +10,7 @@ interface AuthBrandContentProps {
 
 const AuthBrandContent = ({
   headline = "Accept crypto payments with confidence",
-  subtitle = "DynoPay makes it simple for merchants to receive cryptocurrency payments — fast, secure, and with real-time settlement.",
+  subtitle = "Dynopay makes it simple for merchants to receive cryptocurrency payments — fast, secure, and with real-time settlement.",
 }: AuthBrandContentProps) => {
   const isMobile = useIsMobile("md");
   const theme = useTheme();
@@ -20,7 +20,7 @@ const AuthBrandContent = ({
       <Box sx={{ display: "flex", alignItems: "center", gap: "12px" }}>
         <Image
           src={Logo}
-          alt="DynoPay"
+          alt="Dynopay"
           width={100}
           height={34}
           draggable={false}
@@ -40,7 +40,7 @@ const AuthBrandContent = ({
     >
       <Image
         src={Logo}
-        alt="DynoPay"
+        alt="Dynopay"
         width={140}
         height={48}
         draggable={false}

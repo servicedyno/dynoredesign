@@ -10,7 +10,7 @@
   "webhookNotificationUrl": "Meldings-URL",
   "webhookNotificationUrlHelper": "Waar moeten we betalingsmeldingen naartoe sturen?",
   "webhookSecretKey": "Geheime sleutel",
-  "webhookSecretKeyHelper": "Gebruik dit om te verifiëren dat meldingen echt van DynoPay komen.",
+  "webhookSecretKeyHelper": "Gebruik dit om te verifiëren dat meldingen echt van Dynopay komen.",
   "webhookCopy": "Kopiëren",
   "webhookReveal": "Geheime sleutel tonen",
   "webhookHide": "Geheime sleutel verbergen",
