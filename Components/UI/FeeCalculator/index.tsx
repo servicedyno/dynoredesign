@@ -14,6 +14,38 @@ import {
 } from "@mui/material";
 import { styled, alpha, useTheme } from "@mui/material/styles";
 import axiosBaseApi from "@/axiosConfig";
+import Image from "next/image";
+
+/* ================= CRYPTO ICONS ================= */
+import BitcoinIcon from "@/assets/cryptocurrency/Bitcoin-icon.svg";
+import EthereumIcon from "@/assets/cryptocurrency/Ethereum-icon.svg";
+import LitecoinIcon from "@/assets/cryptocurrency/Litecoin-icon.svg";
+import DogecoinIcon from "@/assets/cryptocurrency/Dogecoin-icon.svg";
+import TronIcon from "@/assets/cryptocurrency/Tron-icon.svg";
+import BitcoinCashIcon from "@/assets/cryptocurrency/BitcoinCash-icon.svg";
+import SolanaIcon from "@/assets/cryptocurrency/Solana-icon.svg";
+import XRPIcon from "@/assets/cryptocurrency/XRP-icon.svg";
+import USDTIcon from "@/assets/cryptocurrency/USDT-icon.svg";
+import PolygonIcon from "@/assets/cryptocurrency/Polygon-icon.svg";
+import RLUSDIcon from "@/assets/cryptocurrency/RLUSD-icon.svg";
+
+import type { StaticImageData } from "next/image";
+
+const CRYPTO_ICON_MAP: Record<string, StaticImageData> = {
+  BTC: BitcoinIcon,
+  ETH: EthereumIcon,
+  LTC: LitecoinIcon,
+  DOGE: DogecoinIcon,
+  TRX: TronIcon,
+  BCH: BitcoinCashIcon,
+  SOL: SolanaIcon,
+  XRP: XRPIcon,
+  "USDT-TRC20": USDTIcon,
+  "USDT-ERC20": USDTIcon,
+  USDC: USDTIcon,
+  POLYGON: PolygonIcon,
+  "RLUSD-XRPL": RLUSDIcon,
+};
 
 /* ================= TYPES ================= */
 
@@ -201,6 +233,8 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ compact = false }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string>("");
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isFirstRender = useRef<boolean>(true);
+  const cacheRef = useRef<Map<string, FeeResult>>(new Map());
 
   const symbol = useMemo(() => CURRENCY_SYMBOLS[currency] || currency + " ", [currency]);
 
@@ -217,6 +251,14 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ compact = false }) => {
       return;
     }
 
+    // Check cache first
+    const cacheKey = `${numAmt}-${cur}-${cry}`;
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) {
+      setResult(cached);
+      return;
+    }
+
     setLoading(true);
     setError("");
     try {
@@ -227,6 +269,12 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ compact = false }) => {
       });
       if (data?.data) {
         setResult(data.data);
+        // Store in cache (keep last 20 entries)
+        if (cacheRef.current.size > 20) {
+          const firstKey = cacheRef.current.keys().next().value;
+          if (firstKey) cacheRef.current.delete(firstKey);
+        }
+        cacheRef.current.set(cacheKey, data.data);
       }
     } catch (err: unknown) {
       const errorMsg = err instanceof Error ? err.message : "Calculation failed";
@@ -237,8 +285,13 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ compact = false }) => {
     }
   }, []);
 
-  // Debounced calculation
+  // Debounced calculation — immediate on first render, debounced thereafter
   useEffect(() => {
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      calculateFees(amount, currency, crypto);
+      return;
+    }
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       calculateFees(amount, currency, crypto);
@@ -319,12 +372,39 @@ const FeeCalculator: React.FC<FeeCalculatorProps> = ({ compact = false }) => {
             onChange={handleCryptoChange}
             label={t("inputCrypto")}
             sx={styledSelect}
+            renderValue={(selected) => {
+              const opt = CRYPTO_OPTIONS.find((c) => c.value === selected);
+              const icon = CRYPTO_ICON_MAP[selected];
+              return (
+                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                  {icon && (
+                    <Image src={icon} alt={selected} width={20} height={20} style={{ flexShrink: 0 }} />
+                  )}
+                  <span>{opt?.label || selected}</span>
+                </Box>
+              );
+            }}
           >
-            {CRYPTO_OPTIONS.map((c) => (
-              <MenuItem key={c.value} value={c.value} sx={{ fontFamily: "OutfitRegular" }}>
-                {c.label}
-              </MenuItem>
-            ))}
+            {CRYPTO_OPTIONS.map((c) => {
+              const icon = CRYPTO_ICON_MAP[c.value];
+              return (
+                <MenuItem key={c.value} value={c.value} sx={{ fontFamily: "OutfitRegular" }}>
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+                    {icon && (
+                      <Image src={icon} alt={c.value} width={22} height={22} style={{ flexShrink: 0 }} />
+                    )}
+                    <Box>
+                      <Typography sx={{ fontSize: "14px", fontFamily: "OutfitMedium", lineHeight: 1.3 }}>
+                        {c.label}
+                      </Typography>
+                      <Typography sx={{ fontSize: "11px", fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.2 }}>
+                        {c.network}
+                      </Typography>
+                    </Box>
+                  </Box>
+                </MenuItem>
+              );
+            })}
           </Select>
         </FormControl>
       </Box>
