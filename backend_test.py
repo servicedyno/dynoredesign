@@ -266,7 +266,7 @@ class DynoPayTester:
 
 def main():
     # Use the backend URL from frontend/.env
-    backend_url = "https://checkout-pod-setup.preview.emergentagent.com"
+    backend_url = "https://checkout-flow-demo-1.preview.emergentagent.com"
     
     print("=" * 60)
     print("DynoPay Backend API Test Suite")
