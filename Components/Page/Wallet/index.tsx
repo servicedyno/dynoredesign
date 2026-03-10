@@ -251,8 +251,8 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                   <WalletCardBodyRow>
                     <CustomButton
                       onClick={() => {
-                        router.push(`/transactions?wallet=${encodeURIComponent(wallet.name)}`);
-                      }}}
+                        router.push(`/transactions?wallet=${encodeURIComponent(wallet.walletTitle)}`);
+                      }}
                       label={tWallet("viewTransactions")}
                       variant="outlined"
                       endIcon={<ArrowOutward sx={{ fontSize: 16 }} />}
