@@ -49,6 +49,7 @@ const EXEMPT_PATHS = [
   "/api/user/reset-password",
   "/api/user/generateOTP",
   "/api/user/confirmOTP",
+  "/api/user/checkPhone",
   "/api/user/verifyLoginOTP",
   "/api/user/resendLoginOTP",
   "/api/user/verify-login-otp",

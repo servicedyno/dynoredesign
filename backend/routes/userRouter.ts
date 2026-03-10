@@ -27,8 +27,9 @@ userRouter.post("/resendLoginOTP", otpRateLimiter, userController.resendLoginOTP
 userRouter.post("/verify-login-otp", otpRateLimiter, userController.verifyLoginOTP);
 userRouter.post("/resend-login-otp", otpRateLimiter, userController.resendLoginOTP);
 
-// Email check - moderate rate limiting
+// Email/Phone check - moderate rate limiting
 userRouter.get("/checkEmail", moderateRateLimiter, userController.checkEmail);
+userRouter.get("/checkPhone", moderateRateLimiter, userController.checkPhone);
 
 // OTP endpoints - strict rate limiting (3 per 15 min per contact) to prevent OTP spam
 userRouter.post("/generateOTP", otpRateLimiter, userController.generateOTP);
@@ -52,6 +53,12 @@ userRouter.put("/email", authMiddleware, userController.changeEmail);
 userRouter.put("/phone", authMiddleware, userController.changePhone);
 userRouter.delete("/email", authMiddleware, userController.removeEmail);
 userRouter.delete("/phone", authMiddleware, userController.removePhone);
+
+// Add email/phone with OTP verification (requires auth)
+userRouter.post("/addEmail", authMiddleware, otpRateLimiter, userController.addEmail);
+userRouter.post("/verifyAddEmail", authMiddleware, otpRateLimiter, userController.verifyAddEmail);
+userRouter.post("/addPhone", authMiddleware, otpRateLimiter, userController.addPhone);
+userRouter.post("/verifyAddPhone", authMiddleware, otpRateLimiter, userController.verifyAddPhone);
 
 // Last company persistence (requires auth)
 userRouter.put("/last-company", authMiddleware, userController.updateLastCompany);

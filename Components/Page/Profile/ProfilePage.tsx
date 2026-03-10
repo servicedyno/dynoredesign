@@ -3,6 +3,7 @@ import { Grid } from "@mui/material";
 import { TokenData } from "@/utils/types";
 import AccountSetting from "./AccountSetting";
 import UpdatePassword from "./UpdatePassword";
+import AddContactInfo from "./AddContactInfo";
 
 const ProfilePage = ({ tokenData }: { tokenData: TokenData }) => {
   return (
@@ -12,6 +13,9 @@ const ProfilePage = ({ tokenData }: { tokenData: TokenData }) => {
       </Grid>
       <Grid item md={5.11} xs={12}>
         <UpdatePassword />
+      </Grid>
+      <Grid item xs={12}>
+        <AddContactInfo tokenData={tokenData} />
       </Grid>
     </Grid>
   );

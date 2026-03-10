@@ -8,6 +8,7 @@ import axiosBaseApi from "@/axiosConfig";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
 import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
+import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
 import ForgotPasswordDialog from "@/Components/UI/ForgotPasswordDialog";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import OtpDialog from "@/Components/UI/OtpDialog";
@@ -103,6 +104,22 @@ export default function Login() {
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [showErrorAnimation, setShowErrorAnimation] = useState(false);
   const [previousLoadingState, setPreviousLoadingState] = useState(false);
+
+  // Login mode: "email" or "phone"
+  const [loginMode, setLoginMode] = useState<"email" | "phone">("email");
+
+  // Phone login state
+  const [phoneInput, setPhoneInput] = useState("");
+  const [phoneError, setPhoneError] = useState("");
+  const [phoneTouched, setPhoneTouched] = useState(false);
+  const [phoneCheckLoading, setPhoneCheckLoading] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+  const [showPhoneLoginOtp, setShowPhoneLoginOtp] = useState(false);
+  const [phoneLoginOtpSent, setPhoneLoginOtpSent] = useState(false);
+  const [phoneLoginOtpDialogOpen, setPhoneLoginOtpDialogOpen] = useState(false);
+  const [phoneLoginOtpCountdown, setPhoneLoginOtpCountdown] = useState(0);
+  const [phoneLoginOtpError, setPhoneLoginOtpError] = useState("");
+  const [phoneLoginOtpTouched, setPhoneLoginOtpTouched] = useState(false);
 
   // Forgot password state
   const [forgotPasswordDialogOpen, setForgotPasswordDialogOpen] =
@@ -273,6 +290,119 @@ export default function Login() {
       setLoginOtpCountdown(60);
     }
   }, [userState.loginOtpRequired]);
+
+  // Phone login OTP countdown timer
+  useEffect(() => {
+    if (phoneLoginOtpCountdown > 0) {
+      const timerId = setTimeout(() => {
+        setPhoneLoginOtpCountdown(phoneLoginOtpCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [phoneLoginOtpCountdown]);
+
+  // Handle phone check on continue
+  const handlePhoneCheck = async () => {
+    setPhoneTouched(true);
+    const cleaned = phoneInput.replace(/[^0-9]/g, "");
+    if (!cleaned || cleaned.length < 10) {
+      setPhoneError("mobileInvalid");
+      return;
+    }
+    setPhoneError("");
+    setPhoneCheckLoading(true);
+    try {
+      const response = await axiosBaseApi.get("/user/checkPhone?phone=" + cleaned);
+      const data = response.data?.data;
+      if (data && data.validPhone) {
+        setVerifiedPhone(cleaned);
+        setShowPhoneLoginOtp(true);
+        setPhoneError("");
+        // Auto-send OTP
+        handleSendPhoneLoginOtp(cleaned);
+      } else {
+        setPhoneError("phoneNotFound");
+      }
+    } catch (e: any) {
+      setPhoneError("errorCheckingPhone");
+      dispatch({
+        type: TOAST_SHOW,
+        payload: { message: t("errorCheckingPhone") || "Error checking phone number", severity: "error" },
+      });
+    } finally {
+      setPhoneCheckLoading(false);
+    }
+  };
+
+  // Handle send phone login OTP
+  const handleSendPhoneLoginOtp = async (phoneOverride?: string) => {
+    const phoneToUse = phoneOverride || verifiedPhone;
+    if (phoneLoginOtpCountdown > 0 && !phoneOverride) {
+      setPhoneLoginOtpDialogOpen(true);
+      return;
+    }
+    try {
+      dispatch(
+        UserAction(USER_SEND_OTP, {
+          email: null,
+          mobile: phoneToUse,
+        })
+      );
+      setPhoneLoginOtpSent(true);
+      setPhoneLoginOtpCountdown(30);
+      setPhoneLoginOtpDialogOpen(true);
+      setPhoneLoginOtpError("");
+      setPhoneLoginOtpTouched(false);
+    } catch (e: any) {
+      dispatch({
+        type: TOAST_SHOW,
+        payload: { message: e.message || "Failed to send OTP", severity: "error" },
+      });
+    }
+  };
+
+  // Handle phone login OTP verify
+  const handlePhoneLoginOtpVerify = (otp: string) => {
+    if (userState.loading) return;
+    setPhoneLoginOtpError("");
+    setPhoneLoginOtpTouched(false);
+    if (!otp || otp.trim().length !== 6) {
+      setPhoneLoginOtpError("otpInvalid6Digit");
+      setPhoneLoginOtpTouched(true);
+      return;
+    }
+    dispatch(
+      UserAction(USER_CONFIRM_CODE, {
+        mobile: verifiedPhone,
+        otp: otp.trim(),
+      })
+    );
+  };
+
+  // Reset phone login
+  const handleChangePhone = () => {
+    setShowPhoneLoginOtp(false);
+    setVerifiedPhone("");
+    setPhoneLoginOtpSent(false);
+    setPhoneLoginOtpDialogOpen(false);
+    setPhoneLoginOtpCountdown(0);
+    setPhoneLoginOtpError("");
+    setPhoneLoginOtpTouched(false);
+  };
+
+  // Handle login mode switch
+  const handleLoginModeSwitch = (mode: "email" | "phone") => {
+    setLoginMode(mode);
+    // Reset all states when switching
+    handleChangeEmail();
+    handleChangePhone();
+    setPhoneInput("");
+    setPhoneError("");
+    setPhoneTouched(false);
+    setEmailInput("");
+    setEmailError("");
+    setEmailTouched(false);
+  };
 
   // Handle login OTP verify
   const handleLoginOtpVerify = (otp: string) => {
@@ -841,6 +971,254 @@ export default function Login() {
           align="left"
         />
 
+        {/* Login Mode Toggle: Email / Phone */}
+        {!showLoginMethods && !showPhoneLoginOtp && (
+          <Box
+            sx={{
+              display: "flex",
+              marginTop: isMobile ? "16px" : "20px",
+              borderRadius: "10px",
+              overflow: "hidden",
+              border: "1px solid",
+              borderColor: "divider",
+              backgroundColor: (t: any) => t.palette.mode === "dark" ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.02)",
+            }}
+          >
+            <Box
+              onClick={() => handleLoginModeSwitch("email")}
+              sx={{
+                flex: 1,
+                textAlign: "center",
+                padding: isMobile ? "8px 0" : "10px 0",
+                cursor: "pointer",
+                fontFamily: "UrbanistMedium",
+                fontSize: isMobile ? "13px" : "14px",
+                fontWeight: loginMode === "email" ? 600 : 500,
+                color: loginMode === "email" ? "#fff" : "text.secondary",
+                backgroundColor: loginMode === "email" ? "primary.main" : "transparent",
+                borderRadius: "9px",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {t("email") || "Email"}
+            </Box>
+            <Box
+              onClick={() => handleLoginModeSwitch("phone")}
+              sx={{
+                flex: 1,
+                textAlign: "center",
+                padding: isMobile ? "8px 0" : "10px 0",
+                cursor: "pointer",
+                fontFamily: "UrbanistMedium",
+                fontSize: isMobile ? "13px" : "14px",
+                fontWeight: loginMode === "phone" ? 600 : 500,
+                color: loginMode === "phone" ? "#fff" : "text.secondary",
+                backgroundColor: loginMode === "phone" ? "primary.main" : "transparent",
+                borderRadius: "9px",
+                transition: "all 0.2s ease",
+              }}
+            >
+              {t("phoneNumber") || "Phone Number"}
+            </Box>
+          </Box>
+        )}
+
+        {/* ===== PHONE LOGIN PATH ===== */}
+        {loginMode === "phone" && !showPhoneLoginOtp ? (
+          <>
+            <Box sx={{ marginTop: isMobile ? "18px" : "24px" }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: isMobile ? "13px" : "15px",
+                    fontFamily: "UrbanistMedium",
+                    textAlign: "start",
+                    color: theme.palette.text.primary,
+                    letterSpacing: 0,
+                    lineHeight: "100%",
+                  }}
+                >
+                  {t("phoneNumber") || "Phone Number"}
+                </Typography>
+                <CountryPhoneInput
+                  fullWidth={true}
+                  placeholder={t("mobilePlaceholder") || "Enter phone number"}
+                  name="phoneLogin"
+                  defaultCountry="US"
+                  value={phoneInput}
+                  inputHeight={isMobile ? "32px" : "38px"}
+                  onChange={(newValue) => {
+                    setPhoneInput(newValue);
+                    if (phoneError) {
+                      setPhoneError("");
+                      setPhoneTouched(false);
+                    }
+                  }}
+                />
+                {phoneTouched && phoneError && (
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      color: "error.main",
+                      fontFamily: "UrbanistMedium",
+                      textAlign: "start",
+                    }}
+                  >
+                    {phoneError.includes(" ") ? phoneError : t(phoneError) || phoneError}
+                  </Typography>
+                )}
+              </Box>
+            </Box>
+
+            {/* Don't have acc */}
+            <Box
+              sx={{
+                display: "flex",
+                gap: "7px",
+                marginTop: isMobile ? "16px" : "16px",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "13px",
+                  color: theme.palette.text.secondary,
+                  fontFamily: "UrbanistMedium",
+                  lineHeight: "1.2",
+                  letterSpacing: 0,
+                }}
+                fontWeight={500}
+              >
+                {t("dontHaveAccount")}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: "13px",
+                  color: theme.palette.primary.main,
+                  fontWeight: 500,
+                  lineHeight: "1.2",
+                  letterSpacing: 0,
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                  fontFamily: "UrbanistMedium",
+                }}
+                onClick={() => router.push("/auth/register")}
+              >
+                {t("createNewAccount")}
+              </Typography>
+            </Box>
+
+            <Box sx={{ marginTop: isMobile ? "20px" : "24px" }}>
+              <CustomButton
+                label={t("continue")}
+                variant="primary"
+                size={isMobile ? "small" : "medium"}
+                fullWidth
+                disabled={phoneCheckLoading}
+                onClick={handlePhoneCheck}
+                hideLabelWhenLoading={true}
+                showSuccessAnimation={showSuccessAnimation}
+                showErrorAnimation={showErrorAnimation}
+                sx={{ fontWeight: 700 }}
+                endIcon={phoneCheckLoading ? <LoadingIcon size={20} /> : undefined}
+              />
+            </Box>
+          </>
+        ) : loginMode === "phone" && showPhoneLoginOtp ? (
+          <>
+            {/* Verified phone with edit button */}
+            <Box sx={{ marginTop: isMobile ? "16px" : "24px" }}>
+              <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                <Typography
+                  variant="body2"
+                  sx={{
+                    fontWeight: 500,
+                    fontSize: isMobile ? "13px" : "15px",
+                    fontFamily: "UrbanistMedium",
+                    textAlign: "start",
+                    color: theme.palette.text.primary,
+                    letterSpacing: 0,
+                    lineHeight: "100%",
+                  }}
+                >
+                  {t("phoneNumber") || "Phone Number"}
+                </Typography>
+                <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                  <InputField
+                    type="text"
+                    value={"+" + verifiedPhone}
+                    readOnly={true}
+                    sideButton={true}
+                    sideButtonType="primary"
+                    sideButtonIcon={EditIcon}
+                    sideButtonIconWidth={isMobile ? "12px" : "14px"}
+                    sideButtonIconHeight={isMobile ? "12px" : "14px"}
+                    onSideButtonClick={handleChangePhone}
+                  />
+                </Box>
+              </Box>
+            </Box>
+
+            <Box sx={{ marginTop: "16px" }}>
+              <Typography
+                sx={{
+                  textAlign: "start",
+                  fontSize: isMobile ? "13px" : "15px",
+                  fontFamily: "UrbanistMedium",
+                  lineHeight: "1.2",
+                  letterSpacing: 0,
+                  color: "text.secondary",
+                }}
+              >
+                {t("otpSentToPhone") || "Enter the OTP sent to your phone number"}
+              </Typography>
+            </Box>
+
+            {/* Resend OTP button */}
+            <Box sx={{ marginTop: "12px", display: "flex", justifyContent: "flex-end" }}>
+              <CustomButton
+                variant="secondary"
+                size="small"
+                disabled={phoneLoginOtpCountdown > 0 || userState.loading}
+                label={
+                  phoneLoginOtpCountdown > 0
+                    ? `${t("codeIn") || "Code in"} ${phoneLoginOtpCountdown}s`
+                    : t("resendCode") || "Resend Code"
+                }
+                onClick={() => handleSendPhoneLoginOtp()}
+                sx={{ fontWeight: 500, padding: "8px 20px" }}
+              />
+            </Box>
+
+            <Box sx={{ marginTop: "16px" }}>
+              <CustomButton
+                label={t("continue")}
+                variant="primary"
+                size={isMobile ? "small" : "medium"}
+                fullWidth
+                disabled={userState.loading}
+                onClick={() => {
+                  if (!phoneLoginOtpSent) {
+                    dispatch({
+                      type: TOAST_SHOW,
+                      payload: { message: "Please wait for OTP to be sent", severity: "error" },
+                    });
+                    return;
+                  }
+                  setPhoneLoginOtpDialogOpen(true);
+                }}
+                hideLabelWhenLoading={true}
+                showSuccessAnimation={showSuccessAnimation}
+                showErrorAnimation={showErrorAnimation}
+                sx={{ fontWeight: 700 }}
+                endIcon={userState.loading ? <LoadingIcon size={20} /> : undefined}
+              />
+            </Box>
+          </>
+        ) : (
+        /* ===== EMAIL LOGIN PATH (existing) ===== */
+        <>
         {/* Email Input field - shown initially or when changing email */}
         {!showLoginMethods ? (
           <>
@@ -1376,6 +1754,39 @@ export default function Login() {
               />
             </Box>
           </>
+        )}
+        </>
+        )}
+
+        {/* Phone Login OTP Dialog */}
+        {loginMode === "phone" && (
+          <OtpDialog
+            open={phoneLoginOtpDialogOpen}
+            onClose={() => setPhoneLoginOtpDialogOpen(false)}
+            title={t("smsVerification") || "SMS Verification"}
+            subtitle={t("otpSentToPhone") || "Enter the verification code sent to your phone number"}
+            contactInfo={"+" + verifiedPhone}
+            contactType="phone"
+            resendCodeLabel={t("resendCode") || "Resend Code"}
+            resendCodeCountdownLabel={(seconds) => `${t("codeIn") || "Code in"} ${seconds}s`}
+            primaryButtonLabel={t("verifyAndLogin") || "Verify & Login"}
+            onResendCode={() => handleSendPhoneLoginOtp()}
+            onVerify={handlePhoneLoginOtpVerify}
+            onClearError={() => {
+              setPhoneLoginOtpError("");
+              setPhoneLoginOtpTouched(false);
+            }}
+            countdown={phoneLoginOtpCountdown}
+            loading={userState.loading}
+            preventClose={phoneLoginOtpCountdown > 0}
+            error={
+              phoneLoginOtpTouched && phoneLoginOtpError
+                ? phoneLoginOtpError.includes(" ")
+                  ? phoneLoginOtpError
+                  : t(phoneLoginOtpError)
+                : undefined
+            }
+          />
         )}
 
         {/* Social Login Section - shown only when login methods are visible */}

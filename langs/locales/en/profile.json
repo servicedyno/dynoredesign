@@ -28,5 +28,17 @@
   "newPasswordRequired": "New password is required",
   "passwordValidationError": "Please enter a valid password (requires 1 capital letter, 1 small letter, 1 number, 1 special character and minimum 8 characters)",
   "confirmPasswordRequired": "Confirm password is required",
-  "passwordMismatch": "Passwords do not match"
+  "passwordMismatch": "Passwords do not match",
+  "addEmail": "Add Email Address",
+  "addEmailDescription": "Add an email address to your account. You'll receive a verification code.",
+  "enterEmail": "Enter your email address",
+  "sendVerificationCode": "Send Verification Code",
+  "verifyAndSave": "Verify & Save",
+  "addPhone": "Add Phone Number",
+  "addPhoneDescription": "Add a phone number to your account. You'll receive a verification code via SMS.",
+  "enterPhone": "Enter your phone number",
+  "emailAdded": "Email added successfully!",
+  "phoneAdded": "Phone number added successfully!",
+  "noEmailSet": "No email address on your account",
+  "noPhoneSet": "No phone number on your account"
 }

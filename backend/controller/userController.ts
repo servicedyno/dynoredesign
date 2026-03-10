@@ -2516,6 +2516,242 @@ const updateLastCompany = async (req: express.Request, res: express.Response) =>
   }
 };
 
+/**
+ * Check Phone - Check if a phone number is registered
+ * GET /api/user/checkPhone?phone=1234567890
+ */
+const checkPhone = async (req: express.Request, res: express.Response) => {
+  try {
+    const { phone } = req.query as { phone?: string };
+    if (!phone) {
+      return errorResponseHelper(res, 400, "Phone number is required");
+    }
+    const cleaned = phone.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
+    const userData = await userModel.findOne({
+      where: { mobile: cleaned },
+    });
+
+    let resData: Record<string, unknown> = { validPhone: false };
+    if (userData) {
+      resData = {
+        validPhone: true,
+        mobile: userData.dataValues.mobile,
+        email: userData.dataValues.email ? userData.dataValues.email : null,
+        name: userData.dataValues.name,
+      };
+    }
+    successResponseHelper(res, 200, "Phone check completed", resData);
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Add Email to Account (Step 1: Send OTP)
+ * POST /api/user/addEmail
+ * Requires auth. Sends OTP to the new email for verification.
+ */
+const addEmail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return errorResponseHelper(res, 400, "Email is required");
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return errorResponseHelper(res, 400, "Invalid email format");
+    }
+
+    // Check if email is already in use by another user
+    const emailExists = await userModel.findOne({
+      where: {
+        email: email.toLowerCase(),
+        user_id: { [Op.ne]: userData.user_id },
+      },
+    });
+    if (emailExists) {
+      return errorResponseHelper(res, 400, "Email address already in use by another account");
+    }
+
+    // Send OTP to the email
+    const sent = await sendEmailOTP(email.toLowerCase(), userData.name || "User");
+    if (sent) {
+      return successResponseHelper(res, 200, "Verification OTP sent to your email address.");
+    }
+    return errorResponseHelper(res, 503, "Unable to send OTP email. Please try again shortly.");
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Verify Add Email (Step 2: Verify OTP & Save)
+ * POST /api/user/verifyAddEmail
+ * Requires auth. Verifies the email OTP and saves the email to the account.
+ */
+const verifyAddEmail = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const { email, otp } = req.body;
+    if (!email || !otp) {
+      return errorResponseHelper(res, 400, "Email and OTP are required");
+    }
+
+    // Verify OTP from Redis
+    const otpKey = `otp:${email.toLowerCase()}`;
+    const item = await getRedisItem(otpKey);
+    if (!item || !item.otp) {
+      return errorResponseHelper(res, 400, "OTP expired or not found. Please request a new one.");
+    }
+
+    const createdTime = new Date(item.createdAt);
+    const currentTime = new Date();
+    const diff = getMinutesBetweenDates(currentTime, createdTime);
+    if (diff >= 10) {
+      await deleteRedisItem(otpKey);
+      return errorResponseHelper(res, 400, "OTP expired. Please request a new one.");
+    }
+
+    if (otp !== item.otp) {
+      return errorResponseHelper(res, 400, "OTP did not match!");
+    }
+
+    // OTP verified - check email not taken (race condition guard)
+    const emailExists = await userModel.findOne({
+      where: {
+        email: email.toLowerCase(),
+        user_id: { [Op.ne]: userData.user_id },
+      },
+    });
+    if (emailExists) {
+      await deleteRedisItem(otpKey);
+      return errorResponseHelper(res, 400, "Email address already in use by another account");
+    }
+
+    // Save email to user account
+    await userModel.update(
+      { email: email.toLowerCase(), email_verified: true },
+      { where: { user_id: userData.user_id } }
+    );
+    await deleteRedisItem(otpKey);
+
+    // Generate new token with updated data
+    const token = await getAccessToken(userData.user_id);
+
+    userLogger.info(`Email added for user ${userData.user_id}: ${email.toLowerCase()}`);
+    successResponseHelper(res, 200, "Email added and verified successfully!", token);
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Add Phone to Account (Step 1: Send SMS OTP)
+ * POST /api/user/addPhone
+ * Requires auth. Sends SMS OTP to the new phone for verification.
+ */
+const addPhone = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    let { phone } = req.body;
+    if (!phone) {
+      return errorResponseHelper(res, 400, "Phone number is required");
+    }
+    phone = phone.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
+    const phoneRegex = /^\d{10,15}$/;
+    if (!phoneRegex.test(phone)) {
+      return errorResponseHelper(res, 400, "Invalid phone number format. Use 10-15 digits with country code.");
+    }
+
+    // Check if phone is already in use by another user
+    const phoneExists = await userModel.findOne({
+      where: {
+        mobile: phone,
+        user_id: { [Op.ne]: userData.user_id },
+      },
+    });
+    if (phoneExists) {
+      return errorResponseHelper(res, 400, "Phone number already in use by another account");
+    }
+
+    // Send OTP via Telnyx SMS
+    const smsSent = await sendTelnyxSMS(phone);
+    if (smsSent) {
+      return successResponseHelper(res, 200, "Verification OTP sent to your phone number.");
+    }
+    return errorResponseHelper(res, 503, "Failed to send SMS OTP. Please try again shortly.");
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Verify Add Phone (Step 2: Verify SMS OTP & Save)
+ * POST /api/user/verifyAddPhone
+ * Requires auth. Verifies the SMS OTP and saves the phone to the account.
+ */
+const verifyAddPhone = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    let { phone, otp } = req.body;
+    if (!phone || !otp) {
+      return errorResponseHelper(res, 400, "Phone number and OTP are required");
+    }
+    phone = phone.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
+
+    // Verify OTP with Telnyx
+    try {
+      const verifyResponse = await axios.post(
+        `https://api.telnyx.com/v2/verifications/by_phone_number/+${phone}/actions/verify`,
+        {
+          code: otp,
+          verify_profile_id: process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID,
+        },
+        {
+          headers: {
+            Authorization: "Bearer " + (process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN),
+          },
+        }
+      );
+
+      if (verifyResponse.data?.data?.response_code !== "accepted") {
+        return errorResponseHelper(res, 400, "Invalid or expired OTP");
+      }
+    } catch (otpError) {
+      userLogger.error("Phone OTP verification failed", otpError);
+      return errorResponseHelper(res, 400, "Invalid or expired OTP");
+    }
+
+    // OTP verified - check phone not taken (race condition guard)
+    const phoneExists = await userModel.findOne({
+      where: {
+        mobile: phone,
+        user_id: { [Op.ne]: userData.user_id },
+      },
+    });
+    if (phoneExists) {
+      return errorResponseHelper(res, 400, "Phone number already in use by another account");
+    }
+
+    // Save phone to user account
+    await userModel.update(
+      { mobile: phone },
+      { where: { user_id: userData.user_id } }
+    );
+
+    // Generate new token with updated data
+    const token = await getAccessToken(userData.user_id);
+
+    userLogger.info(`Phone added for user ${userData.user_id}: ${phone}`);
+    successResponseHelper(res, 200, "Phone number added and verified successfully!", token);
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+
+
 export default {
   registerUser,
   registerPhoneStep1,
@@ -2524,6 +2760,7 @@ export default {
   verifyLoginOTP,
   resendLoginOTP,
   checkEmail,
+  checkPhone,
   generateOTP,
   confirmOTP,
   connectSocial,
@@ -2546,4 +2783,8 @@ export default {
   verifyEmail,
   resendVerification,
   updateLastCompany,
+  addEmail,
+  verifyAddEmail,
+  addPhone,
+  verifyAddPhone,
 };

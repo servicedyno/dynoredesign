@@ -257,35 +257,25 @@ frontend:
 metadata:
   created_by: "testing_agent"
   version: "3.0"
-  test_sequence: 2
+  test_sequence: 3
   run_ui: true
-  backend_url: "https://init-flow.preview.emergentagent.com"
+  backend_url: "https://d5473f70-03af-4cf7-9076-a0fd0426d756.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
   current_focus:
-    - "Checkout page review request testing completed"
+    - "Test new backend endpoints: checkPhone, addEmail, verifyAddEmail, addPhone, verifyAddPhone"
+    - "Verify Google login env vars are loaded"
+    - "Verify phone login flow on login page"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
-  backend_tests_completed: true
-  frontend_tests_completed: true
-  specific_fixes_verified: true
-  review_request_completed: true
+  backend_tests_completed: false
+  frontend_tests_completed: false
 
 agent_communication:
-  - agent: "testing"
-    message: "All 4 requested backend API tests completed successfully. DynoPay crypto payment processing platform is fully operational. Backend health check passes, authentication works, payment link #920 recovered, and new payment link creation functional with proper direct pay addresses."
-  - agent: "testing"
-    message: "COMPREHENSIVE TESTING COMPLETED: All 5 specific fixes tested and verified working correctly."
   - agent: "main"
-    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://init-flow.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
-  - agent: "main"
-    message: "Implemented 5 improvements: (1) Default dark mode - ThemeContext defaults changed to dark. (2) i18n language gaps filled - added keys for TodaySummaryStrip and ConversionBanner to all 6 languages. (3) Dashboard pending/volume fix - today_count and yesterday_count now only count completed transactions (status IN successful/done/completed). (4) Auto-convert UX - ConversionBanner now checks for stablecoin wallet availability, shows tooltip if no wallet, shows dropdown picker if no stablecoin configured. (5) Transaction fee simplification - removed fee breakdown, shows single Fee + Amount Received. Pod URLs updated to current pod."
-  - agent: "testing"
-    message: "REVIEW REQUEST TESTING COMPLETED: All 3 specific requirements from review request validated successfully. (1) Health Check API: GET /api/status returns 200 OK with overall_status='operational' - VERIFIED. (2) Login OTP Flow: Two-step authentication (login → OTP session → verify OTP) working correctly, requires real email OTP - VERIFIED. (3) Dashboard & Auto-Convert APIs: Both endpoints exist, properly secured, follow expected structure for today_summary (transactions_today vs pending_count) and auto-convert settings - VERIFIED. Backend API fully functional and ready for production use."
-  - agent: "testing"
-    message: "FRONTEND CHECKOUT PAGE REVIEW REQUEST TESTING COMPLETED: All 3 test scenarios passed successfully. (1) Language Switcher: Flag icons visible in header, dropdown shows 6 languages with flags, successfully changed to French and back to English. (2) Cryptocurrency Payment - BTC: Full payment flow working - crypto dropdown opens, BTC selected, QR code visible, BTC address shown, amount displayed (0.004241 BTC), countdown timer present. NO errors. (3) Mobile View: URL remains on /pay (no redirect to login), page loads properly on mobile (375x812), responsive layout working. All checkout page functionality verified working."
+    message: "Implemented phone login flow and profile contact info management. Backend: Added checkPhone, addEmail/verifyAddEmail, addPhone/verifyAddPhone endpoints. Frontend: Login page now has Email/Phone toggle. Phone login: enter phone → checkPhone → send OTP → verify → login. Profile page: AddContactInfo component shows add email/phone sections with OTP verification for users missing either. Google OAuth credentials added to .env.local."
 
 # Testing Protocol
 # DO NOT EDIT THIS SECTION
