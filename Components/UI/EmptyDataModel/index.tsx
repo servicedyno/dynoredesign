@@ -88,7 +88,7 @@ const EmptyDataModel = ({ pageName, onAddWallet }: EmptyDataModelProps) => {
                     justifyContent: "center",
                     alignItems: "center",
                     gap: "25px",
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: theme.palette.background.paper,
                     borderRadius: "14px",
                 }}
             >

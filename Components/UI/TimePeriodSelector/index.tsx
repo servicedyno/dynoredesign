@@ -292,7 +292,7 @@ export default function TimePeriodSelector({
                 fontWeight: 500,
                 fontFamily: "UrbanistMedium",
                 color: theme.palette.text.primary,
-                backgroundColor: "#FFFFFF",
+                backgroundColor: theme.palette.background.paper,
                 border: `1px solid ${theme.palette.border.main}`,
                 justifyContent: "space-between",
                 whiteSpace: "nowrap",

@@ -98,7 +98,7 @@ export const WalletCopyButton = styled(IconButton)(({ theme }) => ({
   padding: "8px",
   borderRadius: "6px",
   border: `1px solid ${theme.palette.primary.main}`,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
   "&:hover": {
@@ -138,11 +138,11 @@ export const WalletLabel = styled(Box)(({ theme }) => ({
 export const WalletEditButton = styled(IconButton)(({ theme }) => ({
   width: 40,
   height: 40,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.text.primary}`,
   borderRadius: "6px",
   "&:hover": {
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
   },
   [theme.breakpoints.down("md")]: {
     width: 32,

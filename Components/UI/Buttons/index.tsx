@@ -74,24 +74,24 @@ const CustomButton: React.FC<CustomButtonProps> = ({
       borderRadius: "6px",
     },
     secondary: {
-      backgroundColor: theme.palette.common.white,
+      backgroundColor: theme.palette.background.paper,
       color: theme.palette.primary.main,
       border: `1px solid ${theme.palette.primary.main}`,
       fontWeight: 500,
     },
     outlined: {
-      backgroundColor: theme.palette.common.white,
+      backgroundColor: theme.palette.background.paper,
       color: theme.palette.text.primary,
       border: `1px solid ${theme.palette.border.main}`,
       fontWeight: 400,
       fontFamily: "UrbanistRegular",
       fontSize: "15px",
       "&:hover": {
-        backgroundColor: theme.palette.common.white,
+        backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
       },
       "&:disabled": {
-        backgroundColor: theme.palette.common.white,
+        backgroundColor: theme.palette.background.paper,
         color: theme.palette.text.primary,
       },
     },

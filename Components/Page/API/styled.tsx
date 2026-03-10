@@ -72,7 +72,7 @@ export const ApiKeyCopyButton = styled(IconButton)(({ theme }) => ({
   padding: "6px",
   borderRadius: "7px",
   border: `1px solid ${theme.palette.primary.main}`,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
   "&:hover": {

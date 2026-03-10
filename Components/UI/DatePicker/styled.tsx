@@ -17,7 +17,7 @@ export const ContentContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   alignItems: "stretch",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: theme.palette.background.paper,
   flex: 1,
   [theme.breakpoints.down("md")]: {
     flexDirection: "column-reverse",
@@ -93,7 +93,7 @@ export const CalendarContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   alignItems: "flex-start",
-  backgroundColor: "#FFFFFF",
+  backgroundColor: theme.palette.background.paper,
 }));
 
 export const CalendarHeader = styled(Box)(({ theme }) => ({
@@ -269,7 +269,7 @@ export const TriggerButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
   color: theme.palette.text.primary,
-  backgroundColor: "#FFFFFF",
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   justifyContent: "space-between",
   whiteSpace: "nowrap",

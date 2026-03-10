@@ -1,8 +1,8 @@
 import CustomButton from "@/Components/UI/Buttons";
 import CustomSwitch from "@/Components/UI/CustomSwitch";
 import PanelCard from "@/Components/UI/PanelCard";
-import { theme } from "@/styles/theme";
-import { Box, Chip, CircularProgress, Divider, Grid, IconButton, Typography } from "@mui/material";
+import { theme as staticTheme } from "@/styles/theme";
+import { Box, Chip, CircularProgress, Divider, Grid, IconButton, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 import React, { useRef, useState, useEffect } from "react";
 
@@ -91,6 +91,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
 };
 
 const NotificationPage = () => {
+  const theme = useTheme();
   const namespaces = ["notifications"];
   const { t } = useTranslation(namespaces);
   const tNotifications = useCallback(
@@ -344,7 +345,7 @@ const NotificationPage = () => {
                     p: isMobile ? 1.5 : 2,
                     borderRadius: "12px",
                     border: `1px solid ${theme.palette.border.main}`,
-                    backgroundColor: notif.is_read ? theme.palette.common.white : "#F0F7FF",
+                    backgroundColor: notif.is_read ? theme.palette.background.paper : (theme.palette.mode === 'dark' ? 'rgba(106,123,255,0.08)' : "#F0F7FF"),
                     cursor: isTransactionNotification(notif.type) || !notif.is_read ? "pointer" : "default",
                     transition: "all 0.15s ease",
                     "&:hover": { borderColor: theme.palette.primary.main },

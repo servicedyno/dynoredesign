@@ -172,7 +172,7 @@ export const TransactionsTableScrollWrapper = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const TransactionsTableContainer = styled(Box)({
+export const TransactionsTableContainer = styled(Box)(({ theme }) => ({
   width: "100%",
   height: "100%",
   display: "flex",
@@ -184,4 +184,4 @@ export const TransactionsTableContainer = styled(Box)({
   ["@media (max-width:960px)"]: {
     height: "auto",
   },
-});
+}));

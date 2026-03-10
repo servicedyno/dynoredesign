@@ -8,7 +8,7 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const TransactionsTableContainer = styled(Box)({
+export const TransactionsTableContainer = styled(Box)(({ theme }) => ({
   width: "100%",
   height: "100%",
   display: "flex",
@@ -20,7 +20,7 @@ export const TransactionsTableContainer = styled(Box)({
   ["@media (max-width:960px)"]: {
     height: "auto",
   },
-});
+}));
 
 export const TransactionsTableHeader = styled(Box)(({ theme }) => ({
   width: "100%",
@@ -201,7 +201,7 @@ export const TransactionsTableFooter = styled(Box)(({ theme }) => ({
   },
 }));
 
-export const TransactionsTableFooterText = styled(Typography)({
+export const TransactionsTableFooterText = styled(Typography)(({ theme }) => ({
   fontSize: "13px",
   fontWeight: 500,
   color: theme.palette.text.secondary,
@@ -212,7 +212,7 @@ export const TransactionsTableFooterText = styled(Typography)({
     fontSize: "10px",
     lineHeight: "12px",
   },
-});
+}));
 
 export const StatusBadge = styled(Box)<{
   status: "done" | "pending" | "failed";
@@ -309,7 +309,7 @@ export const StatusText = styled(Typography)<{
   };
 });
 
-export const CryptoIconChip = styled(Box)({
+export const CryptoIconChip = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "6px",
@@ -369,7 +369,7 @@ export const CryptoIconChip = styled(Box)({
       height: "10px",
     },
   },
-});
+}));
 
 export const MobileNavigationButtons = styled(Button)(({ theme }) => ({
   display: "none",
@@ -378,7 +378,7 @@ export const MobileNavigationButtons = styled(Button)(({ theme }) => ({
   padding: "0",
   minWidth: "28px",
   borderRadius: "8px",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   color: theme.palette.text.primary,
   "&:hover": {
@@ -386,7 +386,7 @@ export const MobileNavigationButtons = styled(Button)(({ theme }) => ({
     border: `1px solid ${theme.palette.border.main}`,
   },
   "&:disabled": {
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.border.main}`,
     color: theme.palette.text.secondary,
     opacity: 0.5,
@@ -460,14 +460,14 @@ export const WalletSelectorButton = styled(Button)(({ theme }) => ({
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
   color: theme.palette.text.primary,
-  backgroundColor: "#FFFFFF",
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   justifyContent: "space-between",
   whiteSpace: "nowrap",
   width: "100%",
   height: "40px",
   "&:hover": {
-    backgroundColor: "#F5F5F5",
+    backgroundColor: theme.palette.action?.hover || "rgba(255,255,255,0.05)",
     borderColor: theme.palette.border.focus,
   },
   "&:focus": {
@@ -526,7 +526,7 @@ export const SearchIconButton = styled(IconButton)(({ theme }) => ({
   width: "40px",
   height: "40px",
   borderRadius: "6px",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.primary.main}`,
   "&:hover": {
     borderColor: theme.palette.primary.main,
@@ -584,7 +584,7 @@ export const WalletDropdownContainer = styled(Box)<{ isMobile: boolean }>(
     left: isMobile ? "auto" : 0,
     right: isMobile ? 0 : "auto",
     width: isMobile ? "250px" : "270px",
-    background: theme.palette.common.white,
+    background: theme.palette.background.paper,
     borderRadius: "6px",
     border: `1px solid ${theme.palette.border.main}`,
     boxShadow: "0px 8px 24px 0px rgba(16, 24, 40, 0.12)",
@@ -635,7 +635,7 @@ export const DatePickerTriggerButton = styled(Button)(({ theme }) => ({
   padding: "9px 16px",
   borderRadius: "6px",
   textTransform: "none",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   border: `1px solid ${theme.palette.border.main}`,
   height: "40px",
   minWidth: "200px",

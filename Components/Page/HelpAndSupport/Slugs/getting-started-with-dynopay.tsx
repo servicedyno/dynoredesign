@@ -1,15 +1,16 @@
 import { HelpArticle } from "@/pages/help-support/index";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import BackArrow from "@/assets/Icons/BackArrow.svg";
 import Image from "next/image";
 import Dashboard_svg from "@/assets/Images/home/Dashboard.png";
 import { SearchIconButton, TextDecoration } from "../styled";
-import { theme } from "@/styles/theme";
+import { theme as staticTheme } from "@/styles/theme";
 import { useRouter } from "next/router";
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
 import useIsMobile from "@/hooks/useIsMobile";
 
 const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
+  const theme = useTheme();
 
     const router = useRouter();
     const isMobile = useIsMobile("md");
@@ -102,7 +103,7 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
                     flexDirection: "column",
                     gap: "20px",
                     border: "1px solid #E9ECF2",
-                    backgroundColor: "#FFFFFF",
+                    backgroundColor: theme.palette.background.paper,
                     borderRadius: "14px",
                     flexShrink: 0,
                 }}
@@ -181,7 +182,7 @@ const GettingStartedWithDynopay = ({ data }: { data: HelpArticle }) => {
                             sx={{
                                 width: "355px",
                                 border: "1px solid #E9ECF2",
-                                backgroundColor: "#FFFFFF",
+                                backgroundColor: theme.palette.background.paper,
                                 borderRadius: "14px",
                                 padding: "20px",
                                 display: "flex",

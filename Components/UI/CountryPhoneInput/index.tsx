@@ -82,7 +82,7 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
             height: height,
             borderRadius: "6px",
             boxSizing: "border-box",
-            backgroundColor: "#FFFFFF",
+            backgroundColor: theme.palette.background.paper,
             color: theme.palette.text.primary,
             "& input": {
               padding: "12px 0 !important",
@@ -108,7 +108,7 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
           },
           "& .MuiOutlinedInput-root": {
             borderRadius: "6px",
-            backgroundColor: "#FFFFFF",
+            backgroundColor: theme.palette.background.paper,
             transition: "all 0.3s ease",
             boxShadow: "rgba(16, 24, 40, 0.05) 0px 1px 2px 0px",
             "& fieldset": {

@@ -173,7 +173,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
     height: "36px",
     padding: "0px 12px",
     "&:disabled": {
-      backgroundColor: theme.palette.common.white,
+      backgroundColor: theme.palette.background.paper,
       color: theme.palette.text.primary,
       border: `1px solid ${theme.palette.border.main}`,
       cursor: "not-allowed",
@@ -348,7 +348,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
             minHeight: 0,
             overflowY: "auto",
             overflowX: "hidden",
-            backgroundColor: theme.palette.common.white,
+            backgroundColor: theme.palette.background.paper,
           }}
         >
           <TransactionsTableBody>
@@ -483,7 +483,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
       {/* Footer Section */}
       <Box
         sx={{
-          backgroundColor: theme.palette.common.white,
+          backgroundColor: theme.palette.background.paper,
           borderEndStartRadius: "14px",
           borderEndEndRadius: "14px",
         }}

@@ -1,8 +1,7 @@
-import { theme } from "@/styles/theme";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
-export const HeaderTitleRow = styled(Box)({
+export const HeaderTitleRow = styled(Box)(({ theme }) => ({
   display: "flex",
   gap: "100px",
   alignItems: "center",
@@ -12,9 +11,9 @@ export const HeaderTitleRow = styled(Box)({
   [theme.breakpoints.down("sm")]: {
     gap: "25px",
   },
-});
+}));
 
-export const TitleColumn = styled(Box)({
+export const TitleColumn = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
@@ -24,9 +23,9 @@ export const TitleColumn = styled(Box)({
   [theme.breakpoints.down("sm")]: {
     gap: "6px",
   },
-});
+}));
 
-export const TitleLabel = styled(Typography)({
+export const TitleLabel = styled(Typography)(({ theme }) => ({
   fontSize: "15px",
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
@@ -35,9 +34,9 @@ export const TitleLabel = styled(Typography)({
   [theme.breakpoints.down("md")]: {
     fontSize: "13px",
   },
-});
+}));
 
-export const TitleValue = styled(Typography)({
+export const TitleValue = styled(Typography)(({ theme }) => ({
   fontSize: "20px",
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
@@ -46,7 +45,7 @@ export const TitleValue = styled(Typography)({
   [theme.breakpoints.down("md")]: {
     fontSize: "15px",
   },
-});
+}));
 
 export const SectionTitleWithIcon = styled(Box)({
   display: "flex",
@@ -195,7 +194,7 @@ export const StatusText = styled(Typography)<{
   };
 });
 
-export const CryptoIconWrapper = styled(Box)({
+export const CryptoIconWrapper = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
@@ -210,7 +209,7 @@ export const CryptoIconWrapper = styled(Box)({
     height: "24px",
     objectFit: "contain",
   },
-});
+}));
 
 export const HashRow = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -271,7 +270,7 @@ export const CopyButton = styled("button")(({ theme }) => ({
   padding: "8px",
   borderRadius: "6px",
   border: `1px solid ${theme.palette.primary.main}`,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
   "&:hover": {
@@ -296,12 +295,12 @@ export const ExplorerButton = styled("button")(({ theme }) => ({
   padding: "8px",
   borderRadius: "6px",
   border: `1px solid ${theme.palette.text.primary}`,
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   cursor: "pointer",
   transition: "all 0.2s ease",
   color: theme.palette.text.primary,
   "&:hover": {
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
     color: theme.palette.text.primary,
   },
   "&:active": {
@@ -316,7 +315,7 @@ export const ExplorerButton = styled("button")(({ theme }) => ({
 
 export const WebhookResponseBox = styled(Box)(({ theme }) => ({
   margin: "11px 8px 11px 14px",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   maxHeight: "150px",
   overflowY: "auto",
   scrollbarWidth: "none",

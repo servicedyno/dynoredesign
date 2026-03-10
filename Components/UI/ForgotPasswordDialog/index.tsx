@@ -185,7 +185,7 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
             },
           }}
           sx={{
-            backgroundColor: "#FFFFFF",
+            backgroundColor: theme.palette.background.paper,
             borderRadius: "14px",
             padding: "24px",
             boxShadow: "none",

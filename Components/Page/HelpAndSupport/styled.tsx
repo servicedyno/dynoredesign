@@ -4,7 +4,7 @@ export const SearchIconButton = styled(IconButton)(({ theme }) => ({
     width: "40px",
     height: "40px",
     borderRadius: "6px",
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
     border: `1px solid ${theme.palette.primary.main}`,
     "&:hover": {
         borderColor: theme.palette.primary.main,
@@ -30,7 +30,7 @@ export const FooterIconButton = styled(IconButton)(({ theme }) => ({
     width: "40px",
     height: "40px",
     borderRadius: "6px",
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
     border: `1px solid #D7D7D7`,
     "& img": {
         objectFit: "contain",

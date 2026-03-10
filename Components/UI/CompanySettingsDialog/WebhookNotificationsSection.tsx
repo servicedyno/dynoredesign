@@ -201,7 +201,7 @@ export default function WebhookNotificationsSection({
                   borderRadius: "6px",
                   border: `1px solid ${theme.palette.text.primary}`,
                   color: "text.primary",
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: theme.palette.background.paper,
                   "&:hover": {
                     backgroundColor: "#F5F5F5",
                   },
@@ -223,7 +223,7 @@ export default function WebhookNotificationsSection({
                   borderRadius: "6px",
                   border: `1px solid ${theme.palette.text.primary}`,
                   color: "text.primary",
-                  backgroundColor: "#FFFFFF",
+                  backgroundColor: theme.palette.background.paper,
                   "&:hover": {
                     backgroundColor: "#F5F5F5",
                   },
@@ -331,7 +331,7 @@ export default function WebhookNotificationsSection({
               "&:hover": { bgcolor: "action.selected" },
               border: `1px solid ${theme.palette.border.main}`,
               color: "text.primary",
-              backgroundColor: "#FFFFFF",
+              backgroundColor: theme.palette.background.paper,
             }}
           >
             <Image

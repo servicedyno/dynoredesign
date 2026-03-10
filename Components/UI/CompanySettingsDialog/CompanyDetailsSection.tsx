@@ -1088,7 +1088,7 @@ export default function CompanyDetailsSection({
                 textAlign: "center",
                 cursor: "pointer",
                 userSelect: "none",
-                backgroundColor: "#FFFFFF",
+                backgroundColor: theme.palette.background.paper,
                 transition: "all 0.2s ease",
                 "&:hover": {
                   borderColor: theme.palette.primary.light,

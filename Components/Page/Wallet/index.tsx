@@ -14,10 +14,10 @@ import { useWalletData } from "@/hooks/useWalletData";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import { WalletAction } from "@/Redux/Actions";
 import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
-import { theme } from "@/styles/theme";
+import { theme as staticTheme } from "@/styles/theme";
 import { WalletDataType } from "@/utils/types/wallet";
 import { ArrowOutward, DeleteOutlineRounded } from "@mui/icons-material";
-import { Box, CircularProgress, Grid, Typography } from "@mui/material";
+import { Box, CircularProgress, Grid, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 import { useRouter } from "next/router";
 import { useCallback, useState } from "react";
@@ -36,6 +36,7 @@ import {
 const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
   const isMobile = useIsMobile("md");
   const dispatch = useDispatch();
+  const theme = useTheme();
   const { t } = useTranslation("walletScreen");
   const tWallet = useCallback(
     (key: string): string => {
@@ -257,7 +258,7 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                       variant="outlined"
                       endIcon={<ArrowOutward sx={{ fontSize: 16 }} />}
                       sx={{
-                        backgroundColor: theme.palette.common.white,
+                        backgroundColor: theme.palette.background.paper,
                         color: theme.palette.primary.main,
                         border: `1px solid ${theme.palette.primary.main}`,
                         borderRadius: "6px",
@@ -270,7 +271,7 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                         height: isMobile ? "32px" : "40px",
                         gap: isMobile ? "6px" : "10px",
                         "&:hover": {
-                          backgroundColor: theme.palette.common.white,
+                          backgroundColor: theme.palette.background.paper,
                           color: theme.palette.primary.main,
                           border: `1px solid ${theme.palette.primary.main}`,
                         },

@@ -1,5 +1,5 @@
 import useIsMobile from "@/hooks/useIsMobile";
-import { Box, Button, CircularProgress } from "@mui/material";
+import { Box, Button, CircularProgress, useTheme } from "@mui/material";
 import { useTranslation } from "react-i18next";
 import MessageIcon from "@/assets/Icons/MessageIcon.svg";
 import Image from "next/image";
@@ -10,7 +10,7 @@ import {
     TextDecoration,
 } from "./styled";
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
-import { theme } from "@/styles/theme";
+import { theme as staticTheme } from "@/styles/theme";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";
 import HelpAndSupportData from "@/hooks/useHelpAndSupportData";
@@ -28,6 +28,7 @@ interface KBArticle {
 }
 
 const HelpAndSupport = () => {
+    const theme = useTheme();
     const isMobile = useIsMobile("md");
     const { t } = useTranslation("helpAndSupport");
     const router = useRouter();
@@ -216,7 +217,7 @@ const HelpAndSupport = () => {
                                 fontWeight: 500,
                                 padding: "12px 13.5px",
                                 border: "1px solid #E9ECF2",
-                                backgroundColor: "#FFFFFF",
+                                backgroundColor: theme.palette.background.paper,
                                 borderRadius: "6px",
                                 outline: "none",
                                 transition: "0.2s",
@@ -255,7 +256,7 @@ const HelpAndSupport = () => {
                                     sx={{
                                         width: isMobile ? "330px" : "355px",
                                         height: isMobile ? "160px" : "202px",
-                                        backgroundColor: "#FFFFFF",
+                                        backgroundColor: theme.palette.background.paper,
                                         border: "1px solid #E9ECF2",
                                         borderRadius: "14px",
                                         display: "flex",
@@ -306,7 +307,7 @@ const HelpAndSupport = () => {
                         display: "flex",
                         flexDirection: isMobile ? "column" : "row",
                         gap: isMobile ? "40px" : "",
-                        backgroundColor: "#FFFFFF",
+                        backgroundColor: theme.palette.background.paper,
                         borderRadius: "14px",
                     }}
                 >

@@ -119,7 +119,7 @@ export const ExpireTrigger = styled(Box, {
   border: "1px solid",
   borderColor: error ? theme.palette.error.main : theme.palette.border.main,
   cursor: "pointer",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   color: theme.palette.text.primary,
   width: fullWidth ? "100%" : "auto",
   height: isMobile ? "32px" : "40px",
@@ -161,32 +161,32 @@ export const ExpireText = styledEmotion.span<{ isMobile?: boolean }>(
   }),
 );
 
-export const ExpireDropdown = styled(Box)({
+export const ExpireDropdown = styled(Box)(({ theme }) => ({
   padding: "8px",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   overflow: "auto",
   maxHeight: "200px",
   display: "flex",
   flexDirection: "column",
   gap: "4px",
-});
+}));
 
-export const PaymentDetailsContainer = styled(Box)({
+export const PaymentDetailsContainer = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
   backgroundColor: theme.palette.secondary.light,
   padding: "16px",
   borderRadius: "6px",
-});
+}));
 
-export const PaymentDetailsTitle = styled(Typography)({
+export const PaymentDetailsTitle = styled(Typography)(({ theme }) => ({
   fontSize: "13px",
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
   color: theme.palette.text.primary,
   lineHeight: "1.2",
-});
+}));
 
 export const Row = styled(Box)(() => ({
   display: "grid",
@@ -282,7 +282,7 @@ export const AppSwitch = styled(Switch)(({ theme }) => ({
   "& .MuiSwitch-thumb": {
     width: 19,
     height: 19,
-    backgroundColor: theme.palette.common.white,
+    backgroundColor: theme.palette.background.paper,
     boxShadow: "0 1px 3px rgba(0,0,0,0.25)",
     borderRadius: "50%",
   },

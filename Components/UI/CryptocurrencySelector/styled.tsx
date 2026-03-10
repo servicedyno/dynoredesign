@@ -65,7 +65,7 @@ export const CryptocurrencyText = styled.span<{ isMobile?: boolean }>(
 
 export const CryptocurrencyDropdown = styled(Box)({
   padding: "8px",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   overflow: "auto",
   maxHeight: "200px",
   display: "flex",

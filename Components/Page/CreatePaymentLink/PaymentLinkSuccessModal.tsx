@@ -251,7 +251,7 @@ const PaymentLinkSuccessModal: React.FC<PaymentLinkSuccessModalProps> = ({
                   sx={{
                     p: 1.5,
                     borderRadius: "10px",
-                    backgroundColor: "#fff",
+                    backgroundColor: theme.palette.background.paper,
                     display: "inline-flex",
                     boxShadow: "0 1px 4px rgba(0,0,0,0.08)",
                   }}

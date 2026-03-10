@@ -8,7 +8,7 @@ export const RowsPerPageContainer = styled(Box)(({ theme }) => ({
   padding: "9px 12px",
   border: `1px solid ${theme.palette.border.main}`,
   borderRadius: "8px",
-  backgroundColor: theme.palette.common.white,
+  backgroundColor: theme.palette.background.paper,
   height: "fit-content",
   [theme.breakpoints.down("md")]: {
     padding: "7px 6px",
