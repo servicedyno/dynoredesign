@@ -83,6 +83,18 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
                 pendingTransactions: apiData.pending_transactions?.count ?? 0,
                 activeWalletsList: apiData.active_wallets?.wallets ?? [],
                 feeTier: apiData.fee_tier ?? null,
+                todaySummary: apiData.today_summary ? {
+                  volumeToday: apiData.today_summary.volume_today ?? 0,
+                  volumeTodayFormatted: apiData.today_summary.volume_today_formatted ?? "$0.00",
+                  volumeYesterday: apiData.today_summary.volume_yesterday ?? 0,
+                  volumeYesterdayFormatted: apiData.today_summary.volume_yesterday_formatted ?? "$0.00",
+                  volumeChangePercent: apiData.today_summary.volume_change_percent ?? 0,
+                  transactionsToday: apiData.today_summary.transactions_today ?? 0,
+                  transactionsYesterday: apiData.today_summary.transactions_yesterday ?? 0,
+                  transactionsChangePercent: apiData.today_summary.transactions_change_percent ?? 0,
+                  pendingCount: apiData.today_summary.pending_count ?? 0,
+                  currency: apiData.today_summary.currency ?? "USD",
+                } : undefined,
               },
             },
           });

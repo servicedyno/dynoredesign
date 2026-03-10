@@ -38,6 +38,7 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from "
 import { useTranslation } from "react-i18next";
 import { PercentageChip } from "./styled";
 import ConversionBanner from "./ConversionBanner";
+import TodaySummaryStrip from "./TodaySummaryStrip";
 
 const formatDate = (date: Date): string => {
   const months = [
@@ -407,6 +408,9 @@ const DashboardLeftSection = () => {
 
   return (
     <Box>
+      {/* Today Summary Strip */}
+      <TodaySummaryStrip todaySummary={stats.todaySummary} loading={loading} />
+
       {/* Getting Started Banner - shows when user has zero transactions */}
       {totalTransactions === 0 && !loading && (
         <Box

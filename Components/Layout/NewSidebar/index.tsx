@@ -2,6 +2,7 @@ import useIsMobile from "@/hooks/useIsMobile";
 import SidebarIcon from "@/utils/customIcons/sidebar-icons";
 import AddIcon from "@mui/icons-material/Add";
 import GroupAddRounded from "@mui/icons-material/GroupAddRounded";
+import SettingsRounded from "@mui/icons-material/SettingsRounded";
 import { Box, useTheme } from "@mui/material";
 import { useRouter } from "next/router";
 import { useEffect } from "react";
@@ -25,7 +26,7 @@ const NewSidebar = () => {
     const paths = [
       "/dashboard", "/transactions", "/invoices", "/pay-links",
       "/wallet", "/customers", "/developer-keys", "/referrals",
-      "/notifications", "/create-pay-link"
+      "/notifications", "/create-pay-link", "/settings"
     ];
     paths.forEach((p) => router.prefetch(p));
   }, []);
@@ -58,6 +59,11 @@ const NewSidebar = () => {
       icon: "notifications",
       path: "/notifications",
     },
+    {
+      label: "Settings",
+      icon: "settings",
+      path: "/settings",
+    },
   ];
 
   const isActiveRoute = (path: string) => {
@@ -81,6 +87,15 @@ const NewSidebar = () => {
               <IconBox active={isActive}>
                 {item.icon === "referrals" ? (
                   <GroupAddRounded
+                    sx={{
+                      fontSize: 20,
+                      color: isActive
+                        ? theme.palette.primary.main
+                        : theme.palette.text.primary,
+                    }}
+                  />
+                ) : item.icon === "settings" ? (
+                  <SettingsRounded
                     sx={{
                       fontSize: 20,
                       color: isActive

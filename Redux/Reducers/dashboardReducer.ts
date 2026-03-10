@@ -18,6 +18,18 @@ export interface DashboardState {
     activeWallets: number;
     transactionChange: number;
     volumeChange: number;
+    todaySummary?: {
+      volumeToday: number;
+      volumeTodayFormatted: string;
+      volumeYesterday: number;
+      volumeYesterdayFormatted: string;
+      volumeChangePercent: number;
+      transactionsToday: number;
+      transactionsYesterday: number;
+      transactionsChangePercent: number;
+      pendingCount: number;
+      currency: string;
+    };
   };
   chartData: Array<{ date: string; value: number }>;
   feeTiers: {

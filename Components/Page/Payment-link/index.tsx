@@ -8,7 +8,7 @@ import { PaymentLinkAction } from "@/Redux/Actions";
 import { PAYLINK_FETCH } from "@/Redux/Actions/PaymentLinkAction";
 import { rootReducer } from "@/utils/types";
 import PaymentLinksTable from "./PaymentLinksTable";
-import PaymentLinksTopBar from "./PaymentLinksTopBar";
+import PaymentLinksTopBar, { PaymentLinkStatusFilter } from "./PaymentLinksTopBar";
 
 const PaymentLinksPage = ({
   setPageName,
@@ -17,6 +17,9 @@ const PaymentLinksPage = ({
 }: PaymentLinksProps) => {
   const dispatch = useDispatch();
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<PaymentLinkStatusFilter>("all");
+  const [dateStart, setDateStart] = useState("");
+  const [dateEnd, setDateEnd] = useState("");
 
   const selectedCompanyId = useSelector(
     (state: rootReducer) => (state as any).companyReducer?.selectedCompanyId
@@ -60,19 +63,59 @@ const PaymentLinksPage = ({
     }));
   }, [paymentLinkState.paymentLinks]);
 
-  // Filter by search query
+  // Filter by search, status, and date range
   const filteredLinks = useMemo(() => {
-    if (!searchQuery) return paymentLinks;
-    const q = searchQuery.toLowerCase();
-    return paymentLinks.filter(
-      (link) =>
-        link.description.toLowerCase().includes(q) ||
-        link.id.toLowerCase().includes(q)
-    );
-  }, [paymentLinks, searchQuery]);
+    let result = paymentLinks;
+
+    // Search filter
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      result = result.filter(
+        (link) =>
+          link.description.toLowerCase().includes(q) ||
+          link.id.toLowerCase().includes(q)
+      );
+    }
+
+    // Status filter
+    if (statusFilter !== "all") {
+      result = result.filter(
+        (link) => link.status === statusFilter
+      );
+    }
+
+    // Date range filter
+    if (dateStart) {
+      const start = new Date(dateStart);
+      start.setHours(0, 0, 0, 0);
+      result = result.filter((link) => {
+        if (!link.createdAt) return true;
+        return new Date(link.createdAt) >= start;
+      });
+    }
+    if (dateEnd) {
+      const end = new Date(dateEnd);
+      end.setHours(23, 59, 59, 999);
+      result = result.filter((link) => {
+        if (!link.createdAt) return true;
+        return new Date(link.createdAt) <= end;
+      });
+    }
+
+    return result;
+  }, [paymentLinks, searchQuery, statusFilter, dateStart, dateEnd]);
 
   const handleSearch = (value: string) => {
     setSearchQuery(value);
+  };
+
+  const handleStatusFilter = (status: PaymentLinkStatusFilter) => {
+    setStatusFilter(status);
+  };
+
+  const handleDateFilter = (start: string, end: string) => {
+    setDateStart(start);
+    setDateEnd(end);
   };
 
   if (paymentLinkState.loading) {
@@ -81,10 +124,6 @@ const PaymentLinksPage = ({
         <CircularProgress size={32} />
       </Box>
     );
-  }
-
-  if (filteredLinks?.length === 0) {
-    return <EmptyDataModel pageName="payment-links" />;
   }
 
   return (
@@ -99,9 +138,18 @@ const PaymentLinksPage = ({
         },
       }}
     >
-      <PaymentLinksTopBar onSearch={handleSearch} />
+      <PaymentLinksTopBar
+        onSearch={handleSearch}
+        onStatusFilter={handleStatusFilter}
+        onDateFilter={handleDateFilter}
+        statusFilter={statusFilter}
+      />
 
-      <PaymentLinksTable paymentLinks={filteredLinks} rowsPerPage={10} />
+      {filteredLinks?.length === 0 ? (
+        <EmptyDataModel pageName="payment-links" />
+      ) : (
+        <PaymentLinksTable paymentLinks={filteredLinks} rowsPerPage={10} />
+      )}
     </Box>
   );
 };

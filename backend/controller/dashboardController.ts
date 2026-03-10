@@ -132,6 +132,8 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
     const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const startOfYesterday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1);
 
     // ── 1. Transaction COUNTS (no status filter — matches getUserAnalytics) ──
     const companyJoin = company_id ? 'LEFT JOIN tbl_customer c ON ut.customer_id = c.customer_id' : '';
@@ -142,7 +144,9 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
         COUNT(*) as total_count,
         COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfMonth) as current_month_count,
         COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
-        COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count
+        COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count,
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfToday) as today_count,
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday) as yesterday_count
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
@@ -154,7 +158,9 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
       SELECT 
         COALESCE(SUM(${USD_FALLBACK_EXPR}), 0) as total_usd_value,
         COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
-        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value,
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfToday), 0) as today_usd_value,
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday), 0) as yesterday_usd_value
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
@@ -170,11 +176,11 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     // Run all queries + active wallets in parallel
     const [countResult, volumeResult, selfCountResult, activeWallets] = await Promise.all([
       sequelize.query(countQuery, {
-        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
+        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, startOfToday, startOfYesterday, companyId: company_id },
         type: QueryTypes.SELECT,
       }),
       sequelize.query(volumeQuery, {
-        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, companyId: company_id },
+        replacements: { userId, startOfMonth, startOfLastMonth, endOfLastMonth, startOfToday, startOfYesterday, companyId: company_id },
         type: QueryTypes.SELECT,
       }),
       sequelize.query(selfCountQuery, {
@@ -201,6 +207,8 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     const currentCount = parseInt(String(stats.current_month_count || '0'));
     const lastCount = parseInt(String(stats.last_month_count || '0'));
     const pendingCount = parseInt(String(stats.pending_count || '0'));
+    const todayCount = parseInt(String(stats.today_count || '0'));
+    const yesterdayCount = parseInt(String(stats.yesterday_count || '0'));
     const selfCount = parseInt(String((selfCountResult[0] as Record<string, unknown>)?.self_count || '0'));
     const totalCount = incomingTotal + selfCount;
 
@@ -209,21 +217,29 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
     let totalVolumeUSD = parseFloat(String(volumeRow.total_usd_value || '0'));
     let currentVolumeUSD = parseFloat(String(volumeRow.current_month_usd_value || '0'));
     let lastVolumeUSD = parseFloat(String(volumeRow.last_month_usd_value || '0'));
+    let todayVolumeUSD = parseFloat(String(volumeRow.today_usd_value || '0'));
+    let yesterdayVolumeUSD = parseFloat(String(volumeRow.yesterday_usd_value || '0'));
     
     totalVolumeUSD = Math.round(totalVolumeUSD * 100) / 100;
     currentVolumeUSD = Math.round(currentVolumeUSD * 100) / 100;
     lastVolumeUSD = Math.round(lastVolumeUSD * 100) / 100;
+    todayVolumeUSD = Math.round(todayVolumeUSD * 100) / 100;
+    yesterdayVolumeUSD = Math.round(yesterdayVolumeUSD * 100) / 100;
     
     // Convert from USD to preferred currency if needed
     let totalVolume = totalVolumeUSD;
     let currentVolume = currentVolumeUSD;
     let lastVolume = lastVolumeUSD;
+    let todayVolume = todayVolumeUSD;
+    let yesterdayVolume = yesterdayVolumeUSD;
     
     if (preferredCurrency !== 'USD' && totalVolumeUSD > 0) {
       const { rate } = await convertToFiat('USD', preferredCurrency, 1);
       totalVolume = Math.round(totalVolumeUSD * rate * 100) / 100;
       currentVolume = Math.round(currentVolumeUSD * rate * 100) / 100;
       lastVolume = Math.round(lastVolumeUSD * rate * 100) / 100;
+      todayVolume = Math.round(todayVolumeUSD * rate * 100) / 100;
+      yesterdayVolume = Math.round(yesterdayVolumeUSD * rate * 100) / 100;
     }
 
     // Fee tier needs USD volume — use stored usd_value total (already in USD)
@@ -237,6 +253,18 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
 
     // Build response
     const dashboardData = {
+      today_summary: {
+        volume_today: todayVolume,
+        volume_today_formatted: formatAmountForDisplay(todayVolume, preferredCurrency).display_value,
+        volume_yesterday: yesterdayVolume,
+        volume_yesterday_formatted: formatAmountForDisplay(yesterdayVolume, preferredCurrency).display_value,
+        volume_change_percent: calculateChange(todayVolume, yesterdayVolume),
+        transactions_today: todayCount,
+        transactions_yesterday: yesterdayCount,
+        transactions_change_percent: calculateChange(todayCount, yesterdayCount),
+        pending_count: pendingCount,
+        currency: preferredCurrency,
+      },
       total_transactions: {
         count: totalCount,
         current_month: currentCount,
