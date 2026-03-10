@@ -20,6 +20,10 @@ userRouter.post("/registerPhone/verify", moderateRateLimiter, userController.reg
 // Login endpoint - strict rate limiting (5 per 15 min per IP+email combo) to prevent brute force
 userRouter.post("/login", loginRateLimiter, validate(loginSchema), userMiddleware, userController.login);
 
+// Login OTP verification - rate limited to prevent brute force
+userRouter.post("/verifyLoginOTP", otpRateLimiter, userController.verifyLoginOTP);
+userRouter.post("/resendLoginOTP", otpRateLimiter, userController.resendLoginOTP);
+
 // Email check - moderate rate limiting
 userRouter.get("/checkEmail", moderateRateLimiter, userController.checkEmail);
 

@@ -15,6 +15,9 @@ import {
   USER_VERIFY_EMAIL,
   USER_RESEND_VERIFICATION,
   USER_EMAIL_VERIFIED,
+  USER_LOGIN_OTP_REQUIRED,
+  USER_VERIFY_LOGIN_OTP,
+  USER_RESEND_LOGIN_OTP,
 } from "../Actions/UserAction";
 import axios from "@/axiosConfig";
 import { TOAST_SHOW } from "../Actions/ToastAction";
@@ -60,6 +63,12 @@ export function* UserSaga(action: IUserAction): unknown {
     case USER_RESEND_VERIFICATION:
       yield resendVerification(action.payload);
       break;
+    case USER_VERIFY_LOGIN_OTP:
+      yield verifyLoginOTP(action.payload);
+      break;
+    case USER_RESEND_LOGIN_OTP:
+      yield resendLoginOTP(action.payload);
+      break;
     default:
       yield put({ type: USER_API_ERROR });
       break;
@@ -87,6 +96,22 @@ export function* userLogin(payload: any): unknown {
     // Validate that data exists and has the required properties
     if (!data) {
       throw new Error("Response data is missing");
+    }
+
+    // Check if login OTP is required
+    if (data.requires_login_otp) {
+      yield put({
+        type: TOAST_SHOW,
+        payload: { message: message || "OTP sent to your email" },
+      });
+      yield put({
+        type: USER_LOGIN_OTP_REQUIRED,
+        payload: {
+          login_otp_session: data.login_otp_session,
+          masked_email: data.masked_email,
+        },
+      });
+      return;
     }
 
     if (!data.userData || !data.accessToken) {
@@ -118,6 +143,77 @@ export function* userLogin(payload: any): unknown {
         message: message,
         actionType: USER_LOGIN,
       },
+    });
+  }
+}
+
+
+export function* verifyLoginOTP(payload: any): unknown {
+  try {
+    const response = yield call(axios.post, "user/verifyLoginOTP", payload);
+    const responseData = response?.data;
+
+    if (!responseData) {
+      throw new Error("Invalid response from server");
+    }
+
+    if (responseData.success === false) {
+      throw new Error(responseData.message || "OTP verification failed");
+    }
+
+    const { data, message } = responseData;
+
+    if (!data || !data.userData || !data.accessToken) {
+      throw new Error("Invalid response structure");
+    }
+
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message: message || "Login successful" },
+    });
+    yield put({
+      type: USER_LOGIN,
+      payload: { ...data.userData, accessToken: data.accessToken, refreshToken: data.refreshToken },
+    });
+  } catch (e: any) {
+    const message = e.response?.data?.message ?? e.message ?? "OTP verification failed";
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message, severity: "error" },
+    });
+    yield put({
+      type: USER_API_ERROR,
+      payload: { message, actionType: USER_VERIFY_LOGIN_OTP },
+    });
+  }
+}
+
+export function* resendLoginOTP(payload: any): unknown {
+  try {
+    const response = yield call(axios.post, "user/resendLoginOTP", payload);
+    const responseData = response?.data;
+
+    if (!responseData) {
+      throw new Error("Invalid response from server");
+    }
+
+    if (responseData.success === false) {
+      throw new Error(responseData.message || "Failed to resend OTP");
+    }
+
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message: responseData.message || "New OTP sent to your email" },
+    });
+  } catch (e: any) {
+    const message = e.response?.data?.message ?? e.message ?? "Failed to resend OTP";
+    yield put({
+      type: TOAST_SHOW,
+      payload: { message, severity: "error" },
+    });
+    yield put({
+      type: USER_API_ERROR,
+      payload: { message, actionType: USER_RESEND_LOGIN_OTP },
     });
   }
 }

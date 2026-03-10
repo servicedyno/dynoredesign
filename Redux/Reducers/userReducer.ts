@@ -13,6 +13,10 @@ import {
   USER_EMAIL_VERIFIED,
   USER_VERIFY_EMAIL,
   USER_RESEND_VERIFICATION,
+  USER_LOGIN_OTP_REQUIRED,
+  USER_LOGIN_OTP_RESET,
+  USER_VERIFY_LOGIN_OTP,
+  USER_RESEND_LOGIN_OTP,
 } from "../Actions/UserAction";
 
 const userInitialState = {
@@ -24,6 +28,12 @@ const userInitialState = {
   profile: null as any,
   profileLoading: false,
   email_verified: false,
+  // Login OTP state
+  loginOtpRequired: false,
+  loginOtpSession: "",
+  loginOtpMaskedEmail: "",
+  loginOtpLoading: false,
+  loginOtpError: null as string | null,
 };
 
 const userReducer = (state = userInitialState, action: ReducerAction) => {
@@ -122,6 +132,42 @@ const userReducer = (state = userInitialState, action: ReducerAction) => {
         loading: false,
         error: null,
       };
+    case USER_LOGIN_OTP_REQUIRED:
+      return {
+        ...state,
+        loading: false,
+        loginOtpRequired: true,
+        loginOtpSession: payload.login_otp_session,
+        loginOtpMaskedEmail: payload.masked_email,
+        loginOtpError: null,
+        loginOtpLoading: false,
+        error: null,
+      };
+
+    case USER_LOGIN_OTP_RESET:
+      return {
+        ...state,
+        loginOtpRequired: false,
+        loginOtpSession: "",
+        loginOtpMaskedEmail: "",
+        loginOtpError: null,
+        loginOtpLoading: false,
+      };
+
+    case USER_VERIFY_LOGIN_OTP:
+      return {
+        ...state,
+        loginOtpLoading: true,
+        loginOtpError: null,
+      };
+
+    case USER_RESEND_LOGIN_OTP:
+      return {
+        ...state,
+        loginOtpLoading: true,
+        loginOtpError: null,
+      };
+
     default:
       return {
         ...state,

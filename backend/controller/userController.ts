@@ -25,7 +25,7 @@ import { IUserType } from "../utils/types";
 import axios from "axios";
 // tatumApi import removed - not used in this controller
 import { userLogger } from "../utils/loggers";
-import { getRedisItem, setRedisItem, setRedisTTL, deleteRedisItem } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, deleteRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
 import { isAccountLocked, recordFailedAttempt, clearFailedAttempts } from "../services/accountLockoutService";
 import { createSession } from "../services/sessionService";
 import { is2FARequired } from "../services/twoFactorService";
@@ -416,99 +416,209 @@ const login = async (req: express.Request, res: express.Response) => {
       
       return errorResponseHelper(res, 401, "Invalid email or password");
     } else {
-      // ── Successful Login ──────────────────────────────────────────────────
+      // ── Successful Credentials — Send Login OTP ─────────────────────────
       // Clear lockout and failed attempts
       await clearFailedAttempts(email);
       const cacheKey = `failed_logins:${email.toLowerCase()}`;
       await deleteRedisItem(cacheKey);
       
-      // Check if 2FA is required
-      const needs2FA = await is2FARequired(userData.dataValues.user_id);
-      if (needs2FA) {
-        // Return partial response — client must complete 2FA
-        return successResponseHelper(res, 200, "2FA verification required", {
-          requires_2fa: true,
-          user_id: userData.dataValues.user_id,
-          message: "Please provide your 2FA code to complete login.",
-        });
-      }
-      
-      // Check for new device/IP login
-      const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
-      const ipAddress = rawIp.split(',')[0].trim().substring(0, 45);
-      const userAgent = req.headers['user-agent'] || 'Unknown';
-      const lastLoginIp = userData.dataValues.last_login_ip;
-      
-      userLogger.info(`[Login] User ${email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
-      
-      // Send new device alert if IP changed (and not first login)
-      const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
-      const alertCacheValue = await getRedisItem(alertCacheKey);
-      const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
-      
-      userLogger.info(`[Login] Alert check - lastLoginIp: ${!!lastLoginIp}, ipChanged: ${lastLoginIp !== ipAddress}, alertAlreadySent: ${alertAlreadySent}`);
-      
-      if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
-        try {
-          await setRedisItem(alertCacheKey, 'sent');
-          await setRedisTTL(alertCacheKey, 300);
-          
-          let location: string | null = null;
-          try {
-            const axios = (await import("axios")).default;
-            const geoResponse = await axios.get(`http://ip-api.com/json/${ipAddress}?fields=status,city,country`, { timeout: 3000 });
-            if (geoResponse.data && geoResponse.data.status === 'success') {
-              const { city, country } = geoResponse.data;
-              location = city && country ? `${city}, ${country}` : (country || null);
-            }
-          } catch (geoError) {
-            userLogger.info(`[Login] IP geolocation failed for ${ipAddress}:`, geoError.message);
-          }
-          
-          const { sendNewDeviceLoginEmail } = await import("../services/emailService");
-          const now = new Date();
-          const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
-          const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-          await sendNewDeviceLoginEmail(
-            userData.dataValues.email,
-            userData.dataValues.name || 'User',
-            ipAddress,
-            userAgent,
-            location,
-            date,
-            time
-          );
-          userLogger.info(`[Login] New device alert sent to ${email} - IP changed from ${lastLoginIp} to ${ipAddress} (${location || 'Unknown location'})`);
-        } catch (emailError) {
-          userLogger.error("[Login] Failed to send new device alert:", emailError);
-        }
-      }
-      
-      // Update last login IP
-      await userModel.update(
-        { last_login_ip: ipAddress },
-        { where: { user_id: userData.dataValues.user_id } }
-      );
-      
-      // ── Create Session with Refresh Token ──────────────────────────────────
-      const sessionData = await createSession(userData.dataValues, req as any);
-      
-      // Build response (backward compatible + new fields)
-      const { password: _pw, telegram_id: _tid, ...userDataClean } = userData.dataValues;
-      const resData = {
-        userData: userDataClean,
-        accessToken: sessionData.accessToken,
-        refreshToken: sessionData.refreshToken,
-        expiresIn: sessionData.expiresIn,
-        session_id: sessionData.session_id,
-        token_type: "Bearer",
+      // Generate 6-digit OTP
+      const otp = String(Math.floor(100000 + Math.random() * 900000));
+      const loginOtpSession = crypto.randomUUID();
+      const otpData = {
+        user_id: userData.dataValues.user_id,
+        email: userData.dataValues.email,
+        name: userData.dataValues.name || 'User',
+        otp,
+        attempts: 0,
       };
+      await setRedisItemWithTTL(`login_otp:${loginOtpSession}`, otpData, 300);
+
+      // Send OTP email
+      const { sendLoginOTPEmail } = await import("../services/emailService");
+      await sendLoginOTPEmail(userData.dataValues.email, userData.dataValues.name || 'User', otp);
+
+      // Mask email for display
+      const emailParts = email.split('@');
+      const maskedLocal = emailParts[0].length > 2
+        ? emailParts[0].charAt(0) + '*'.repeat(emailParts[0].length - 2) + emailParts[0].charAt(emailParts[0].length - 1)
+        : emailParts[0].charAt(0) + '***';
+      const maskedEmail = maskedLocal + '@' + emailParts[1];
+
+      userLogger.info(`[Login] Login OTP sent to ${email}`);
       
-      successResponseHelper(res, 200, "Login Successful!", resData);
+      return successResponseHelper(res, 200, "OTP sent to your email", {
+        requires_login_otp: true,
+        login_otp_session: loginOtpSession,
+        masked_email: maskedEmail,
+      });
     }
   } catch (e) {
 
       handleControllerError(res, e, userLogger);
+  }
+};
+
+// ── Verify Login OTP ──────────────────────────────────────────────────────
+const verifyLoginOTP = async (req: express.Request, res: express.Response) => {
+  try {
+    const { login_otp_session, otp } = req.body;
+    if (!login_otp_session || !otp) {
+      return errorResponseHelper(res, 400, "Session and OTP are required");
+    }
+
+    const redisKey = `login_otp:${login_otp_session}`;
+    const raw = await getRedisItem(redisKey);
+    if (!raw || (typeof raw === 'object' && Object.keys(raw).length === 0)) {
+      return errorResponseHelper(res, 400, "OTP expired or invalid session. Please login again.");
+    }
+
+    const otpData = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    // Check attempts
+    if (Number(otpData.attempts) >= 3) {
+      await deleteRedisItem(redisKey);
+      return errorResponseHelper(res, 429, "Too many failed attempts. Please login again.");
+    }
+
+    // Verify OTP
+    if (String(otpData.otp) !== String(otp)) {
+      otpData.attempts = Number(otpData.attempts) + 1;
+      const remaining = 3 - otpData.attempts;
+      await setRedisItemWithTTL(redisKey, otpData, 300);
+      if (remaining <= 0) {
+        await deleteRedisItem(redisKey);
+        return errorResponseHelper(res, 429, "Too many failed attempts. Please login again.");
+      }
+      return errorResponseHelper(res, 400, `Invalid OTP. ${remaining} attempt${remaining > 1 ? 's' : ''} remaining.`);
+    }
+
+    // OTP is valid — delete it and complete login
+    await deleteRedisItem(redisKey);
+
+    // Fetch user data fresh
+    const userData = await userModel.findOne({ where: { user_id: otpData.user_id } });
+    if (!userData) {
+      return errorResponseHelper(res, 400, "User not found");
+    }
+
+    // Check if 2FA is required (TOTP)
+    const needs2FA = await is2FARequired(userData.dataValues.user_id);
+    if (needs2FA) {
+      return successResponseHelper(res, 200, "2FA verification required", {
+        requires_2fa: true,
+        user_id: userData.dataValues.user_id,
+        message: "Please provide your 2FA code to complete login.",
+      });
+    }
+
+    // Check for new device/IP login
+    const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
+    const ipAddress = rawIp.split(',')[0].trim().substring(0, 45);
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    const lastLoginIp = userData.dataValues.last_login_ip;
+
+    userLogger.info(`[Login OTP Verify] User ${otpData.email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
+
+    const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
+    const alertCacheValue = await getRedisItem(alertCacheKey);
+    const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
+
+    if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
+      try {
+        await setRedisItem(alertCacheKey, 'sent');
+        await setRedisTTL(alertCacheKey, 300);
+
+        let location: string | null = null;
+        try {
+          const axiosLib = (await import("axios")).default;
+          const geoResponse = await axiosLib.get(`http://ip-api.com/json/${ipAddress}?fields=status,city,country`, { timeout: 3000 });
+          if (geoResponse.data && geoResponse.data.status === 'success') {
+            const { city, country } = geoResponse.data;
+            location = city && country ? `${city}, ${country}` : (country || null);
+          }
+        } catch (geoError) {
+          userLogger.info(`[Login OTP Verify] IP geolocation failed: ${geoError.message}`);
+        }
+
+        const { sendNewDeviceLoginEmail } = await import("../services/emailService");
+        const now = new Date();
+        const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+        const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+        await sendNewDeviceLoginEmail(
+          userData.dataValues.email,
+          userData.dataValues.name || 'User',
+          ipAddress,
+          userAgent,
+          location,
+          date,
+          time
+        );
+        userLogger.info(`[Login OTP Verify] New device alert sent to ${otpData.email}`);
+      } catch (emailError) {
+        userLogger.error("[Login OTP Verify] Failed to send new device alert:", emailError);
+      }
+    }
+
+    // Update last login IP
+    await userModel.update(
+      { last_login_ip: ipAddress },
+      { where: { user_id: userData.dataValues.user_id } }
+    );
+
+    // Create Session with Refresh Token
+    const sessionData = await createSession(userData.dataValues, req as any);
+
+    // Build response
+    const { password: _pw, telegram_id: _tid, ...userDataClean } = userData.dataValues;
+    const resData = {
+      userData: userDataClean,
+      accessToken: sessionData.accessToken,
+      refreshToken: sessionData.refreshToken,
+      expiresIn: sessionData.expiresIn,
+      session_id: sessionData.session_id,
+      token_type: "Bearer",
+    };
+
+    userLogger.info(`[Login OTP Verify] Login completed for ${otpData.email}`);
+    successResponseHelper(res, 200, "Login Successful!", resData);
+  } catch (e) {
+    userLogger.error("[verifyLoginOTP] Error:", e);
+    handleControllerError(e, res, "An error occurred during OTP verification");
+  }
+};
+
+// ── Resend Login OTP ──────────────────────────────────────────────────────
+const resendLoginOTP = async (req: express.Request, res: express.Response) => {
+  try {
+    const { login_otp_session } = req.body;
+    if (!login_otp_session) {
+      return errorResponseHelper(res, 400, "Session ID is required");
+    }
+
+    const redisKey = `login_otp:${login_otp_session}`;
+    const raw = await getRedisItem(redisKey);
+    if (!raw || (typeof raw === 'object' && Object.keys(raw).length === 0)) {
+      return errorResponseHelper(res, 400, "Session expired. Please login again.");
+    }
+
+    const otpData = typeof raw === 'string' ? JSON.parse(raw) : raw;
+
+    // Generate new OTP and reset attempts
+    const newOtp = String(Math.floor(100000 + Math.random() * 900000));
+    otpData.otp = newOtp;
+    otpData.attempts = 0;
+    await setRedisItemWithTTL(redisKey, otpData, 300);
+
+    // Send new OTP email
+    const { sendLoginOTPEmail } = await import("../services/emailService");
+    await sendLoginOTPEmail(otpData.email, otpData.name, newOtp);
+
+    userLogger.info(`[Login OTP Resend] New OTP sent to ${otpData.email}`);
+    successResponseHelper(res, 200, "New OTP sent to your email");
+  } catch (e) {
+    userLogger.error("[resendLoginOTP] Error:", e);
+    handleControllerError(e, res, "An error occurred while resending OTP");
   }
 };
 
@@ -2411,6 +2521,8 @@ export default {
   registerPhoneStep1,
   registerPhoneStep2,
   login,
+  verifyLoginOTP,
+  resendLoginOTP,
   checkEmail,
   generateOTP,
   confirmOTP,

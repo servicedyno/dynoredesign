@@ -172,6 +172,18 @@ backend:
         agent: "main"
         comment: "Added findOrRecreateCustomer() helper to merchantApiRouter.ts. When a customer JWT is valid but the DB record was deleted, the customer is auto-recreated with the same UUID, a wallet is created, and the payment proceeds. Applied to all 4 endpoints: cryptoPayment, createPayment, addFunds, useWallet. Tested: created customer, deleted via API, then cryptoPayment succeeded with auto-recreation logged."
 
+  - task: "Login Email OTP (2FA)"
+    implemented: true
+    working: true
+    file: "backend/controller/userController.ts, pages/auth/login.tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Implemented email OTP on every merchant password login. Backend: modified login() to send OTP instead of tokens, added verifyLoginOTP and resendLoginOTP endpoints with 5-min expiry, 3-attempt limit, Brevo email delivery. Frontend: Added Redux actions/saga/reducer for OTP flow, reused OtpDialog component in login page. Added CSRF exemptions for new endpoints. Added i18n translations. Verified: password login triggers OTP dialog with masked email, countdown timer, verify & resend buttons all working."
+
 metadata:
   created_by: "testing_agent"
   version: "2.0"

@@ -30,6 +30,9 @@ import {
   USER_LOGIN,
   USER_SEND_OTP,
   USER_SEND_RESET_LINK,
+  USER_VERIFY_LOGIN_OTP,
+  USER_RESEND_LOGIN_OTP,
+  USER_LOGIN_OTP_RESET,
   UserAction,
 } from "@/Redux/Actions/UserAction";
 import { rootReducer } from "@/utils/types";
@@ -93,6 +96,9 @@ export default function Login() {
   const [smsOtpCountdown, setSmsOtpCountdown] = useState(0);
   const [smsOtpDialogOpen, setSmsOtpDialogOpen] = useState(false);
 
+  // Login OTP state
+  const [loginOtpCountdown, setLoginOtpCountdown] = useState(0);
+
   // Animation states
   const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
   const [showErrorAnimation, setShowErrorAnimation] = useState(false);
@@ -121,6 +127,10 @@ export default function Login() {
     if (userState.name && !isPasswordRecoveryMode) {
       setShowSuccessAnimation(true);
       setEmailOtpDialogOpen(false);
+      // Reset login OTP state on successful login
+      if (userState.loginOtpRequired) {
+        dispatch({ type: USER_LOGIN_OTP_RESET });
+      }
       setTimeout(() => {
         router.replace("/dashboard");
       }, 600);
@@ -151,7 +161,8 @@ export default function Login() {
       if (!userState.name && showLoginMethods) {
         const shouldShowErrorAnimation = !(
           (loginMethod === "email" && emailOtpDialogOpen) ||
-          (loginMethod === "sms" && smsOtpDialogOpen)
+          (loginMethod === "sms" && smsOtpDialogOpen) ||
+          userState.loginOtpRequired
         );
 
         if (shouldShowErrorAnimation) {
@@ -245,6 +256,48 @@ export default function Login() {
       return () => clearTimeout(timerId);
     }
   }, [smsOtpCountdown]);
+
+  // Login OTP countdown timer
+  useEffect(() => {
+    if (loginOtpCountdown > 0) {
+      const timerId = setTimeout(() => {
+        setLoginOtpCountdown(loginOtpCountdown - 1);
+      }, 1000);
+      return () => clearTimeout(timerId);
+    }
+  }, [loginOtpCountdown]);
+
+  // Start countdown when login OTP is required
+  useEffect(() => {
+    if (userState.loginOtpRequired) {
+      setLoginOtpCountdown(60);
+    }
+  }, [userState.loginOtpRequired]);
+
+  // Handle login OTP verify
+  const handleLoginOtpVerify = (otp: string) => {
+    dispatch(
+      UserAction(USER_VERIFY_LOGIN_OTP, {
+        login_otp_session: userState.loginOtpSession,
+        otp,
+      })
+    );
+  };
+
+  // Handle login OTP resend
+  const handleLoginOtpResend = () => {
+    dispatch(
+      UserAction(USER_RESEND_LOGIN_OTP, {
+        login_otp_session: userState.loginOtpSession,
+      })
+    );
+    setLoginOtpCountdown(60);
+  };
+
+  // Handle login OTP dialog close
+  const handleLoginOtpClose = () => {
+    dispatch({ type: USER_LOGIN_OTP_RESET });
+  };
 
   // Validate email (only called on button click)
   const validateEmail = async () => {
@@ -1469,6 +1522,30 @@ export default function Login() {
           }
         />
       )}
+
+      {/* Login OTP Dialog - shown after password validation */}
+      <OtpDialog
+        open={userState.loginOtpRequired}
+        onClose={handleLoginOtpClose}
+        title={t("loginVerification") || "Login Verification"}
+        subtitle={t("loginOtpSubtitle") || "Enter the verification code sent to your email to complete login"}
+        contactInfo={userState.loginOtpMaskedEmail}
+        contactType="email"
+        resendCodeLabel={t("resendCode") || "Resend Code"}
+        resendCodeCountdownLabel={(seconds) => `${t("codeIn") || "Code in"} ${seconds}s`}
+        primaryButtonLabel={t("verifyAndLogin") || "Verify & Login"}
+        onResendCode={handleLoginOtpResend}
+        onVerify={handleLoginOtpVerify}
+        onClearError={() => {}}
+        countdown={loginOtpCountdown}
+        loading={userState.loginOtpLoading || userState.loading}
+        preventClose={false}
+        error={
+          userState.error && userState.error.actionType === USER_VERIFY_LOGIN_OTP
+            ? userState.error.message
+            : undefined
+        }
+      />
 
       {/* Forgot Password Dialog */}
       <ForgotPasswordDialog

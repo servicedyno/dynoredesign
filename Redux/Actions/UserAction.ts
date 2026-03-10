@@ -13,6 +13,10 @@ export const USER_PROFILE_FETCH = "USER_PROFILE_FETCH";
 export const USER_VERIFY_EMAIL = "USER_VERIFY_EMAIL";
 export const USER_RESEND_VERIFICATION = "USER_RESEND_VERIFICATION";
 export const USER_EMAIL_VERIFIED = "USER_EMAIL_VERIFIED";
+export const USER_LOGIN_OTP_REQUIRED = "USER_LOGIN_OTP_REQUIRED";
+export const USER_VERIFY_LOGIN_OTP = "USER_VERIFY_LOGIN_OTP";
+export const USER_RESEND_LOGIN_OTP = "USER_RESEND_LOGIN_OTP";
+export const USER_LOGIN_OTP_RESET = "USER_LOGIN_OTP_RESET";
 
 export const UserAction = (type?: string, data?: any) => {
   return { type: USER_INIT, payload: data, crudType: type };

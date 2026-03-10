@@ -49,6 +49,8 @@ const EXEMPT_PATHS = [
   "/api/user/reset-password",
   "/api/user/generateOTP",
   "/api/user/confirmOTP",
+  "/api/user/verifyLoginOTP",
+  "/api/user/resendLoginOTP",
   "/api/user/2fa/validate",
   "/api/events/stream",
   // Public checkout endpoints — called cross-origin by hosted checkout frontend

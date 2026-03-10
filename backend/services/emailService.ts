@@ -151,7 +151,7 @@ export const sendLoginOTPEmail = async (
     const content = `${p(`Hey ${name},`)}
     ${p(`Here's your one-time login code for Dynopay:`)}
     ${otpBlock(otpCode)}
-    ${p(`This code expires in 10 minutes. If you didn't request this code, please secure your account immediately.`)}`;
+    ${p(`This code expires in 5 minutes. If you didn't request this code, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Your Login Code", content);
     await mailTransporter({ to: email, name, subject, body: html });
