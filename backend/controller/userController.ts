@@ -584,7 +584,7 @@ const verifyLoginOTP = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "Login Successful!", resData);
   } catch (e) {
     userLogger.error("[verifyLoginOTP] Error:", e);
-    handleControllerError(e, res, "An error occurred during OTP verification");
+    handleControllerError(res, e, userLogger);
   }
 };
 
@@ -618,7 +618,7 @@ const resendLoginOTP = async (req: express.Request, res: express.Response) => {
     successResponseHelper(res, 200, "New OTP sent to your email");
   } catch (e) {
     userLogger.error("[resendLoginOTP] Error:", e);
-    handleControllerError(e, res, "An error occurred while resending OTP");
+    handleControllerError(res, e, userLogger);
   }
 };
 
