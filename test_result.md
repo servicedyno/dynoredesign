@@ -117,6 +117,9 @@ backend:
       - working: true
         agent: "main"
         comment: "Set up NEXT_PUBLIC_BASE_URL in /app/.env.local for frontend API calls. Backend already had SERVER_URL, CHECKOUT_URL, FRONTEND_URL configured. Installed all dependencies (yarn install for both /app and /app/backend). All services running, homepage loads, backend API operational."
+      - working: true
+        agent: "main"
+        comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -162,7 +165,7 @@ metadata:
   version: "2.0"
   test_sequence: 1
   run_ui: false
-  backend_url: "https://current-pod-config-1.preview.emergentagent.com"
+  backend_url: "https://07269ee3-2783-4715-9a5c-bd7492b47754.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
@@ -179,7 +182,7 @@ agent_communication:
   - agent: "testing"
     message: "COMPREHENSIVE TESTING COMPLETED: All 5 specific fixes tested and verified working correctly."
   - agent: "main"
-    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://current-pod-config-1.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
+    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://unified-pod-backend.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
   - agent: "testing"
     message: "Dashboard Today Summary API testing COMPLETED: POST /api/user/login authentication successful with nomadly@moxx.co/Katiekendra123@ credentials. GET /api/dashboard returns complete today_summary object with all required fields validated - volume_today, volume_today_formatted, volume_yesterday, volume_yesterday_formatted, volume_change_percent, transactions_today, transactions_yesterday, transactions_change_percent, pending_count, currency. Data validation passed: real transaction data shows 0 volume today vs $40.04 yesterday (-100% change), 0 transactions today vs 3 yesterday (-100% change), 2 pending transactions. All existing dashboard fields (total_transactions: 98, total_volume: $4813.94, active_wallets: 17, fee_tier) working correctly. All tests PASSED."
 
