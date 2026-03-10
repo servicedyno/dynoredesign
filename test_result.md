@@ -122,10 +122,10 @@ backend:
         comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://current-pod-config-3.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
+        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://current-pod-deploy.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current pod (a4826c4d-9a2c-47e0-ab91-0a98aff535d0). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://a4826c4d-9a2c-47e0-ab91-0a98aff535d0.preview.emergentagent.com. Installed all dependencies (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login page 200, Checkout page 200."
+        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://current-pod-deploy.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -222,7 +222,7 @@ metadata:
   version: "2.0"
   test_sequence: 1
   run_ui: false
-  backend_url: "https://a4826c4d-9a2c-47e0-ab91-0a98aff535d0.preview.emergentagent.com"
+  backend_url: "https://100f9b25-8e2e-4084-b2d4-d59843b8f8c7.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
@@ -243,7 +243,7 @@ agent_communication:
   - agent: "testing"
     message: "COMPREHENSIVE TESTING COMPLETED: All 5 specific fixes tested and verified working correctly."
   - agent: "main"
-    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://current-pod-config-3.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
+    message: "Pod URL configuration completed. Created .env.local with NEXT_PUBLIC_BASE_URL=https://current-pod-deploy.preview.emergentagent.com/. Backend .env already had correct SERVER_URL/CHECKOUT_URL/FRONTEND_URL. Installed dependencies for both frontend and backend. All services running."
   - agent: "main"
     message: "Implemented 5 improvements: (1) Default dark mode - ThemeContext defaults changed to dark. (2) i18n language gaps filled - added keys for TodaySummaryStrip and ConversionBanner to all 6 languages. (3) Dashboard pending/volume fix - today_count and yesterday_count now only count completed transactions (status IN successful/done/completed). (4) Auto-convert UX - ConversionBanner now checks for stablecoin wallet availability, shows tooltip if no wallet, shows dropdown picker if no stablecoin configured. (5) Transaction fee simplification - removed fee breakdown, shows single Fee + Amount Received. Pod URLs updated to current pod."
   - agent: "testing"
