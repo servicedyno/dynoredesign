@@ -934,6 +934,68 @@ export const themeDark = createTheme({
         },
       },
     },
+    MuiTableCell: {
+      styleOverrides: {
+        root: {
+          color: "#E8E8EC",
+          borderBottomColor: "#2A2D42",
+        },
+        head: {
+          color: "#A0A1A5",
+          fontWeight: 600,
+        },
+      },
+    },
+    MuiTableRow: {
+      styleOverrides: {
+        root: {
+          "&:hover": {
+            backgroundColor: "rgba(106,123,255,0.06)",
+          },
+        },
+      },
+    },
+    MuiMenuItem: {
+      styleOverrides: {
+        root: {
+          color: "#E8E8EC",
+          "&:hover": {
+            backgroundColor: "rgba(106,123,255,0.08)",
+          },
+          "&.Mui-selected": {
+            backgroundColor: "rgba(106,123,255,0.12)",
+            color: "#E8E8EC",
+            "&:hover": {
+              backgroundColor: "rgba(106,123,255,0.16)",
+            },
+          },
+        },
+      },
+    },
+    MuiDivider: {
+      styleOverrides: {
+        root: {
+          borderColor: "#2A2D42",
+        },
+      },
+    },
+    MuiListItemText: {
+      styleOverrides: {
+        primary: {
+          color: "#E8E8EC",
+        },
+        secondary: {
+          color: "#A0A1A5",
+        },
+      },
+    },
+    MuiSvgIcon: {
+      styleOverrides: {
+        root: {
+          color: "inherit",
+        },
+      },
+    },
     MuiDialog: {
       styleOverrides: {
         paper: {

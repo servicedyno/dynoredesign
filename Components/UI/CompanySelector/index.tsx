@@ -242,7 +242,7 @@ export default function CompanySelector() {
             position: "absolute",
             top: "0",
             width: isMobile ? "224px" : "300px",
-            border: "1px solid rgba(233, 236, 242, 1)",
+            border: `1px solid ${theme.palette.mode === "dark" ? "#2A2D42" : "rgba(233, 236, 242, 1)"}`,
             borderRadius: "6px",
             backgroundColor: theme.palette.background.paper,
             padding: anchorEl ? "9px 8px" : "11px 8px",
@@ -319,9 +319,9 @@ export default function CompanySelector() {
                     sx={{ display: "flex", alignItems: "center", gap: "6px" }}
                   >
                     <BusinessCenterIcon
-                      sx={{ fontSize: isMobile ? "16.5px" : "20px" }}
+                      sx={{ fontSize: isMobile ? "16.5px" : "20px", color: theme.palette.text.primary }}
                     />
-                    <TriggerText>
+                    <TriggerText sx={{ color: theme.palette.text.primary }}>
                       {isMobile
                         ? truncateByWords(c?.company_name ?? "-", 18)
                         : (c?.company_name ?? "-")}
@@ -332,6 +332,7 @@ export default function CompanySelector() {
                       fontSize: isMobile ? "10px" : "13px",
                       fontFamily: "UrbanistMedium",
                       fontWeight: 500,
+                      color: theme.palette.text.secondary,
                     }}
                   >
                     {c.email}
@@ -357,7 +358,7 @@ export default function CompanySelector() {
               </CompanyItem>
             ))}
 
-            <Divider sx={{ my: "6px", borderColor: "#D9D9D9" }} />
+            <Divider sx={{ my: "6px", borderColor: theme.palette.mode === "dark" ? "#2A2D42" : "#D9D9D9" }} />
 
             <CustomButton
               label={t("addCompany")}
@@ -400,7 +401,7 @@ export default function CompanySelector() {
         anchorOrigin={{ vertical: "top", horizontal: "center" }}
         message={
           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-            <BusinessCenterIcon sx={{ fontSize: 18 }} />
+            <BusinessCenterIcon sx={{ fontSize: 18, color: theme.palette.text.secondary }} />
             <span>Switched to <strong>{switchToast}</strong></span>
           </Box>
         }

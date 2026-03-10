@@ -1,16 +1,15 @@
 import CalendarTodayIcon from "@/assets/Icons/calendar-icon.svg";
 import { RoundedStackIcon } from "@/utils/customIcons";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import useIsMobile from "@/hooks/useIsMobile";
-import { theme } from "@/styles/theme";
 import {
   ActiveTooltipState,
   ChartData,
   CustomTooltipProps,
 } from "@/utils/types/dashboard";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 import {
   Area,
@@ -22,7 +21,49 @@ import {
   YAxis,
 } from "recharts";
 
-const formatK = (v: number) => `$${Math.round(v / 1000)}k`;
+// Smart value formatter that avoids duplicate labels
+const formatValue = (v: number): string => {
+  if (v === 0) return "$0";
+  const abs = Math.abs(v);
+  if (abs >= 1_000_000) return `$${+(v / 1_000_000).toFixed(1)}M`;
+  if (abs >= 10_000) return `$${Math.round(v / 1000)}k`;
+  if (abs >= 1_000) return `$${+(v / 1000).toFixed(1)}k`;
+  if (abs >= 1) return `$${Math.round(v)}`;
+  return `$${v.toFixed(2)}`;
+};
+
+// Generate nicely spaced Y-axis ticks that never duplicate after formatting
+const computeYTicks = (data: ChartData[], tickCount = 5): number[] => {
+  const values = data.map((d) => d.value).filter((v) => typeof v === "number");
+  const maxVal = values.length > 0 ? Math.max(...values) : 0;
+  const minVal = values.length > 0 ? Math.min(0, Math.min(...values)) : 0;
+
+  if (maxVal === 0 && minVal === 0) {
+    return [0, 2000, 4000, 6000, 8000];
+  }
+
+  // Add 10% headroom
+  const range = (maxVal - minVal) * 1.1 || 1000;
+  const rawStep = range / (tickCount - 1);
+
+  // Round step to a "nice" number
+  const magnitude = Math.pow(10, Math.floor(Math.log10(rawStep)));
+  const niceSteps = [1, 2, 2.5, 5, 10];
+  let niceStep = magnitude;
+  for (const ns of niceSteps) {
+    if (ns * magnitude >= rawStep) {
+      niceStep = ns * magnitude;
+      break;
+    }
+  }
+
+  const niceMin = Math.floor(minVal / niceStep) * niceStep;
+  const ticks: number[] = [];
+  for (let i = 0; i < tickCount; i++) {
+    ticks.push(niceMin + i * niceStep);
+  }
+  return ticks;
+};
 
 const TOOLTIP_GAP = 12;
 const VIEWPORT_PADDING = 8;
@@ -34,6 +75,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   coordinate,
   containerRef,
 }) => {
+  const muiTheme = useTheme();
+  const isDark = muiTheme.palette.mode === "dark";
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const [position, setPosition] = useState({
     left: 0,
@@ -100,6 +143,13 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
   if (typeof window === "undefined") return null;
 
   const value = payload[0].value ?? 0;
+  const tooltipBg = isDark ? "#1E293B" : muiTheme.palette.background.paper;
+  const tooltipBorder = isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.06)";
+  const tooltipShadow = isDark
+    ? "0 10px 30px rgba(0,0,0,0.5)"
+    : "0 10px 25px rgba(0,0,0,0.12)";
+  const labelColor = isDark ? "#94A3B8" : "#676768";
+  const arrowColor = tooltipBg;
 
   return createPortal(
     <Box
@@ -110,10 +160,11 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
         position: "fixed",
         left: position.left,
         top: position.top,
-        background: theme.palette.background.paper,
+        background: tooltipBg,
+        border: `1px solid ${tooltipBorder}`,
         padding: "10px 14px",
         borderRadius: "12px",
-        boxShadow: "0 10px 25px rgba(0,0,0,0.12)",
+        boxShadow: tooltipShadow,
         fontSize: 12,
         pointerEvents: "none",
         whiteSpace: "nowrap",
@@ -134,12 +185,13 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
           alt="calendar-icon"
           width={14}
           height={14}
+          style={{ opacity: isDark ? 0.7 : 1 }}
         />
         <Typography
           sx={{
             fontSize: 12,
             fontWeight: 500,
-            color: "#676768",
+            color: labelColor,
             fontFamily: "UrbanistMedium",
             lineHeight: "100%",
             letterSpacing: 0,
@@ -154,21 +206,20 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
           display: "flex",
           alignItems: "center",
           gap: 6,
-          color: "#1E40FF",
           fontWeight: 600,
         }}
       >
-        <RoundedStackIcon fill={theme.palette.primary.main} size={12} />
+        <RoundedStackIcon fill={muiTheme.palette.primary.main} size={12} />
         <Typography
           sx={{
             fontSize: "12px",
             fontFamily: "UrbanistMedium",
-            color: theme.palette.primary.main,
+            color: muiTheme.palette.primary.main,
             lineHeight: "100%",
             letterSpacing: 0,
           }}
         >
-          Volume: {typeof value === "number" ? value.toLocaleString() : value}
+          Volume: ${typeof value === "number" ? value.toLocaleString() : value}
         </Typography>
       </div>
 
@@ -184,8 +235,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
           top: position.placement === "bottom" ? -6 : "auto",
           bottom: position.placement === "top" ? -6 : "auto",
           borderBottom:
-            position.placement === "bottom" ? "6px solid white" : "none",
-          borderTop: position.placement === "top" ? "6px solid white" : "none",
+            position.placement === "bottom" ? `6px solid ${arrowColor}` : "none",
+          borderTop: position.placement === "top" ? `6px solid ${arrowColor}` : "none",
         }}
       />
     </Box>,
@@ -194,6 +245,8 @@ const CustomTooltip: React.FC<CustomTooltipProps> = ({
 };
 
 const Chart = ({ data }: { data: ChartData[] }) => {
+  const muiTheme = useTheme();
+  const isDark = muiTheme.palette.mode === "dark";
   const isAllZero = data.every((item) => item.value === 0);
   const isMobile = useIsMobile("md");
   const [activeTooltip, setActiveTooltip] = useState<ActiveTooltipState | null>(
@@ -201,13 +254,20 @@ const Chart = ({ data }: { data: ChartData[] }) => {
   );
   const chartContainerRef = useRef<HTMLDivElement | null>(null);
   const gradientId = "areaGradient";
-  const gradientStartColor = "#D1E0FF";
-  const gradientEndColor = "#E5EDFF";
-  const finalGradientStartColor =
-    gradientStartColor || theme.palette.primary.main;
-  const finalGradientEndColor = gradientEndColor || theme.palette.primary.main;
+
+  // Theme-aware colors
+  const lineColor = isDark ? "#60A5FA" : "#1E40FF";
+  const dotColor = isDark ? "#60A5FA" : "#1E40FF";
+  const gridColor = isDark ? "rgba(255,255,255,0.06)" : "#E5E7EB";
+  const tickColor = isDark ? "#94A3B8" : "#676768";
+  const emptyTextColor = isDark ? "#64748B" : "#9CA3AF";
+
+  // Theme-aware gradient
+  const gradientStartColor = isDark ? "rgba(96,165,250,0.35)" : "#D1E0FF";
+  const gradientEndColor = isDark ? "rgba(96,165,250,0)" : "#E5EDFF";
   const gradientStartOpacity = 1;
   const gradientEndOpacity = 0;
+
   const xGridPointsRef = useRef<number[]>([]);
   const [, forceRender] = useState(0);
   const [containerSize, setContainerSize] = useState({
@@ -237,8 +297,12 @@ const Chart = ({ data }: { data: ChartData[] }) => {
     (d) => typeof d.value === "number" && d.value > 0,
   );
 
-  const yDomain = hasRealValues ? ["auto", "auto"] : [0, 16000];
-  const yTicks = hasRealValues ? undefined : [0, 4000, 8000, 12000, 16000];
+  // Compute smart Y-axis ticks that never produce duplicate labels
+  const yTicks = useMemo(() => computeYTicks(data, 5), [data]);
+  const yDomain: [number, number] = hasRealValues
+    ? [yTicks[0], yTicks[yTicks.length - 1]]
+    : [0, 8000];
+  const yTicksFinal = hasRealValues ? yTicks : [0, 2000, 4000, 6000, 8000];
 
   const MAX_LABELS = 15;
 
@@ -357,12 +421,12 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                 <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="0%"
-                    stopColor={finalGradientStartColor}
+                    stopColor={gradientStartColor}
                     stopOpacity={gradientStartOpacity}
                   />
                   <stop
                     offset="100%"
-                    stopColor={finalGradientEndColor}
+                    stopColor={gradientEndColor}
                     stopOpacity={gradientEndOpacity}
                   />
                 </linearGradient>
@@ -392,14 +456,14 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                         y1={Number(y) - 8}
                         x2={x}
                         y2={Number(y)}
-                        stroke="#676768"
+                        stroke={tickColor}
                         strokeWidth={1}
                       />
                       <text
                         x={x}
                         y={Number(y) + 15}
                         textAnchor="middle"
-                        fill="#676768"
+                        fill={tickColor}
                         fontSize={isMobile ? 10 : 12}
                         fontFamily="UrbanistMedium"
                       >
@@ -411,17 +475,18 @@ const Chart = ({ data }: { data: ChartData[] }) => {
               />
 
               <YAxis
-                tickFormatter={formatK}
+                tickFormatter={formatValue}
                 domain={yDomain}
-                ticks={yTicks}
+                ticks={yTicksFinal}
                 tick={{
-                  fill: "#676768",
+                  fill: tickColor,
                   fontSize: isMobile ? 10 : 12,
                   fontFamily: "UrbanistMedium",
                   letterSpacing: 0,
                 }}
                 tickMargin={5}
-                style={{ color: "#676768" }}
+                tickLine={false}
+                axisLine={false}
               />
 
               {!isAllZero ? (
@@ -437,7 +502,7 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                   />
 
                   <CartesianGrid
-                    stroke="#E5E7EB"
+                    stroke={gridColor}
                     horizontal
                     vertical
                     verticalPoints={xGridPointsRef.current}
@@ -447,7 +512,7 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                   <Area
                     type="monotone"
                     dataKey="value"
-                    stroke="#1E40FF"
+                    stroke={lineColor}
                     strokeWidth={3}
                     fill={`url(#${gradientId})`}
                     activeDot={false}
@@ -479,14 +544,14 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                                 cx={cx}
                                 cy={cy}
                                 r={7}
-                                fill="#1E40FF"
+                                fill={dotColor}
                                 filter={`blur(12px)`}
-                                opacity={0.6}
+                                opacity={isDark ? 0.8 : 0.6}
                               />
                               <circle
                                 cx={cx}
                                 cy={cy}
-                                fill="#1E40FF"
+                                fill={dotColor}
                                 r={6}
                                 strokeWidth={2}
                               />
@@ -499,14 +564,14 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                                 cx={cx}
                                 cy={cy}
                                 r={7}
-                                fill="#1E40FF"
+                                fill={dotColor}
                                 filter={`blur(12px)`}
-                                opacity={0.6}
+                                opacity={isDark ? 0.8 : 0.6}
                               />
                               <circle
                                 cx={cx}
                                 cy={cy}
-                                fill="#1E40FF"
+                                fill={dotColor}
                                 r={6}
                                 strokeWidth={2}
                               />
@@ -519,7 +584,7 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                 </>
               ) : (
                 <>
-                  <CartesianGrid stroke="#E5E7EB" strokeDasharray="4 4" />
+                  <CartesianGrid stroke={gridColor} strokeDasharray="4 4" />
 
                   <Area dataKey="value" activeDot={false} />
 
@@ -528,7 +593,7 @@ const Chart = ({ data }: { data: ChartData[] }) => {
                     y="40%"
                     textAnchor="middle"
                     dominantBaseline="middle"
-                    fill="#9CA3AF"
+                    fill={emptyTextColor}
                     fontSize="16px"
                     fontWeight={500}
                     fontFamily="UrbanistMedium"

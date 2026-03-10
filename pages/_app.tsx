@@ -10,7 +10,7 @@ import NProgress from "nprogress";
 import dynamic from "next/dynamic";
 
 import type { SxProps, Theme } from "@mui/material";
-import { ThemeProvider as MuiThemeProvider } from "@mui/material";
+import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
 import { SessionProvider } from "next-auth/react";
 import { Provider } from "react-redux";
 
@@ -208,6 +208,7 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
 
   return (
     <MuiThemeProvider theme={activeTheme}>
+      <CssBaseline />
       {renderWithLayout()}
     </MuiThemeProvider>
   );

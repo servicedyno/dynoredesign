@@ -55,7 +55,7 @@ export const CompanyItem = styled("div", {
     transition: "0.2s ease-in-out",
 
     "&:hover": {
-      background: "#eef2ff",
+      background: theme.palette.mode === "dark" ? "rgba(106,123,255,0.08)" : "#eef2ff",
     },
 
     ".info": {
@@ -94,7 +94,7 @@ export const ItemRight = styled("div", {
 })<{ active: boolean }>(
   ({ active, theme }) => ({
     background: active ? theme.palette.primary.light : "transparent",
-    border: active ? "1px solid #fff" : "1px solid #d1d5db",
+    border: active ? `1px solid ${theme.palette.mode === "dark" ? theme.palette.primary.main : "#fff"}` : `1px solid ${theme.palette.mode === "dark" ? "#2A2D42" : "#d1d5db"}`,
     display: "flex",
     width: "40px",
     height: "40px",
@@ -105,7 +105,7 @@ export const ItemRight = styled("div", {
     transition: "0.15s ease-in-out",
 
     "&:hover": {
-      background: active ? theme.palette.primary.light : "#f4f6f9",
+      background: active ? theme.palette.primary.light : (theme.palette.mode === "dark" ? "rgba(106,123,255,0.06)" : "#f4f6f9"),
       borderColor: theme.palette.primary.main,
 
       "& img": {

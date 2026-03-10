@@ -29,7 +29,7 @@ import EmptyDataModel from "@/Components/UI/EmptyDataModel";
 import UnitedStatesFlag from "@/assets/Images/Icons/flags/united-states-flag.png";
 import { stringShorten } from "@/helpers";
 import useIsMobile from "@/hooks/useIsMobile";
-import { theme } from "@/styles/theme";
+import { useTheme } from "@mui/material";
 import { ApiKeyCardProps, ApiKeysPageProps } from "@/utils/types/apis";
 import Image from "next/image";
 import * as yup from "yup";
@@ -49,6 +49,7 @@ import {
 const ApiDocumentationCard = ({ docsUrl }: { docsUrl: string }) => {
   const { t } = useTranslation("apiScreen");
   const isMobile = useIsMobile("md");
+  const theme = useTheme();
 
   return (
     <PanelCard
@@ -145,6 +146,7 @@ const ApiKeyCard = ({ title, apiRow, onCopy, onDelete, onRegenerate, onToggleSta
   const [showApiKey, setShowApiKey] = useState(false);
   const [showAdminToken, setShowAdminToken] = useState(false);
   const isMobile = useIsMobile("md");
+  const theme = useTheme();
 
   const apiKey: string = apiRow?.apiKey || "";
   const adminToken: string = apiRow?.adminToken || "";
@@ -341,6 +343,7 @@ const ApiKeysPage = ({
   const dispatch = useDispatch();
   const { t } = useTranslation("apiScreen");
   const isMobile = useIsMobile("md");
+  const theme = useTheme();
   const apiState = useSelector((state: rootReducer) => state.apiReducer);
 
   const selectedCompanyId = useSelector(
@@ -433,7 +436,7 @@ const ApiKeysPage = ({
       >
         <CircularProgress
           sx={{
-            color: "#0004ff",
+            color: theme.palette.primary.main,
           }}
         />
       </Box>
@@ -457,8 +460,8 @@ const ApiKeysPage = ({
             variant="outlined"
             sx={{
               borderColor: "#0004FF",
-              color: "#0004FF",
-              "&:hover": { background: "#f0f5ff", borderColor: "#0004FF" },
+              color: theme.palette.primary.main,
+              "&:hover": { background: theme.palette.mode === "dark" ? "rgba(106,123,255,0.08)" : "#f0f5ff", borderColor: theme.palette.primary.main },
             }}
             onClick={() => {
               window.open(docsUrl, "_blank", "noopener,noreferrer");
