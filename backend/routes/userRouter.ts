@@ -23,6 +23,9 @@ userRouter.post("/login", loginRateLimiter, validate(loginSchema), userMiddlewar
 // Login OTP verification - rate limited to prevent brute force
 userRouter.post("/verifyLoginOTP", otpRateLimiter, userController.verifyLoginOTP);
 userRouter.post("/resendLoginOTP", otpRateLimiter, userController.resendLoginOTP);
+// Kebab-case aliases (some frontends/proxies may normalize to kebab-case)
+userRouter.post("/verify-login-otp", otpRateLimiter, userController.verifyLoginOTP);
+userRouter.post("/resend-login-otp", otpRateLimiter, userController.resendLoginOTP);
 
 // Email check - moderate rate limiting
 userRouter.get("/checkEmail", moderateRateLimiter, userController.checkEmail);
