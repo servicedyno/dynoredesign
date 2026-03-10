@@ -63,7 +63,7 @@ const mailTransporter = async ({ to, subject, body, name, attachments }: mailOpt
   const payload: Record<string, unknown> = {
     sender: {
       name: "Dynopay",
-      email: "notify@dynopay.com",
+      email: process.env.BREVO_SENDER_EMAIL || "hi@dynopay.com",
     },
     subject: subject.trim(),
     to: [
