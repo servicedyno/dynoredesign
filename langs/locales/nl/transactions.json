@@ -37,5 +37,7 @@
   "close": "Sluiten",
   "viewOnExplorer": "Bekijken in Explorer",
   "copy": "Kopiëren",
-  "copiedToClipboard": "Gekopieerd naar klembord"
+  "copiedToClipboard": "Gekopieerd naar klembord",
+  "totalFees": "Kosten",
+  "amountReceived": "Ontvangen Bedrag"
 }

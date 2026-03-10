@@ -48,5 +48,18 @@
     "invoicesTax": "Invoices & Tax",
     "customers": "Customers",
     "helpSupport": "Help",
-    "referrals": "Referrals"
+    "referrals": "Referrals",
+    "volumeToday": "Volume Today",
+    "volumeYesterday": "Volume Yesterday",
+    "transactionsToday": "Transactions Today",
+    "pendingLabel": "Pending",
+    "vsYesterday": "vs yesterday",
+    "awaitingConfirmation": "awaiting confirmation",
+    "autoConvertToStablecoins": "Auto-Convert to Stablecoins",
+    "protectRevenueFromVolatility": "Protect revenue from crypto volatility",
+    "settlingIn": "Settling in {{stablecoin}}",
+    "configure": "Configure",
+    "setupStablecoinWallet": "Set up a stablecoin wallet first",
+    "selectStablecoin": "Select target stablecoin",
+    "awaitingPayment": "awaiting payment"
 }

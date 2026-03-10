@@ -37,5 +37,7 @@
   "close": "Schließen",
   "viewOnExplorer": "Im Explorer anzeigen",
   "copy": "Kopieren",
-  "copiedToClipboard": "In die Zwischenablage kopiert"
+  "copiedToClipboard": "In die Zwischenablage kopiert",
+  "totalFees": "Gebühr",
+  "amountReceived": "Erhaltener Betrag"
 }

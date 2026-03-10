@@ -31,31 +31,31 @@ const TodaySummaryStrip: React.FC<TodaySummaryProps> = ({ todaySummary, loading 
 
   const cards = [
     {
-      label: "Volume Today",
+      label: t("volumeToday"),
       value: todaySummary?.volumeTodayFormatted ?? "$0.00",
       change: todaySummary?.volumeChangePercent ?? 0,
-      subLabel: "vs yesterday",
+      subLabel: t("vsYesterday"),
       icon: <TrendingUp sx={{ fontSize: 18, color: theme.palette.primary.main }} />,
     },
     {
-      label: "Volume Yesterday",
+      label: t("volumeYesterday"),
       value: todaySummary?.volumeYesterdayFormatted ?? "$0.00",
       change: null,
       subLabel: "",
       icon: <AccessTime sx={{ fontSize: 18, color: theme.palette.text.secondary }} />,
     },
     {
-      label: "Transactions Today",
+      label: t("transactionsToday"),
       value: String(todaySummary?.transactionsToday ?? 0),
       change: todaySummary?.transactionsChangePercent ?? 0,
-      subLabel: "vs yesterday",
+      subLabel: t("vsYesterday"),
       icon: <TrendingUp sx={{ fontSize: 18, color: theme.palette.primary.main }} />,
     },
     {
-      label: "Pending",
+      label: t("pendingLabel"),
       value: String(todaySummary?.pendingCount ?? 0),
       change: null,
-      subLabel: "awaiting confirmation",
+      subLabel: t("awaitingPayment"),
       icon: <PendingActions sx={{ fontSize: 18, color: "#F59E0B" }} />,
     },
   ];

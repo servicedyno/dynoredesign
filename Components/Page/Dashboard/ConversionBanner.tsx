@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { Box, Typography, Switch, useTheme } from "@mui/material";
+import {
+  Box,
+  Typography,
+  Switch,
+  useTheme,
+  Tooltip,
+  Select,
+  MenuItem,
+  FormControl,
+} from "@mui/material";
 import { useSelector } from "react-redux";
+import { useTranslation } from "react-i18next";
 import Image from "next/image";
 
 import axiosBaseApi from "@/axiosConfig";
@@ -14,25 +24,44 @@ const STABLECOIN_LABELS: Record<string, string> = {
   usdt_trc20: "USDT (TRC-20)",
   usdt_erc20: "USDT (ERC-20)",
   usdc_erc20: "USDC (ERC-20)",
+  "USDT-TRC20": "USDT (TRC-20)",
+  "USDT-ERC20": "USDT (ERC-20)",
+  "USDC-ERC20": "USDC (ERC-20)",
+  "USDT-POLYGON": "USDT (Polygon)",
 };
+
+interface SettlementOption {
+  currency: string;
+  chain: string;
+  wallet_type: string;
+  wallet_address: string;
+}
 
 const ConversionBanner = () => {
   const muiTheme = useTheme();
   const isMobile = useIsMobile("md");
   const { openCompanySettings } = useCompanySettingsDialog();
+  const { t } = useTranslation("dashboardLayout");
 
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer
   );
   const selectedCompanyId = companyState.selectedCompanyId;
-  const company: ICompany | null = companyState.companyList?.find(
-    (c: ICompany) => c.company_id === selectedCompanyId
-  ) ?? companyState.companyList?.[0] ?? null;
+  const company: ICompany | null =
+    companyState.companyList?.find(
+      (c: ICompany) => c.company_id === selectedCompanyId
+    ) ??
+    companyState.companyList?.[0] ??
+    null;
 
   const [enabled, setEnabled] = useState(false);
-  const [stablecoin, setStablecoin] = useState("usdt_trc20");
+  const [stablecoin, setStablecoin] = useState("");
+  const [stablecoinChain, setStablecoinChain] = useState("");
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(false);
+  const [availableOptions, setAvailableOptions] = useState<SettlementOption[]>([]);
+  const [hasStablecoinWallet, setHasStablecoinWallet] = useState(false);
+  const [showStablecoinPicker, setShowStablecoinPicker] = useState(false);
 
   const fetchStatus = useCallback(async () => {
     if (!company?.company_id) {
@@ -45,13 +74,22 @@ const ConversionBanner = () => {
       );
       const data = res?.data?.data;
       if (data) {
-        setEnabled(
-          data.auto_convert_enabled === true ||
-            data.auto_convert_volatile_crypto === "yes"
-        );
-        setStablecoin(
-          data.target_stablecoin ?? data.convert_to_stablecoin ?? "usdt_trc20"
-        );
+        setEnabled(data.auto_convert_enabled === true);
+        const options = data.available_settlement_options || [];
+        setAvailableOptions(options);
+        setHasStablecoinWallet(options.length > 0);
+
+        // Set current stablecoin from settings
+        const currency = data.settlement_currency;
+        const chain = data.settlement_chain;
+        if (currency && chain) {
+          setStablecoin(`${currency}-${chain}`);
+          setStablecoinChain(chain);
+        } else if (options.length > 0) {
+          // Default to first available option
+          setStablecoin(options[0].wallet_type);
+          setStablecoinChain(options[0].chain);
+        }
       }
     } catch {
       // Silently fail — will show default OFF state
@@ -66,26 +104,84 @@ const ConversionBanner = () => {
 
   const handleToggle = async () => {
     if (!company?.company_id || toggling) return;
+
+    // Case 1: Disabling — always allowed
+    if (enabled) {
+      setToggling(true);
+      setEnabled(false);
+      try {
+        await axiosBaseApi.put(
+          `/company/auto-convert/${company.company_id}`,
+          { auto_convert_enabled: false }
+        );
+      } catch {
+        setEnabled(true); // Revert
+      } finally {
+        setToggling(false);
+      }
+      return;
+    }
+
+    // Case 2: No stablecoin wallet → don't toggle, user needs to add wallet
+    if (!hasStablecoinWallet) {
+      return; // Tooltip will show the message
+    }
+
+    // Case 3: Has wallet but no stablecoin configured → show picker
+    if (!stablecoin && availableOptions.length > 0) {
+      setShowStablecoinPicker(true);
+      return;
+    }
+
+    // Case 4: If picker is showing and no selection yet, show picker
+    if (availableOptions.length > 1 && !stablecoin) {
+      setShowStablecoinPicker(true);
+      return;
+    }
+
+    // Case 5: Everything configured → enable
+    await enableAutoConvert(stablecoin);
+  };
+
+  const enableAutoConvert = async (walletType: string) => {
+    if (!company?.company_id) return;
     setToggling(true);
-    const newEnabled = !enabled;
-    setEnabled(newEnabled); // Optimistic update
+    setEnabled(true); // Optimistic
+
+    // Parse wallet_type like "USDT-TRC20" into currency + chain
+    const option = availableOptions.find((o) => o.wallet_type === walletType);
+    const currency = option?.currency || walletType.split("-")[0];
+    const chain = option?.chain || walletType.split("-")[1];
 
     try {
       await axiosBaseApi.put(
         `/company/auto-convert/${company.company_id}`,
         {
-          auto_convert_enabled: newEnabled,
-          target_stablecoin: stablecoin,
+          auto_convert_enabled: true,
+          settlement_currency: currency,
+          settlement_chain: chain,
         }
       );
+      setStablecoin(walletType);
+      setShowStablecoinPicker(false);
     } catch {
-      setEnabled(!newEnabled); // Revert on error
+      setEnabled(false); // Revert
     } finally {
       setToggling(false);
     }
   };
 
+  const handleStablecoinSelect = (walletType: string) => {
+    setStablecoin(walletType);
+    enableAutoConvert(walletType);
+  };
+
   if (loading || !company) return null;
+
+  const stablecoinLabel =
+    STABLECOIN_LABELS[stablecoin] || stablecoin || "Stablecoin";
+
+  const toggleDisabled = toggling || (!hasStablecoinWallet && !enabled);
 
   return (
     <Box
@@ -105,7 +201,9 @@ const ConversionBanner = () => {
           borderRadius: "14px",
           border: "1px solid",
           borderColor: enabled ? "#22C55E33" : muiTheme.palette.divider,
-          backgroundColor: enabled ? "#22C55E08" : muiTheme.palette.background.paper,
+          backgroundColor: enabled
+            ? "#22C55E08"
+            : muiTheme.palette.background.paper,
           transition: "all 0.25s ease",
         }}
       >
@@ -124,7 +222,11 @@ const ConversionBanner = () => {
               width: isMobile ? 32 : 36,
               height: isMobile ? 32 : 36,
               borderRadius: "10px",
-              backgroundColor: enabled ? "#22C55E1A" : "#F3F4F6",
+              backgroundColor: enabled
+                ? "#22C55E1A"
+                : muiTheme.palette.mode === "dark"
+                ? "rgba(255,255,255,0.06)"
+                : "#F3F4F6",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -158,13 +260,15 @@ const ConversionBanner = () => {
                 letterSpacing: 0,
               }}
             >
-              Auto-Convert to Stablecoins
+              {t("autoConvertToStablecoins")}
             </Typography>
             <Typography
               sx={{
                 fontSize: isMobile ? 11 : 12,
                 fontFamily: "UrbanistMedium",
-                color: muiTheme.palette.text.secondary,
+                color: !hasStablecoinWallet && !enabled
+                  ? "#F59E0B"
+                  : muiTheme.palette.text.secondary,
                 lineHeight: 1.3,
                 letterSpacing: 0,
                 mt: 0.25,
@@ -173,14 +277,16 @@ const ConversionBanner = () => {
                 textOverflow: "ellipsis",
               }}
             >
-              {enabled
-                ? `Settling in ${STABLECOIN_LABELS[stablecoin] || stablecoin}`
-                : "Protect revenue from crypto volatility"}
+              {!hasStablecoinWallet && !enabled
+                ? t("setupStablecoinWallet")
+                : enabled
+                ? t("settlingIn", { stablecoin: stablecoinLabel })
+                : t("protectRevenueFromVolatility")}
             </Typography>
           </Box>
         </Box>
 
-        {/* Right: Toggle + Configure link */}
+        {/* Right: Toggle + Configure/Picker */}
         <Box
           sx={{
             display: "flex",
@@ -189,20 +295,60 @@ const ConversionBanner = () => {
             flexShrink: 0,
           }}
         >
-          <Switch
-            checked={enabled}
-            onChange={handleToggle}
-            disabled={toggling}
-            size="small"
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: "#22C55E",
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: "#22C55E",
-              },
-            }}
-          />
+          {/* Stablecoin picker — inline dropdown */}
+          {showStablecoinPicker && !enabled && availableOptions.length > 0 && (
+            <FormControl size="small" sx={{ minWidth: 130 }}>
+              <Select
+                value=""
+                displayEmpty
+                onChange={(e) => handleStablecoinSelect(e.target.value as string)}
+                sx={{
+                  fontSize: 12,
+                  fontFamily: "UrbanistMedium",
+                  height: 32,
+                  "& .MuiSelect-select": {
+                    py: 0.5,
+                  },
+                }}
+              >
+                <MenuItem value="" disabled>
+                  {t("selectStablecoin")}
+                </MenuItem>
+                {availableOptions.map((opt) => (
+                  <MenuItem key={opt.wallet_type} value={opt.wallet_type}>
+                    {STABLECOIN_LABELS[opt.wallet_type] || opt.wallet_type}
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+
+          <Tooltip
+            title={
+              !hasStablecoinWallet && !enabled
+                ? t("setupStablecoinWallet")
+                : ""
+            }
+            arrow
+            placement="top"
+          >
+            <span>
+              <Switch
+                checked={enabled}
+                onChange={handleToggle}
+                disabled={toggleDisabled}
+                size="small"
+                sx={{
+                  "& .MuiSwitch-switchBase.Mui-checked": {
+                    color: "#22C55E",
+                  },
+                  "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                    backgroundColor: "#22C55E",
+                  },
+                }}
+              />
+            </span>
+          </Tooltip>
           <Typography
             onClick={() => {
               if (company) openCompanySettings(company);
@@ -218,7 +364,7 @@ const ConversionBanner = () => {
               },
             }}
           >
-            Configure
+            {t("configure")}
           </Typography>
         </Box>
       </Box>

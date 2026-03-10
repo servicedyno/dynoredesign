@@ -17,16 +17,16 @@ export const useThemeMode = () => {
   if (!context) {
     // Return default values for SSR/SSG - won't throw during static generation
     return {
-      mode: 'light' as ThemeMode,
+      mode: 'dark' as ThemeMode,
       toggleTheme: () => {},
-      isDark: false,
+      isDark: true,
     };
   }
   return context;
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>('light');
+  const [mode, setMode] = useState<ThemeMode>('dark');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -66,7 +66,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   // This prevents flash - actual theme is applied client-side
   if (!mounted) {
     return (
-      <ThemeContext.Provider value={{ mode: 'light', toggleTheme: () => {}, isDark: false }}>
+      <ThemeContext.Provider value={{ mode: 'dark', toggleTheme: () => {}, isDark: true }}>
         {children}
       </ThemeContext.Provider>
     );

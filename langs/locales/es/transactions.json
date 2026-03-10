@@ -37,5 +37,7 @@
   "close": "Cerrar",
   "viewOnExplorer": "Ver en el Explorador",
   "copy": "Copiar",
-  "copiedToClipboard": "Copiado al portapapeles"
+  "copiedToClipboard": "Copiado al portapapeles",
+  "totalFees": "Tarifa",
+  "amountReceived": "Monto Recibido"
 }

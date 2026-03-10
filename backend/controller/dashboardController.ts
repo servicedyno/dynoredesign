@@ -145,8 +145,8 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
         COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfMonth) as current_month_count,
         COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth) as last_month_count,
         COUNT(*) FILTER (WHERE ut.status = 'pending') as pending_count,
-        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfToday) as today_count,
-        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday) as yesterday_count
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfToday AND ut.status IN ('successful', 'done', 'completed')) as today_count,
+        COUNT(*) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday AND ut.status IN ('successful', 'done', 'completed')) as yesterday_count
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}
@@ -159,8 +159,8 @@ const getDashboard = async (req: express.Request, res: express.Response) => {
         COALESCE(SUM(${USD_FALLBACK_EXPR}), 0) as total_usd_value,
         COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfMonth), 0) as current_month_usd_value,
         COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfLastMonth AND ut."createdAt" <= :endOfLastMonth), 0) as last_month_usd_value,
-        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfToday), 0) as today_usd_value,
-        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday), 0) as yesterday_usd_value
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfToday AND ut.status IN ('successful', 'done', 'completed')), 0) as today_usd_value,
+        COALESCE(SUM(${USD_FALLBACK_EXPR}) FILTER (WHERE ut."createdAt" >= :startOfYesterday AND ut."createdAt" < :startOfToday AND ut.status IN ('successful', 'done', 'completed')), 0) as yesterday_usd_value
       FROM tbl_user_transaction ut
       ${companyJoin}
       WHERE ut.user_id = :userId ${companyFilter}

@@ -37,5 +37,7 @@
   "close": "Fermer",
   "viewOnExplorer": "Voir sur l'Explorateur",
   "copy": "Copier",
-  "copiedToClipboard": "Copié dans le presse-papiers"
+  "copiedToClipboard": "Copié dans le presse-papiers",
+  "totalFees": "Frais",
+  "amountReceived": "Montant Reçu"
 }

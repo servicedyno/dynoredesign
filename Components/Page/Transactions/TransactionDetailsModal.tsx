@@ -312,35 +312,17 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
               {(Number(transaction.fees) > 0 || (transaction.feesBreakdown && (transaction.feesBreakdown.platform > 0 || transaction.feesBreakdown.blockchain > 0))) && (
                 <>
                   <DetailRow>
-                    <TitleLabel>Total Fees</TitleLabel>
+                    <TitleLabel>{tTransactions("totalFees")}</TitleLabel>
                     <TitleValue>
                       ${Number(transaction.fees).toFixed(2)} USD
                     </TitleValue>
                   </DetailRow>
-                  {transaction.feesBreakdown && transaction.feesBreakdown.platform > 0 && (
-                    <DetailRow>
-                      <TitleLabel sx={{ pl: 2 }}>Platform Fee</TitleLabel>
-                      <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        ${transaction.feesBreakdown.platform.toFixed(2)} USD
-                      </TitleValue>
-                    </DetailRow>
-                  )}
-                  {transaction.feesBreakdown && transaction.feesBreakdown.blockchain > 0 && (
-                    <DetailRow>
-                      <TitleLabel sx={{ pl: 2 }}>Blockchain Fee</TitleLabel>
-                      <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        ${transaction.feesBreakdown.blockchain.toFixed(2)} USD
-                      </TitleValue>
-                    </DetailRow>
-                  )}
-                  {transaction.feesBreakdown && transaction.feesBreakdown.fixed > 0 && (
-                    <DetailRow>
-                      <TitleLabel sx={{ pl: 2 }}>Fixed Fee</TitleLabel>
-                      <TitleValue sx={{ fontSize: "13px", color: "text.secondary" }}>
-                        ${transaction.feesBreakdown.fixed.toFixed(2)} USD
-                      </TitleValue>
-                    </DetailRow>
-                  )}
+                  <DetailRow>
+                    <TitleLabel>{tTransactions("amountReceived")}</TitleLabel>
+                    <TitleValue sx={{ color: "#10B981", fontWeight: 600 }}>
+                      ${(Number(transaction.usdValue?.replace(/[^0-9.-]+/g, '') || 0) - Number(transaction.fees || 0)).toFixed(2)} USD
+                    </TitleValue>
+                  </DetailRow>
                 </>
               )}
               {transaction.confirmations && (

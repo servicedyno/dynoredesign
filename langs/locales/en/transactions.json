@@ -37,5 +37,7 @@
   "close": "Close",
   "viewOnExplorer": "View on Explorer",
   "copy": "Copy",
-  "copiedToClipboard": "Copied to Clipboard"
+  "copiedToClipboard": "Copied to Clipboard",
+  "totalFees": "Fee",
+  "amountReceived": "Amount Received"
 }

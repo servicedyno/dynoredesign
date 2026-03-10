@@ -48,5 +48,18 @@
     "invoicesTax": "Facturen & BTW",
     "customers": "Klanten",
     "helpSupport": "Help",
-    "referrals": "Verwijzingen"
+    "referrals": "Verwijzingen",
+    "volumeToday": "Volume Vandaag",
+    "volumeYesterday": "Volume Gisteren",
+    "transactionsToday": "Transacties Vandaag",
+    "pendingLabel": "In afwachting",
+    "vsYesterday": "vs gisteren",
+    "awaitingConfirmation": "wacht op bevestiging",
+    "autoConvertToStablecoins": "Auto-Converteer naar Stablecoins",
+    "protectRevenueFromVolatility": "Bescherm inkomsten tegen crypto-volatiliteit",
+    "settlingIn": "Verrekening in {{stablecoin}}",
+    "configure": "Configureren",
+    "setupStablecoinWallet": "Stel eerst een stablecoin-wallet in",
+    "selectStablecoin": "Selecteer doel-stablecoin",
+    "awaitingPayment": "wacht op betaling"
 }
