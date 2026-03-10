@@ -7,7 +7,7 @@ import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import OtpDialog from "@/Components/UI/OtpDialog";
-import { AuthContainer, CardWrapper, SplitLayoutWrapper, AuthPageBackground, BrandPanel, FormPanel } from "@/Containers/Login/styled";
+import { AuthContainer, CardWrapper, SplitLayoutWrapper, BrandPanel, FormPanel } from "@/Containers/Login/styled";
 import LiveBrandContent from "@/Components/UI/AuthLayout/BrandContent/LiveBrandContent";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
@@ -419,7 +419,18 @@ const Register = () => {
   };
 
   return (
-    <AuthPageBackground>
+    <Box
+      sx={{
+        width: "100%",
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: { xs: "flex-start", sm: "center" },
+        background: (t: any) => t.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
+        padding: { xs: "0", sm: "32px 24px" },
+        boxSizing: "border-box",
+      }}
+    >
     <SplitLayoutWrapper>
       <BrandPanel>
         <LiveBrandContent />
@@ -975,7 +986,7 @@ const Register = () => {
     </AuthContainer>
       </FormPanel>
     </SplitLayoutWrapper>
-    </AuthPageBackground>
+    </Box>
   );
 };
 

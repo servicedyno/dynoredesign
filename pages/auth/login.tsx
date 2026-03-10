@@ -17,7 +17,6 @@ import {
   CardWrapper,
   ImageCenter,
   SplitLayoutWrapper,
-  AuthPageBackground,
   BrandPanel,
   FormPanel,
 } from "@/Containers/Login/styled";
@@ -787,7 +786,18 @@ export default function Login() {
   };
 
   return (
-    <AuthPageBackground>
+    <Box
+      sx={{
+        width: "100%",
+        minHeight: "100dvh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: { xs: "flex-start", sm: "center" },
+        background: (t: any) => t.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
+        padding: { xs: "0", sm: "32px 24px" },
+        boxSizing: "border-box",
+      }}
+    >
     <SplitLayoutWrapper>
       <BrandPanel>
         <LiveBrandContent />
@@ -1578,6 +1588,6 @@ export default function Login() {
     </AuthContainer>
       </FormPanel>
     </SplitLayoutWrapper>
-    </AuthPageBackground>
+    </Box>
   );
 }

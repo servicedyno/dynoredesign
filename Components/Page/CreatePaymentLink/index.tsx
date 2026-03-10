@@ -121,12 +121,19 @@ const CreatePaymentLinkPage = ({
     prevPaymentLinksLengthRef.current = currentLength;
   }, [paymentLinkState?.paymentLinks, isCreating]);
 
-  // Reset creating state on error (saga dispatches PAYLINK_ERROR → createLoading: false)
+  // Reset creating state on error — only after createLoading transitions from true → false
+  // This guards against the premature reset that was happening before
+  const prevCreateLoadingRef = useRef(paymentLinkState?.createLoading);
   useEffect(() => {
-    if (isCreating && paymentLinkState?.createLoading === false && !successModalOpen) {
-      // If createLoading turned false but we didn't open the modal, an error occurred
+    const wasLoading = prevCreateLoadingRef.current;
+    const nowLoading = paymentLinkState?.createLoading;
+    prevCreateLoadingRef.current = nowLoading;
+
+    // Only react when createLoading transitions from true to false
+    if (wasLoading === true && nowLoading === false && isCreating && !successModalOpen) {
       const links = paymentLinkState?.paymentLinks || [];
       if (links.length <= prevPaymentLinksLengthRef.current) {
+        // API returned an error (no new link was added)
         setIsCreating(false);
       }
     }

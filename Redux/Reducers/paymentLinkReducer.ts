@@ -36,6 +36,7 @@ const paymentLinkReducer = (
       return {
         ...state,
         loading: state.paymentLinks.length === 0,
+        ...((action as any).crudType === PAYLINK_CREATE && { createLoading: true }),
       };
 
     case PAYLINK_FETCH:
