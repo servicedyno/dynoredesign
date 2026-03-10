@@ -98,13 +98,16 @@ backend:
     implemented: true
     working: false
     file: "/api/pay/getPaymentLinks"
-    stuck_count: 0
+    stuck_count: 1
     priority: "high"
     needs_retesting: false
     status_history:
       - working: false
         agent: "testing"
         comment: "CRITICAL ISSUE: GET /api/pay/getPaymentLinks?company_id=3 returns payment links with capitalized status values instead of lowercase. Found link_id=920 with status='Completed' (should be 'completed'), multiple links with status='Active' (should be 'active'), and status='Expired' (should be 'expired'). Status normalization is not implemented - all 69 payment links have capitalized statuses."
+      - working: false
+        agent: "testing"
+        comment: "RE-TESTED: Status normalization fix NOT implemented. Both endpoints still return capitalized statuses: (1) GET /api/pay/getPaymentLinks?company_id=3 - all 69 payment links have capitalized statuses ('Completed', 'Active', 'Expired') instead of required lowercase ('completed', 'active', 'expired'). (2) GET /api/pay/links/920 - returns status='Completed' instead of 'completed'. No status normalization applied to either endpoint."
 
 metadata:
   created_by: "testing_agent"
@@ -129,3 +132,5 @@ agent_communication:
     message: "COMPREHENSIVE TESTING COMPLETED: All 5 specific fixes tested and verified working correctly. (1) Backend Health Check: GET /api/status returns 200 with overall_status='operational' ✅ (2) User Login: POST /api/user/login with nomadly@moxx.co credentials returns 200 with accessToken ✅ (3) Payment Link #920 Status: GET /api/pay/getPaymentLinks?company_id=3 shows link_id=920 with status='Completed' (not pending/Active) ✅ (4) Transaction History: GET /api/company/getTransactions/3 shows $42 BTC successful transaction ✅ (5) Checkout Page: POST /api/pay/getData returns payment_completed=true, status='successful', paid_amount=0.00060867 ✅. The $42 BTC payment recovery is fully operational."
   - agent: "testing"
     message: "ADDITIONAL SPECIFIC TESTS COMPLETED: (6) Transaction Status with Auto-Convert Display: ✅ PASS - API correctly returns transactions with status fields, auto_convert structure ready for when auto-converted transactions exist. (7) Payment Link Status Normalization: ❌ CRITICAL FAILURE - All payment link statuses are capitalized (Completed, Active, Expired) instead of lowercase (completed, active, expired). This affects link_id=920 and all 69 payment links. Status normalization needs implementation in /api/pay/getPaymentLinks endpoint."
+  - agent: "testing"
+    message: "PAYMENT LINK STATUS NORMALIZATION FIX - RE-TEST RESULTS: ❌ FAILED - The requested status normalization fix has NOT been implemented. Comprehensive testing of both endpoints shows: (1) GET /api/pay/getPaymentLinks?company_id=3 - All 69 payment links still return capitalized status values ('Completed', 'Active', 'Expired') instead of required lowercase format. (2) GET /api/pay/links/920 - Single link endpoint also returns 'Completed' instead of 'completed'. The fix needs to be implemented in the backend API to convert all status values to lowercase before returning to client."
