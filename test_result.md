@@ -87,7 +87,7 @@ metadata:
   version: "2.0"
   test_sequence: 1
   run_ui: false
-  backend_url: "http://localhost:8001"
+  backend_url: "https://checkout-flow-demo-1.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
