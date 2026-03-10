@@ -10,7 +10,7 @@ import sys
 from typing import Dict, Any, List
 
 # Test configuration
-BASE_URL = "https://checkout-flow-demo-1.preview.emergentagent.com/api"
+BASE_URL = "https://current-pod-config-1.preview.emergentagent.com/api"
 TEST_CREDENTIALS = {
     "email": "nomadly@moxx.co",
     "password": "Katiekendra123@"

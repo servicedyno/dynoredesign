@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://checkout-flow-demo-1.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://current-pod-config-1.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
