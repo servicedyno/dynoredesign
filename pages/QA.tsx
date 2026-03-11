@@ -91,6 +91,35 @@ const StepRow = styled(Box)(({ theme }) => ({
   },
 }));
 
+
+/* ==================== NOMADLY1 WALLET TEST DATA ==================== */
+interface WalletTestData {
+  walletId: number;
+  type: string;
+  address: string;
+  balance: string;
+  network: string;
+}
+
+const NOMADLY1_WALLETS: WalletTestData[] = [
+  { walletId: 41,  type: "BTC",          address: "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7",                     balance: "0.0630 BTC",     network: "Bitcoin" },
+  { walletId: 42,  type: "LTC",          address: "LM179QVx32QMtEzkhJZnvMdQgJfkAbf3fm",                      balance: "23.5502 LTC",    network: "Litecoin" },
+  { walletId: 43,  type: "DOGE",         address: "DEReH1ES1zT8MUtkBQPqLqYGWrJhw2gCUL",                      balance: "84.2443 DOGE",   network: "Dogecoin" },
+  { walletId: 45,  type: "ETH",          address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "1.7800 ETH",     network: "Ethereum" },
+  { walletId: 46,  type: "TRX",          address: "TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR",                      balance: "25.2750 TRX",    network: "Tron" },
+  { walletId: 47,  type: "USDT-ERC20",   address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "581.8425 USDT",  network: "Ethereum" },
+  { walletId: 48,  type: "USDT-TRC20",   address: "TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR",                      balance: "1,809.6905 USDT", network: "Tron" },
+  { walletId: 495, type: "USDC-ERC20",   address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "0.0000 USDC",    network: "Ethereum" },
+  { walletId: 518, type: "BCH",          address: "1JH5TnZzjYTf1yYwBDLjWoHgkAcCHc1Do7",                     balance: "0.0000 BCH",     network: "Bitcoin Cash" },
+  { walletId: 519, type: "SOL",          address: "Gjjphdxe26tayH3PBQcqXYt3R2gt7phEdCAFfxZB63U8",             balance: "0.0000 SOL",     network: "Solana" },
+  { walletId: 520, type: "XRP",          address: "rNxp4h8apvRis6mJf9Sh8C6iRxfrDWN7AV",                      balance: "0.0000 XRP",     network: "Ripple" },
+  { walletId: 521, type: "POLYGON",      address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "0.0000 MATIC",   network: "Polygon" },
+  { walletId: 522, type: "RLUSD",        address: "rNxp4h8apvRis6mJf9Sh8C6iRxfrDWN7AV",                      balance: "0.0000 RLUSD",   network: "Ripple" },
+  { walletId: 523, type: "USDT-POLYGON", address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "0.0000 USDT",    network: "Polygon" },
+  { walletId: 524, type: "RLUSD-ERC20",  address: "0x9a7221b5e32d5f99e8da95585835442e29afb38f",                balance: "0.0000 RLUSD",   network: "Ethereum" },
+];
+
+
 /* ==================== TEST DATA ==================== */
 const TEST_SECTIONS: TestSection[] = [
   {
@@ -1042,6 +1071,134 @@ const QAPage = () => {
               />
             </Box>
           </Box>
+
+          {/* Nomadly1 Wallet Test Data Reference */}
+          <SectionAccordion
+            expanded={expandedSections.includes("wallet-data")}
+            onChange={(_, expanded) => {
+              setExpandedSections((prev) =>
+                expanded ? [...prev, "wallet-data"] : prev.filter((id) => id !== "wallet-data")
+              );
+            }}
+          >
+            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+              <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, width: "100%" }}>
+                <Typography sx={{ fontSize: 22 }}>🧪</Typography>
+                <Box sx={{ flex: 1 }}>
+                  <Typography sx={{ fontFamily: "UrbanistSemibold", fontSize: 16, color: "text.primary" }}>
+                    Test Data — Nomadly1 Wallet Addresses
+                  </Typography>
+                  <Typography sx={{ fontSize: 12, color: "text.secondary", mt: 0.2 }}>
+                    15 saved wallet addresses for the Nomadly1 company (company_id: 3). Use these to verify wallet display, payment routing, and address management.
+                  </Typography>
+                </Box>
+                <Chip
+                  label="15 wallets"
+                  size="small"
+                  sx={{ fontSize: 11, fontFamily: "UrbanistSemibold", bgcolor: alpha("#8B5CF6", 0.12), color: "#8B5CF6", mr: 1 }}
+                />
+              </Box>
+            </AccordionSummary>
+            <AccordionDetails sx={{ pt: 0, overflowX: "auto" }}>
+              {/* Table header */}
+              <Box
+                sx={{
+                  display: "grid",
+                  gridTemplateColumns: isMobile ? "1fr" : "60px 120px 1fr 130px 110px",
+                  gap: 1,
+                  py: 1,
+                  borderBottom: `2px solid ${isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.08)"}`,
+                  minWidth: isMobile ? "auto" : 750,
+                }}
+              >
+                {!isMobile && (
+                  <>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "UrbanistSemibold", textTransform: "uppercase" }}>ID</Typography>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "UrbanistSemibold", textTransform: "uppercase" }}>Type</Typography>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "UrbanistSemibold", textTransform: "uppercase" }}>Address</Typography>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "UrbanistSemibold", textTransform: "uppercase" }}>Balance</Typography>
+                    <Typography sx={{ fontSize: 10, color: "text.secondary", fontFamily: "UrbanistSemibold", textTransform: "uppercase" }}>Network</Typography>
+                  </>
+                )}
+              </Box>
+              {/* Wallet rows */}
+              {NOMADLY1_WALLETS.map((w) => (
+                <Box
+                  key={w.walletId}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: isMobile ? "1fr" : "60px 120px 1fr 130px 110px",
+                    gap: 1,
+                    py: 1.2,
+                    borderBottom: `1px solid ${isDark ? "rgba(255,255,255,0.04)" : "rgba(0,0,0,0.04)"}`,
+                    minWidth: isMobile ? "auto" : 750,
+                    "&:hover": { bgcolor: isDark ? "rgba(255,255,255,0.02)" : "rgba(0,0,0,0.015)" },
+                  }}
+                >
+                  {isMobile ? (
+                    <Box>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1, mb: 0.5 }}>
+                        <Chip label={w.type} size="small" sx={{ fontSize: 11, fontFamily: "monospace", fontWeight: 700, height: 22 }} />
+                        <Typography sx={{ fontSize: 11, color: "text.secondary" }}>{w.network}</Typography>
+                        <Typography sx={{ fontSize: 11, fontFamily: "UrbanistSemibold", color: parseFloat(w.balance) > 0 ? "#22C55E" : "text.secondary", ml: "auto" }}>
+                          {w.balance}
+                        </Typography>
+                      </Box>
+                      <Typography
+                        sx={{
+                          fontSize: 11,
+                          fontFamily: "monospace",
+                          color: "text.secondary",
+                          wordBreak: "break-all",
+                          cursor: "pointer",
+                          "&:hover": { color: "primary.main" },
+                        }}
+                        onClick={() => { navigator.clipboard?.writeText(w.address); }}
+                      >
+                        {w.address}
+                      </Typography>
+                    </Box>
+                  ) : (
+                    <>
+                      <Typography sx={{ fontSize: 12, color: "text.secondary", fontFamily: "monospace" }}>{w.walletId}</Typography>
+                      <Chip label={w.type} size="small" sx={{ fontSize: 11, fontFamily: "monospace", fontWeight: 700, height: 22, justifySelf: "start" }} />
+                      <Tooltip title="Click to copy" arrow>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            fontFamily: "monospace",
+                            color: "text.secondary",
+                            wordBreak: "break-all",
+                            cursor: "pointer",
+                            "&:hover": { color: "primary.main" },
+                          }}
+                          onClick={() => { navigator.clipboard?.writeText(w.address); }}
+                        >
+                          {w.address}
+                        </Typography>
+                      </Tooltip>
+                      <Typography
+                        sx={{
+                          fontSize: 12,
+                          fontFamily: "UrbanistSemibold",
+                          color: parseFloat(w.balance.replace(",", "")) > 0 ? "#22C55E" : "text.secondary",
+                        }}
+                      >
+                        {w.balance}
+                      </Typography>
+                      <Typography sx={{ fontSize: 12, color: "text.secondary" }}>{w.network}</Typography>
+                    </>
+                  )}
+                </Box>
+              ))}
+              <Box sx={{ mt: 2, p: 1.5, borderRadius: 2, bgcolor: isDark ? alpha("#3B82F6", 0.06) : alpha("#3B82F6", 0.04), border: `1px solid ${alpha("#3B82F6", 0.12)}` }}>
+                <Typography sx={{ fontSize: 12, color: "#3B82F6", fontFamily: "UrbanistSemibold" }}>
+                  💡 Click any address to copy it. Green balances indicate wallets with funds available for transaction testing.
+                  Shared EVM addresses (ETH, USDT-ERC20, USDC-ERC20, POLYGON, USDT-POLYGON, RLUSD-ERC20) all use the same address: 0x9a72...b38f
+                </Typography>
+              </Box>
+            </AccordionDetails>
+          </SectionAccordion>
 
           {/* Test Sections */}
           {filteredSections.map((section) => (
