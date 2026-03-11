@@ -4,6 +4,7 @@ Welcome to the Dynopay API! This guide will help you integrate crypto payments a
 
 ## Table of Contents
 - [Quick Start](#quick-start)
+- [Userless Payment (Simplified)](#userless-payment-simplified)
 - [Common Integration Patterns](#common-integration-patterns)
 - [Customer Wallet System](#customer-wallet-system)
 - [Best Practices](#best-practices)
@@ -19,8 +20,222 @@ Welcome to the Dynopay API! This guide will help you integrate crypto payments a
 3. Click **"Create New Key"**
 4. Save your API key securely (it won't be shown again!)
 
-### 2. Make Your First API Call
-Create a customer and get their bearer token:
+### 2. Make Your First Payment (No Customer Setup Required!)
+
+With **Userless Payment**, you can create payments using just your API key — no customer creation step needed:
+
+```bash
+curl -X POST https://api.dynopay.com/api/user/createPayment \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 50.00,
+    "redirect_uri": "https://yoursite.com/thank-you"
+  }'
+```
+
+Response:
+```json
+{
+  "success": true,
+  "message": "Link Generated!",
+  "data": {
+    "redirect_url": "https://checkout.dynopay.com/pay?d=abc123...",
+    "fee_payer": "company",
+    "available_currencies": ["BTC", "ETH", "USDT-TRC20", "LTC"]
+  }
+}
+```
+
+**Redirect your customer to `redirect_url`** to complete the payment!
+
+> **Note**: If you need to track customers individually (for wallets, transaction history, etc.), see the [Customer-Based Flow](#customer-based-flow-advanced) below.
+
+---
+
+## Userless Payment (Simplified)
+
+**Userless Payment** is the fastest way to accept crypto payments. You only need your API key — no customer accounts, no tokens, no extra steps.
+
+### How It Works
+1. You send a payment request with just your `x-api-key` header
+2. Dynopay automatically handles customer context internally
+3. You get back a payment address, QR code, or checkout URL immediately
+
+### Authentication
+All userless endpoints require only one header:
+```
+x-api-key: your_api_key
+```
+
+No `Authorization: Bearer <token>` header is needed. If you do include a customer token, Dynopay will use that customer's context instead (backward compatible).
+
+### Userless Checkout Payment
+
+Create a hosted checkout page where your customer selects their preferred crypto:
+
+```bash
+curl -X POST https://api.dynopay.com/api/user/createPayment \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 25.00,
+    "redirect_uri": "https://yoursite.com/order/success",
+    "webhook_url": "https://yoursite.com/webhooks/dynopay",
+    "meta_data": { "order_id": "ORD-456" }
+  }'
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `amount` | number | Yes | Payment amount (minimum 5) in your base currency |
+| `redirect_uri` | string | Yes | URL to redirect customer after payment |
+| `webhook_url` | string | No | URL to receive payment status webhooks |
+| `meta_data` | object | No | Custom data attached to the payment |
+| `fee_payer` | string | No | Who pays network fees: `"company"` (default) or `"customer"` |
+| `accepted_currencies` | array | No | Limit accepted cryptos, e.g. `["BTC", "ETH"]` |
+| `callback_url` | string | No | Alternative callback URL for status updates |
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Link Generated!",
+  "data": {
+    "redirect_url": "https://checkout.dynopay.com/pay?d=abc123...",
+    "fee_payer": "company",
+    "available_currencies": ["BTC", "ETH", "LTC", "USDT-TRC20"],
+    "webhook_url": "configured"
+  }
+}
+```
+
+### Userless Direct Crypto Payment (QR Code)
+
+Generate a QR code and wallet address for a specific cryptocurrency — ideal for embedding in your own UI:
+
+```bash
+curl -X POST https://api.dynopay.com/api/user/cryptoPayment \
+  -H "x-api-key: your_api_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "amount": 15.00,
+    "currency": "BTC",
+    "redirect_uri": "https://yoursite.com/payment/success"
+  }'
+```
+
+**Parameters:**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `amount` | number | Yes | Payment amount in your base currency |
+| `currency` | string | Yes | Crypto to pay with: `BTC`, `ETH`, `LTC`, `DOGE`, `TRX`, `BCH`, `USDT-TRC20`, `USDT-ERC20`, `USDC-ERC20`, `SOL`, `XRP`, `RLUSD`, `RLUSD-ERC20`, `POLYGON`, `USDT-POLYGON` |
+| `redirect_uri` | string | No | URL to redirect customer after payment |
+| `webhook_url` | string | No | URL to receive payment status webhooks |
+| `meta_data` | object | No | Custom data attached to the payment |
+| `fee_payer` | string | No | `"company"` (default) or `"customer"` |
+| `accepted_currencies` | array | No | Limit accepted cryptos |
+| `callback_url` | string | No | Alternative callback URL |
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Payment Created!",
+  "data": {
+    "transaction_id": "a1b2c3d4-e5f6-...",
+    "qr_code": "data:image/png;base64,...",
+    "address": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+    "amount": 0.000245,
+    "currency": "BTC",
+    "base_amount": 15.00,
+    "base_currency": "USD",
+    "redirect_uri": "https://yoursite.com/payment/success"
+  }
+}
+```
+
+> **XRP/RLUSD payments**: The response includes a `destination_tag` field. You **must** display this to the customer along with the address — it is required for the payment to be identified.
+
+### Get Supported Currencies
+
+Check which cryptocurrencies are configured for your account:
+
+```bash
+curl -X GET https://api.dynopay.com/api/user/getSupportedCurrency \
+  -H "x-api-key: your_api_key"
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Supported currencies retrieved",
+  "data": {
+    "currencies": ["BTC", "ETH", "USDT-TRC20"],
+    "all_supported": ["BTC", "ETH", "LTC", "DOGE", "TRX", "BCH", "USDT-TRC20", "USDT-ERC20", "USDC-ERC20", "SOL", "XRP", "RLUSD", "RLUSD-ERC20", "POLYGON", "USDT-POLYGON"]
+  }
+}
+```
+
+> `currencies` = cryptos you have wallet addresses configured for. `all_supported` = all cryptos Dynopay supports.
+
+### Quick Integration Example (Node.js)
+
+```javascript
+const axios = require('axios');
+
+// Simplest possible crypto checkout — just API key, amount, and redirect
+async function createPayment(orderAmount, orderId) {
+  const API_KEY = process.env.DYNOPAY_API_KEY;
+
+  const res = await axios.post('https://api.dynopay.com/api/user/createPayment', {
+    amount: orderAmount,
+    redirect_uri: `https://yoursite.com/orders/${orderId}/success`,
+    webhook_url: 'https://yoursite.com/webhooks/dynopay',
+    meta_data: { order_id: orderId }
+  }, {
+    headers: {
+      'x-api-key': API_KEY,
+      'Content-Type': 'application/json'
+    }
+  });
+
+  return res.data.data.redirect_url;
+}
+```
+
+```python
+# Python example
+import requests
+
+def create_payment(order_amount, order_id):
+    API_KEY = os.environ['DYNOPAY_API_KEY']
+    
+    response = requests.post(
+        'https://api.dynopay.com/api/user/createPayment',
+        json={
+            'amount': order_amount,
+            'redirect_uri': f'https://yoursite.com/orders/{order_id}/success',
+            'webhook_url': 'https://yoursite.com/webhooks/dynopay',
+            'meta_data': {'order_id': order_id}
+        },
+        headers={'x-api-key': API_KEY}
+    )
+    
+    return response.json()['data']['redirect_url']
+```
+
+---
+
+## Customer-Based Flow (Advanced)
+
+If you need per-customer tracking (wallet balances, individual transaction histories), you can optionally create customers and use their tokens. **This is fully backward compatible with the userless flow.**
+
+### Create a Customer
 
 ```bash
 curl -X POST https://api.dynopay.com/api/user/createUser \
@@ -44,8 +259,7 @@ Response:
 }
 ```
 
-### 3. Create a Payment
-Use the customer token to create a checkout payment:
+### Create Payment with Customer Token
 
 ```bash
 curl -X POST https://api.dynopay.com/api/user/createPayment \
@@ -58,30 +272,40 @@ curl -X POST https://api.dynopay.com/api/user/createPayment \
   }'
 ```
 
-Response:
-```json
-{
-  "success": true,
-  "message": "Link Generated!",
-  "data": {
-    "redirect_url": "https://checkout.dynopay.com/pay?d=abc123...",
-    "fee_payer": "company",
-    "available_currencies": ["BTC", "ETH", "USDT"]
-  }
-}
-```
-
-**Redirect your customer to `redirect_url`** to complete the payment!
+> **Tip**: When you include a valid `Authorization: Bearer <token>` header, the payment is associated with that specific customer. Without it, Dynopay uses a default internal customer.
 
 ---
 
 ## Common Integration Patterns
 
-### Pattern 1: E-commerce Checkout
-**Use Case**: Customer buys a product on your website
+### Pattern 1: E-commerce Checkout (Userless - Recommended)
+**Use Case**: Customer buys a product on your website — simplest integration
 
 ```javascript
-// Node.js example
+const axios = require('axios');
+
+async function createCryptoCheckout(orderAmount, orderId) {
+  const API_KEY = process.env.DYNOPAY_API_KEY;
+
+  // Single API call — no customer creation needed!
+  const paymentRes = await axios.post('https://api.dynopay.com/api/user/createPayment', {
+    amount: orderAmount,
+    redirect_uri: `https://yoursite.com/orders/${orderId}/success`,
+    webhook_url: 'https://yoursite.com/webhooks/dynopay',
+    meta_data: { order_id: orderId }
+  }, {
+    headers: { 'x-api-key': API_KEY }
+  });
+
+  // Return checkout URL to redirect customer
+  return paymentRes.data.data.redirect_url;
+}
+```
+
+### Pattern 2: E-commerce Checkout (With Customer Tracking)
+**Use Case**: Customer buys a product and you want per-customer history
+
+```javascript
 const axios = require('axios');
 
 async function createCryptoCheckout(customerEmail, customerName, orderAmount, orderId) {
@@ -98,7 +322,7 @@ async function createCryptoCheckout(customerEmail, customerName, orderAmount, or
 
   const customerToken = customerRes.data.data.token;
 
-  // Step 2: Create checkout payment
+  // Step 2: Create checkout payment with customer context
   const paymentRes = await axios.post(`${BASE_URL}/createPayment`, {
     amount: orderAmount,
     redirect_uri: `https://yoursite.com/orders/${orderId}/success`,
@@ -111,12 +335,11 @@ async function createCryptoCheckout(customerEmail, customerName, orderAmount, or
     }
   });
 
-  // Return checkout URL to redirect customer
   return paymentRes.data.data.redirect_url;
 }
 ```
 
-### Pattern 2: In-App Wallet Top-Up
+### Pattern 3: In-App Wallet Top-Up
 **Use Case**: Customer adds funds to their wallet balance
 
 ```javascript
@@ -139,31 +362,32 @@ async function topUpWallet(customerToken, amount) {
 }
 ```
 
-### Pattern 3: Direct Crypto Payment (QR Code)
-**Use Case**: Show QR code in your app for crypto payment
+### Pattern 4: Direct Crypto Payment (QR Code) - Userless
+**Use Case**: Show QR code in your app for crypto payment — no customer setup
 
 ```javascript
-async function createDirectPayment(customerToken, amount, crypto = 'BTC') {
+async function createDirectPayment(amount, crypto = 'BTC') {
   const API_KEY = process.env.DYNOPAY_API_KEY;
-  const BASE_URL = 'https://api.dynopay.com/api/user';
 
-  const res = await axios.post(`${BASE_URL}/cryptoPayment`, {
+  const res = await axios.post('https://api.dynopay.com/api/user/cryptoPayment', {
     amount: amount,
-    currency: crypto, // BTC, ETH, USDT, etc.
+    currency: crypto,
     redirect_uri: 'https://yourapp.com/payment/success'
   }, {
-    headers: {
-      'x-api-key': API_KEY,
-      'Authorization': `Bearer ${customerToken}`
-    }
+    headers: { 'x-api-key': API_KEY }
   });
 
   // Display QR code and address in your app
   return {
-    qrCode: res.data.data.qr_code,        // Base64 image
-    address: res.data.data.address,       // Crypto address
-    amount: res.data.data.amount,         // Amount in crypto
-    transactionId: res.data.data.transaction_id
+    qrCode: res.data.data.qr_code,           // Base64 image
+    address: res.data.data.address,           // Crypto address
+    amount: res.data.data.amount,             // Amount in crypto
+    currency: res.data.data.currency,         // e.g. "BTC"
+    baseAmount: res.data.data.base_amount,    // Original fiat amount
+    baseCurrency: res.data.data.base_currency,// e.g. "USD"
+    transactionId: res.data.data.transaction_id,
+    // For XRP/RLUSD only:
+    destinationTag: res.data.data.destination_tag
   };
 }
 ```
@@ -173,6 +397,8 @@ async function createDirectPayment(customerToken, amount, crypto = 'BTC') {
 ## Customer Wallet System
 
 Dynopay provides a built-in wallet system where customers can store funds and you can programmatically manage their balances.
+
+> **Note**: Wallet operations (addFunds, useWallet, getBalance) work in both userless mode and with customer tokens. In userless mode, a default internal customer is used. For per-customer wallet tracking, use the [Customer-Based Flow](#customer-based-flow-advanced) with individual customer tokens.
 
 ### Customer Wallet Flow
 1. **Customer adds funds** → `POST /api/user/addFunds` (hosted checkout)
@@ -336,6 +562,22 @@ async function chargeSubscription(customerId, subscriptionFee) {
 
 ## FAQ
 
+### Q: Do I need to create a customer before accepting payments?
+**A**: No! With **Userless Payment**, you can call `createPayment` or `cryptoPayment` with just your `x-api-key` header. Dynopay automatically handles customer context internally. Customer creation is only needed if you want per-customer wallet balances and transaction history.
+
+### Q: What's the difference between userless and customer-based payments?
+**A**: 
+| Feature | Userless (API key only) | Customer-Based (API key + token) |
+|---|---|---|
+| Setup | 1 API call | 2 API calls (createUser + payment) |
+| Customer tracking | Shared internal customer | Individual customer records |
+| Wallet balance | Shared | Per-customer |
+| Transaction history | Shared | Per-customer |
+| **Best for** | Simple checkouts, one-time payments | Marketplaces, wallets, subscriptions |
+
+### Q: Can I mix userless and customer-based payments?
+**A**: Yes! Both flows are fully compatible. If you include an `Authorization: Bearer <token>` header, Dynopay uses that customer. If you don't, it uses a default internal customer. You can use userless for simple checkouts and customer-based for wallet features.
+
 ### Q: How do I test payments without real crypto?
 **A**: Use the development API key (starts with `dpk_test_`). Development keys are limited to smaller amounts and sandbox mode.
 
@@ -344,7 +586,7 @@ async function chargeSubscription(customerId, subscriptionFee) {
 ```javascript
 {
   amount: 50,
-  accepted_currencies: ["BTC", "ETH", "USDT"]
+  accepted_currencies: ["BTC", "ETH", "USDT-TRC20"]
 }
 ```
 
@@ -371,6 +613,9 @@ POST /api/admin/customers/:id/credit
 
 ### Q: Are wallet operations atomic?
 **A**: Yes. All wallet credit/debit operations use database transactions to ensure consistency.
+
+### Q: What happens with XRP/RLUSD payments?
+**A**: The `cryptoPayment` response includes a `destination_tag` field for XRP and RLUSD currencies. You **must** display this tag to your customer alongside the wallet address — it is required for the payment to be correctly identified on the blockchain.
 
 ---
 

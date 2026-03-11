@@ -29,7 +29,7 @@ interface Endpoint {
   path: string;
   title: string;
   description: string;
-  auth: "api-key" | "api-key-bearer";
+  auth: "api-key" | "api-key-bearer" | "api-key-optional-bearer";
   headers: { name: string; value: string; description: string }[];
   body?: { name: string; type: string; required: boolean; description: string }[];
   queryParams?: { name: string; type: string; required: boolean; description: string }[];
@@ -218,6 +218,7 @@ const AuthBadge = styled("span", {
 })<{ authType: string }>(({ theme, authType }) => {
   const dk = theme.palette.mode === "dark";
   const isApiOnly = authType === "api-key";
+  const isOptionalBearer = authType === "api-key-optional-bearer";
   return {
     fontSize: "11px",
     padding: "3px 10px",
@@ -227,8 +228,10 @@ const AuthBadge = styled("span", {
     whiteSpace: "nowrap" as const,
     background: isApiOnly
       ? dk ? "rgba(29,78,216,0.15)" : "#DBEAFE"
-      : dk ? "rgba(109,40,217,0.15)" : "#EDE9FE",
-    color: isApiOnly ? "#60A5FA" : "#A78BFA",
+      : isOptionalBearer
+        ? dk ? "rgba(5,150,105,0.15)" : "#D1FAE5"
+        : dk ? "rgba(109,40,217,0.15)" : "#EDE9FE",
+    color: isApiOnly ? "#60A5FA" : isOptionalBearer ? "#10B981" : "#A78BFA",
   };
 });
 
@@ -315,20 +318,25 @@ const StepNumber = styled(Box)(({ theme }) => {
 
 const AuthCard = styled(Box, {
   shouldForwardProp: (prop) => prop !== "variant",
-})<{ variant: "blue" | "purple" }>(({ theme, variant }) => {
+})<{ variant: "blue" | "purple" | "green" }>(({ theme, variant }) => {
   const dk = theme.palette.mode === "dark";
   const isBlue = variant === "blue";
+  const isGreen = variant === "green";
   return {
     padding: "24px",
     borderRadius: "14px",
     border: `1px solid ${
       isBlue
         ? dk ? "rgba(29,78,216,0.3)" : "#BFDBFE"
-        : dk ? "rgba(109,40,217,0.3)" : "#DDD6FE"
+        : isGreen
+          ? dk ? "rgba(5,150,105,0.3)" : "#A7F3D0"
+          : dk ? "rgba(109,40,217,0.3)" : "#DDD6FE"
     }`,
     background: isBlue
       ? dk ? "rgba(29,78,216,0.06)" : "#EFF6FF"
-      : dk ? "rgba(109,40,217,0.06)" : "#F5F3FF",
+      : isGreen
+        ? dk ? "rgba(5,150,105,0.06)" : "#ECFDF5"
+        : dk ? "rgba(109,40,217,0.06)" : "#F5F3FF",
     height: "100%",
   };
 });
@@ -389,11 +397,11 @@ const ENDPOINTS: Endpoint[] = [
     path: "/createPayment",
     title: "Create Checkout Payment",
     description:
-      "Create a hosted checkout session. Returns a redirect URL where your customer selects their crypto and completes payment. Best for web integrations — similar to Stripe Checkout.",
-    auth: "api-key-bearer",
+      "Create a hosted checkout session. Returns a redirect URL where your customer selects their crypto and completes payment. Works with just your API key (userless mode) — no customer creation needed. Optionally include a customer Bearer token for per-customer tracking.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
     body: [
@@ -430,11 +438,11 @@ const ENDPOINTS: Endpoint[] = [
     path: "/cryptoPayment",
     title: "Create Direct Crypto Payment",
     description:
-      "Create a direct crypto payment that returns a QR code and wallet address. Use this for in-app payment flows where you handle the UI — the customer sends crypto directly to the provided address.",
-    auth: "api-key-bearer",
+      "Create a direct crypto payment that returns a QR code and wallet address. Use this for in-app payment flows where you handle the UI. Works with just your API key (userless mode) — no customer creation needed. Optionally include a customer Bearer token for per-customer tracking. For XRP/RLUSD, the response includes a destination_tag that must be displayed to the customer.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
     body: [
@@ -474,11 +482,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "POST",
     path: "/addFunds",
     title: "Add Funds to Wallet",
-    description: "Add funds to a customer's wallet via a hosted checkout. Returns a redirect URL for the customer to complete the deposit.",
-    auth: "api-key-bearer",
+    description: "Add funds to a customer's wallet via a hosted checkout. Returns a redirect URL for the customer to complete the deposit. Works with just your API key (userless mode) or with a customer Bearer token for per-customer wallets.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
     body: [
@@ -506,11 +514,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "POST",
     path: "/useWallet",
     title: "Debit from Wallet",
-    description: "Debit a specified amount from a customer's wallet balance. Creates a debit transaction record.",
-    auth: "api-key-bearer",
+    description: "Debit a specified amount from a customer's wallet balance. Creates a debit transaction record. Works with just your API key (userless mode) or with a customer Bearer token.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
       { name: "Content-Type", value: "application/json", description: "" },
     ],
     body: [{ name: "amount", type: "number", required: true, description: "Amount to debit from wallet" }],
@@ -531,11 +539,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/getBalance",
     title: "Get Wallet Balance",
-    description: "Retrieve the current wallet balance for a customer.",
-    auth: "api-key-bearer",
+    description: "Retrieve the current wallet balance for a customer. Works with just your API key (userless mode) or with a customer Bearer token.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
     ],
     responseExample: `{
   "success": true,
@@ -548,11 +556,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/getTransactions",
     title: "List Transactions",
-    description: "Get paginated transaction history for a customer, including auto-conversion details.",
-    auth: "api-key-bearer",
+    description: "Get paginated transaction history for a customer, including auto-conversion details. Works with just your API key (userless mode) or with a customer Bearer token.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
     ],
     queryParams: [
       { name: "page", type: "number", required: false, description: "Page number (default: 1)" },
@@ -575,11 +583,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/getSingleTransaction/:id",
     title: "Get Transaction Details",
-    description: "Retrieve full details for a single transaction by its ID.",
-    auth: "api-key-bearer",
+    description: "Retrieve full details for a single transaction by its ID. Works with just your API key (userless mode) or with a customer Bearer token.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
     ],
     pathParams: [{ name: "id", type: "string", description: "The transaction ID" }],
     responseExample: `{
@@ -599,11 +607,11 @@ const ENDPOINTS: Endpoint[] = [
     method: "GET",
     path: "/getCryptoTransaction/:address",
     title: "Verify Crypto Payment",
-    description: "Verify a crypto payment by its blockchain deposit address. Use this to poll payment status.",
-    auth: "api-key-bearer",
+    description: "Verify a crypto payment by its blockchain deposit address. Use this to poll payment status. Works with just your API key (userless mode) or with a customer Bearer token.",
+    auth: "api-key-optional-bearer",
     headers: [
       { name: "x-api-key", value: "your_api_key", description: "Your Dynopay API key" },
-      { name: "Authorization", value: "Bearer {customer_token}", description: "Token from Create Customer" },
+      { name: "Authorization", value: "Bearer {customer_token}", description: "(Optional) Token from Create Customer — omit for userless mode" },
     ],
     pathParams: [{ name: "address", type: "string", description: "The deposit address from cryptoPayment response" }],
     responseExample: `{
@@ -789,7 +797,7 @@ const EndpointCard = memo(({ ep }: { ep: Endpoint }) => {
         <Typography sx={{ fontSize: 14, fontWeight: 500, fontFamily: "OutfitMedium", color: "text.primary", mr: 1, display: { xs: "none", md: "block" } }}>
           {ep.title}
         </Typography>
-        <AuthBadge authType={ep.auth}>{ep.auth === "api-key" ? "API Key" : "API Key + Bearer"}</AuthBadge>
+        <AuthBadge authType={ep.auth}>{ep.auth === "api-key" ? "API Key" : ep.auth === "api-key-optional-bearer" ? "API Key (Bearer Optional)" : "API Key + Bearer"}</AuthBadge>
         <ExpandMoreIcon sx={{ fontSize: 20, color: "text.secondary", transform: expanded ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s" }} />
       </EndpointHeader>
       {expanded && (
@@ -959,13 +967,12 @@ const DocumentationPage = () => {
                   Getting Started
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
-                  Integrate Dynopay in three simple steps:
+                  Integrate Dynopay in just two steps — no customer creation needed:
                 </Typography>
                 <Box sx={{ display: "flex", flexDirection: "column", gap: 2, mb: 4 }}>
                   {[
                     { step: "1", title: "Get your API Key", desc: 'Go to your Dynopay dashboard → API section → "Create New Key". You\'ll receive an API key for authenticating requests.' },
-                    { step: "2", title: "Create a Customer", desc: "Use the Create Customer endpoint to register your users. You'll get back a bearer token for that customer." },
-                    { step: "3", title: "Create a Payment", desc: "Use the Checkout Payment or Direct Crypto Payment endpoint. The customer pays in crypto, funds forward instantly to your wallet." },
+                    { step: "2", title: "Create a Payment", desc: "Use the Checkout Payment or Direct Crypto Payment endpoint with just your API key. No customer creation needed! The customer pays in crypto, funds forward instantly to your wallet." },
                   ].map((s) => (
                     <StepCard key={s.step}>
                       <StepNumber>{s.step}</StepNumber>
@@ -976,21 +983,26 @@ const DocumentationPage = () => {
                     </StepCard>
                   ))}
                 </Box>
-                <Typography sx={{ fontSize: 13, fontWeight: 600, fontFamily: "OutfitSemiBold", color: "text.primary", mb: 1 }}>Quick Example</Typography>
+                <Typography sx={{ fontSize: 13, fontWeight: 600, fontFamily: "OutfitSemiBold", color: "text.primary", mb: 1 }}>Quick Example (Userless — API Key Only)</Typography>
                 <CodeBlock
                   lang="bash"
-                  code={`# Step 1: Create a customer
+                  code={`# Create a checkout payment — just your API key, no customer setup!
+curl -X POST https://api.dynopay.com/api/user/createPayment \\
+  -H "x-api-key: your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"amount": 50, "redirect_uri": "https://yoursite.com/thanks"}'
+
+# Or create a direct crypto payment with QR code:
+curl -X POST https://api.dynopay.com/api/user/cryptoPayment \\
+  -H "x-api-key: your_api_key" \\
+  -H "Content-Type: application/json" \\
+  -d '{"amount": 25, "currency": "BTC", "redirect_uri": "https://yoursite.com/done"}'
+
+# Optional: Create a customer for per-customer tracking
 curl -X POST https://api.dynopay.com/api/user/createUser \\
   -H "x-api-key: your_api_key" \\
   -H "Content-Type: application/json" \\
-  -d '{"name": "Jane Smith", "email": "jane@example.com"}'
-
-# Step 2: Create a checkout payment (use the token from Step 1)
-curl -X POST https://api.dynopay.com/api/user/createPayment \\
-  -H "x-api-key: your_api_key" \\
-  -H "Authorization: Bearer eyJhbGciOi..." \\
-  -H "Content-Type: application/json" \\
-  -d '{"amount": 50, "redirect_uri": "https://yoursite.com/thanks"}'`}
+  -d '{"name": "Jane Smith", "email": "jane@example.com"}'`}
                 />
               </Box>
 
@@ -1000,10 +1012,10 @@ curl -X POST https://api.dynopay.com/api/user/createPayment \\
                   Authentication
                 </Typography>
                 <Typography sx={{ fontSize: 15, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.8, mb: 3 }}>
-                  Dynopay uses two levels of authentication depending on the endpoint:
+                  Dynopay uses three levels of authentication depending on the endpoint:
                 </Typography>
                 <Grid container spacing={2.5} sx={{ mb: 3 }}>
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
                     <AuthCard variant="blue">
                       <Typography sx={{ fontWeight: 500, fontFamily: "OutfitMedium", fontSize: 15, color: "#60A5FA", mb: 1 }}>API Key Only</Typography>
                       <Typography sx={{ fontSize: 13, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
@@ -1012,11 +1024,20 @@ curl -X POST https://api.dynopay.com/api/user/createPayment \\
                       <CodeBlock code="x-api-key: your_api_key" />
                     </AuthCard>
                   </Grid>
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
+                    <AuthCard variant="green">
+                      <Typography sx={{ fontWeight: 500, fontFamily: "OutfitMedium", fontSize: 15, color: "#10B981", mb: 1 }}>API Key (Bearer Optional)</Typography>
+                      <Typography sx={{ fontSize: 13, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
+                        For payments and wallet operations. Works with just the API key (userless mode). Optionally add a customer token for per-customer tracking.
+                      </Typography>
+                      <CodeBlock code={`x-api-key: your_api_key\n# Optional:\nAuthorization: Bearer eyJhbGciOi...`} />
+                    </AuthCard>
+                  </Grid>
+                  <Grid item xs={12} md={4}>
                     <AuthCard variant="purple">
                       <Typography sx={{ fontWeight: 500, fontFamily: "OutfitMedium", fontSize: 15, color: "#A78BFA", mb: 1 }}>API Key + Bearer Token</Typography>
                       <Typography sx={{ fontSize: 13, fontFamily: "OutfitRegular", color: "text.secondary", lineHeight: 1.7, mb: 2 }}>
-                        Required for all payment and wallet operations. Include both the API key and a customer bearer token.
+                        For customer-specific operations where you want per-customer history and wallet balances.
                       </Typography>
                       <CodeBlock code={`x-api-key: your_api_key\nAuthorization: Bearer eyJhbGciOi...`} />
                     </AuthCard>
