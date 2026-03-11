@@ -122,64 +122,74 @@ const NOMADLY1_WALLETS: WalletTestData[] = [
 
 /* ==================== TEST DATA ==================== */
 const TEST_SECTIONS: TestSection[] = [
+  /* ============================================================
+     SECTION 1: PUBLIC PAGES & NAVIGATION
+     ============================================================ */
   {
     id: "public",
     title: "Public Pages & Navigation",
     icon: "🌐",
-    description: "Landing page, blog, fees, legal pages, SEO, system status",
+    description: "Landing page sections, blog, fees, legal, documentation, system status, help center",
     cases: [
       {
         id: "PUB-001",
-        title: "Landing Page Load & Navigation",
+        title: "Landing Page — Full Render & Sections",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Navigate to dynopay.com", expected: "Homepage loads with hero section, feature sections, pricing CTA, and footer. No console errors." },
-          { id: "2", action: "Click all navbar links (Features, Pricing, Blog, Documentation, Login, Sign Up)", expected: "Each link navigates to the correct page without errors." },
-          { id: "3", action: "Scroll through entire homepage", expected: "All sections render: Hero, Features, How It Works, Supported Cryptos, Pricing, CTA, Footer. Images load." },
-          { id: "4", action: "Resize browser to mobile width (375px)", expected: "Mobile responsive layout activates. Hamburger menu appears. All sections stack vertically." },
-          { id: "5", action: "Toggle dark/light mode (if available)", expected: "Theme switches correctly. All text remains readable. No broken contrast." },
+          { id: "1", action: "Navigate to dynopay.com", expected: "Homepage loads. No console errors. All images render." },
+          { id: "2", action: "Verify Hero section", expected: "Hero headline, subtitle, 'Start Accepting Crypto' and 'Learn More' CTAs visible." },
+          { id: "3", action: "Click 'Start Accepting Crypto' CTA", expected: "If logged in → /dashboard. If not → /auth/login." },
+          { id: "4", action: "Click 'Learn More' CTA", expected: "Navigates to /blog." },
+          { id: "5", action: "Scroll to Features section", expected: "Feature cards render with icons and descriptions." },
+          { id: "6", action: "Scroll to 'Why Choose DynoPay' section", expected: "Comparison or USP cards display correctly." },
+          { id: "7", action: "Scroll to Use Cases section", expected: "Use case examples render properly." },
+          { id: "8", action: "Scroll to Fee/Pricing section", expected: "Pricing tiers or fee breakdown visible." },
+          { id: "9", action: "Scroll to Social Proof / Trust Badges", expected: "Supported crypto logos, trust badges, partner logos visible." },
+          { id: "10", action: "Scroll to 'Go Live' CTA section", expected: "Final CTA with sign-up button visible." },
+          { id: "11", action: "Verify footer", expected: "Footer with links (Privacy, Terms, AML, Blog, Support, Socials), copyright." },
         ],
       },
       {
         id: "PUB-002",
-        title: "Blog Section",
-        priority: "Medium",
+        title: "Navbar & Navigation Links",
+        priority: "High",
         steps: [
-          { id: "1", action: "Navigate to /blog", expected: "Blog listing page loads with all blog posts, each showing title, date, category, and excerpt." },
-          { id: "2", action: "Click on a blog post", expected: "Blog detail page loads with full content, author info, published date, and social sharing buttons." },
-          { id: "3", action: "Verify all blog dates", expected: "All dates show 2026 (not 2025). Example: 'Mar 7, 2026'." },
-          { id: "4", action: "Click each social share button (X/Twitter, LinkedIn, Facebook, WhatsApp)", expected: "Each opens correct sharing URL in a new tab with pre-filled post title and URL." },
-          { id: "5", action: "Navigate back to /blog from a post", expected: "Returns to blog listing. Browser back button also works." },
+          { id: "1", action: "Click all navbar links: Features, Pricing, Blog, Documentation, Login, Sign Up", expected: "Each navigates to correct page." },
+          { id: "2", action: "Resize to mobile (375px)", expected: "Hamburger menu appears. All links accessible via mobile menu." },
+          { id: "3", action: "Scroll down on homepage then click navbar logo", expected: "Scrolls back to top or navigates to homepage." },
         ],
       },
       {
         id: "PUB-003",
-        title: "Fees Page",
+        title: "Blog Listing & Articles",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /fees", expected: "Fees page loads with pricing tiers and fee calculator." },
-          { id: "2", action: "Interact with fee calculator (enter amounts, select currencies)", expected: "Calculator shows correct fee breakdown (platform fee, blockchain fee, net amount)." },
-          { id: "3", action: "Compare plan features table", expected: "All plan columns display correctly with check/cross icons." },
+          { id: "1", action: "Navigate to /blog", expected: "Blog listing loads with all posts (title, date, category, excerpt)." },
+          { id: "2", action: "Verify all dates show 2026", expected: "No dates showing 2025. All posts dated 2026." },
+          { id: "3", action: "Click a blog post", expected: "Detail page loads: full content, author, date, category badge." },
+          { id: "4", action: "Verify social share buttons (X, LinkedIn, Facebook, WhatsApp)", expected: "All 4 share buttons present at top and bottom of article." },
+          { id: "5", action: "Click each share button", expected: "Opens correct sharing URL in new tab with pre-filled title + URL." },
+          { id: "6", action: "Navigate back to /blog", expected: "Blog listing loads. Browser back button also works." },
         ],
       },
       {
         id: "PUB-004",
-        title: "SEO & Meta Tags",
-        priority: "High",
+        title: "Fees Page & Calculator",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "View page source of homepage", expected: "Meta title, description, OG tags, and Twitter cards are present and correct." },
-          { id: "2", action: "Navigate to /sitemap.xml", expected: "Valid XML sitemap with all public pages listed. Includes hreflang for i18n." },
-          { id: "3", action: "Check /robots.txt", expected: "Robots.txt exists with proper Allow/Disallow rules and sitemap reference." },
+          { id: "1", action: "Navigate to /fees", expected: "Fees page loads with pricing tiers." },
+          { id: "2", action: "Interact with fee calculator (enter amounts, select currencies)", expected: "Shows fee breakdown: platform fee, blockchain fee, net to merchant." },
+          { id: "3", action: "Compare plan features table", expected: "All columns render with correct check/cross icons." },
         ],
       },
       {
         id: "PUB-005",
-        title: "Legal & Policy Pages",
-        priority: "Low",
+        title: "Documentation Page",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /privacy-policy", expected: "Privacy policy page loads with full content." },
-          { id: "2", action: "Navigate to /terms-conditions", expected: "Terms & conditions page loads with full content." },
-          { id: "3", action: "Navigate to /aml-policy", expected: "AML policy page loads with full content." },
+          { id: "1", action: "Navigate to /documentation", expected: "Developer docs load with API reference sections." },
+          { id: "2", action: "Verify code samples render", expected: "All code blocks display correctly. Endpoint paths match actual API." },
+          { id: "3", action: "Check request/response examples", expected: "All examples show proper JSON formatting." },
         ],
       },
       {
@@ -187,8 +197,9 @@ const TEST_SECTIONS: TestSection[] = [
         title: "System Status Page",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /system-status", expected: "Status page loads showing all service statuses (API Gateway, Payment Processing, Wallet, Webhook, Dashboard)." },
-          { id: "2", action: "Verify real-time data", expected: "Statuses reflect actual service health from /api/status endpoint." },
+          { id: "1", action: "Navigate to /system-status", expected: "Status page loads with all services listed." },
+          { id: "2", action: "Verify service statuses match /api/status", expected: "API Gateway, Payment Processing, Wallet, Webhook, Dashboard statuses accurate." },
+          { id: "3", action: "Check uptime percentage display", expected: "Uptime metrics shown for each service." },
         ],
       },
       {
@@ -197,186 +208,296 @@ const TEST_SECTIONS: TestSection[] = [
         priority: "Low",
         steps: [
           { id: "1", action: "Navigate to /help-support", expected: "Help center loads with categorized articles." },
-          { id: "2", action: "Click on an article", expected: "Article detail page loads with full content." },
+          { id: "2", action: "Click on a category", expected: "Articles for that category listed." },
+          { id: "3", action: "Click on an article", expected: "Article detail (/help-support/[slug]) loads with full content." },
+          { id: "4", action: "Use search functionality", expected: "Search returns relevant articles." },
+          { id: "5", action: "Submit article feedback (helpful/not helpful)", expected: "Feedback recorded. Thank you message shown." },
         ],
       },
       {
         id: "PUB-008",
-        title: "Documentation Page",
-        priority: "Medium",
+        title: "Legal Pages",
+        priority: "Low",
         steps: [
-          { id: "1", action: "Navigate to /documentation", expected: "Developer documentation page loads with API reference sections." },
-          { id: "2", action: "Verify code samples and endpoint descriptions", expected: "All code blocks render correctly. Endpoint paths match actual API routes." },
+          { id: "1", action: "Navigate to /privacy-policy", expected: "Privacy policy loads with full content." },
+          { id: "2", action: "Navigate to /terms-conditions", expected: "Terms & conditions loads." },
+          { id: "3", action: "Navigate to /aml-policy", expected: "AML policy loads." },
+          { id: "4", action: "Verify footer links to all legal pages", expected: "All 3 legal pages linked from footer." },
+        ],
+      },
+      {
+        id: "PUB-009",
+        title: "SEO — Sitemap, Robots, Meta Tags",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Navigate to /sitemap.xml", expected: "Valid XML sitemap with all public pages. Includes hreflang attributes." },
+          { id: "2", action: "Check /robots.txt", expected: "Proper Allow/Disallow rules. Sitemap URL referenced." },
+          { id: "3", action: "View page source of homepage", expected: "Meta title, description, OG tags, Twitter cards present." },
+          { id: "4", action: "View page source of a blog post", expected: "Unique meta title/description per post. OG image set." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 2: AUTHENTICATION & ONBOARDING
+     ============================================================ */
   {
     id: "auth",
     title: "Authentication & Onboarding",
     icon: "🔐",
-    description: "Registration, login (email + OTP), Google sign-in, forgot password, 2FA, session management",
+    description: "Email/phone registration, email+OTP login, Google/Facebook sign-in, forgot password, 2FA, sessions, token refresh",
     cases: [
       {
         id: "AUTH-001",
         title: "Email + Password Registration",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Navigate to /auth/register", expected: "Registration form loads with Name, Email, Password fields, and Google sign-up option." },
-          { id: "2", action: "Submit empty form", expected: "Validation errors shown for required fields." },
-          { id: "3", action: "Enter invalid email format", expected: "'Invalid email' validation error shown." },
-          { id: "4", action: "Enter weak password (< 8 chars)", expected: "Password strength validation error shown." },
-          { id: "5", action: "Register with valid new email + password", expected: "OTP verification screen appears. Confirmation email sent." },
-          { id: "6", action: "Enter correct OTP", expected: "Registration succeeds. User redirected to /dashboard. Welcome toast shown." },
-          { id: "7", action: "Try registering with the same email again", expected: "'Email already registered' error message shown." },
+          { id: "1", action: "Navigate to /auth/register", expected: "Registration form: Name, Email, Password, Google sign-up option." },
+          { id: "2", action: "Submit empty form", expected: "Validation errors for required fields." },
+          { id: "3", action: "Enter invalid email format", expected: "Validation error shown." },
+          { id: "4", action: "Enter weak password (< 8 chars)", expected: "Password strength error." },
+          { id: "5", action: "Register with valid data", expected: "OTP verification screen. Confirmation email sent." },
+          { id: "6", action: "Enter correct OTP", expected: "Registration succeeds → redirected to /dashboard." },
+          { id: "7", action: "Register same email again", expected: "'Email already registered' error." },
         ],
       },
       {
         id: "AUTH-002",
-        title: "Email + Password Login (with OTP)",
-        priority: "Critical",
+        title: "Phone Registration Flow",
+        priority: "High",
         steps: [
-          { id: "1", action: "Navigate to /auth/login", expected: "Login form loads with Email and Password fields." },
-          { id: "2", action: "Enter invalid credentials", expected: "Error message: 'Invalid email or password'." },
-          { id: "3", action: "Enter valid credentials and submit", expected: "OTP verification screen appears. OTP sent to email." },
-          { id: "4", action: "Enter wrong OTP", expected: "Error message: 'Invalid OTP'. Retry allowed." },
-          { id: "5", action: "Enter correct OTP", expected: "Login succeeds. Redirected to /dashboard. Success toast shown." },
-          { id: "6", action: "Click 'Resend OTP'", expected: "New OTP sent. Cooldown timer starts. Previous OTP invalidated." },
+          { id: "1", action: "Navigate to /auth/register and select phone registration", expected: "Phone input field displayed with country code selector." },
+          { id: "2", action: "Enter valid phone number", expected: "OTP sent to phone. Verification screen shown." },
+          { id: "3", action: "Enter correct OTP", expected: "Phone registration succeeds." },
+          { id: "4", action: "Enter duplicate phone number", expected: "'Phone already registered' error." },
         ],
       },
       {
         id: "AUTH-003",
-        title: "Google Sign-In (NEW USER)",
+        title: "Email + Password Login (with OTP)",
         priority: "Critical",
-        preconditions: "Use a Google account not previously registered on DynoPay.",
         steps: [
-          { id: "1", action: "Navigate to /auth/login and click 'Sign in with Google'", expected: "Google OAuth popup appears (or redirect to Google accounts)." },
-          { id: "2", action: "Select/authenticate with Google account", expected: "Popup closes. Success toast appears. Brief success animation shown." },
-          { id: "3", action: "Wait for redirect", expected: "User is redirected to /dashboard within ~1 second. Dashboard loads successfully." },
-          { id: "4", action: "Verify dashboard loads fully (no redirect back to login)", expected: "Dashboard shows onboarding flow (no companies yet). Stats cards visible with 0 values. NO redirect back to /auth/login." },
-          { id: "5", action: "Check browser console", expected: "No CSRF errors. No 403 cascades. Token stored in localStorage." },
-          { id: "6", action: "Refresh the page", expected: "Dashboard reloads. User stays logged in." },
+          { id: "1", action: "Navigate to /auth/login", expected: "Login form: Email, Password fields." },
+          { id: "2", action: "Enter invalid credentials", expected: "'Invalid email or password' error." },
+          { id: "3", action: "Enter valid credentials", expected: "OTP sent to email. OTP input screen shown." },
+          { id: "4", action: "Enter wrong OTP", expected: "'Invalid OTP' error. Retry allowed." },
+          { id: "5", action: "Enter correct OTP", expected: "Login succeeds → /dashboard. Success toast." },
+          { id: "6", action: "Click 'Resend OTP'", expected: "New OTP sent. Cooldown timer starts." },
         ],
-        notes: "This was a critical bug (CSRF cascade from business-logic 403). Verify fix thoroughly.",
       },
       {
         id: "AUTH-004",
-        title: "Google Sign-In (EXISTING USER)",
+        title: "Google Sign-In — NEW User",
         priority: "Critical",
-        preconditions: "Use a Google account that has previously registered and set up a company.",
+        preconditions: "Use a Google account not previously registered.",
         steps: [
-          { id: "1", action: "Navigate to /auth/login and click 'Sign in with Google'", expected: "Google OAuth popup appears." },
-          { id: "2", action: "Authenticate with Google", expected: "Login succeeds. Redirected to /dashboard." },
-          { id: "3", action: "Verify dashboard shows company data", expected: "Dashboard shows company stats, chart, recent transactions, fee tiers. All data loads." },
-          { id: "4", action: "Navigate to other pages (Wallet, Transactions, Settings)", expected: "All pages load with user data. No auth errors." },
+          { id: "1", action: "Click 'Sign in with Google' on /auth/login", expected: "Google OAuth popup (or redirect)." },
+          { id: "2", action: "Authenticate with Google account", expected: "Success toast. Brief animation." },
+          { id: "3", action: "Wait for redirect", expected: "Redirected to /dashboard within ~1s." },
+          { id: "4", action: "Verify dashboard loads fully", expected: "Dashboard shows onboarding (no companies). Stats visible with 0 values. NO redirect back to login." },
+          { id: "5", action: "Check browser DevTools > Application > localStorage", expected: "'token' and 'refreshToken' both present." },
+          { id: "6", action: "Check DevTools > Network", expected: "No CSRF 403 errors on dashboard API calls." },
+          { id: "7", action: "Refresh the page", expected: "Stays on dashboard. User remains logged in." },
         ],
+        notes: "Critical bug fix area — previously caused CSRF cascade redirect. Verify thoroughly.",
       },
       {
         id: "AUTH-005",
-        title: "Forgot Password Flow",
-        priority: "High",
+        title: "Google Sign-In — Existing User",
+        priority: "Critical",
+        preconditions: "Use a Google account that has a company set up.",
         steps: [
-          { id: "1", action: "Click 'Forgot Password' on login page", expected: "Forgot password form appears with email input." },
-          { id: "2", action: "Enter registered email and submit", expected: "Password reset email sent. Success message shown." },
-          { id: "3", action: "Click reset link in email", expected: "Redirected to /reset-password with valid token." },
-          { id: "4", action: "Enter new password and confirm", expected: "Password reset succeeds. User can login with new password." },
+          { id: "1", action: "Click 'Sign in with Google'", expected: "OAuth popup." },
+          { id: "2", action: "Authenticate", expected: "Login succeeds → /dashboard with company data." },
+          { id: "3", action: "Navigate to Wallet, Transactions, Settings", expected: "All pages load with data. No auth errors." },
         ],
       },
       {
         id: "AUTH-006",
-        title: "Two-Factor Authentication (2FA) Setup",
+        title: "Facebook Sign-In",
         priority: "High",
-        preconditions: "User is logged in. 2FA is not yet enabled.",
         steps: [
-          { id: "1", action: "Go to Settings > Security > Enable 2FA", expected: "QR code displayed for authenticator app. Secret key shown." },
-          { id: "2", action: "Scan QR code with Google Authenticator / Authy", expected: "App generates 6-digit TOTP codes." },
-          { id: "3", action: "Enter generated code to verify setup", expected: "2FA enabled. Backup codes displayed. Prompt to save them." },
-          { id: "4", action: "Log out and log back in", expected: "After password + OTP, additional 2FA prompt appears before dashboard access." },
-          { id: "5", action: "Enter 2FA code", expected: "Login completes. Dashboard accessible." },
+          { id: "1", action: "Click 'Sign in with Facebook' on /auth/login", expected: "Facebook OAuth popup (or redirect)." },
+          { id: "2", action: "Authenticate with Facebook", expected: "Login/registration succeeds → /dashboard." },
+          { id: "3", action: "Verify dashboard loads", expected: "No errors. User profile shows Facebook-linked info." },
         ],
       },
       {
         id: "AUTH-007",
-        title: "Session Management",
+        title: "NextAuth Social Login Redirect (Fallback)",
         priority: "Medium",
-        preconditions: "User is logged in.",
+        preconditions: "If NEXT_PUBLIC_GOOGLE_CLIENT_ID is not set, Google uses NextAuth redirect flow.",
         steps: [
-          { id: "1", action: "Navigate to Settings > Sessions (or /api/user/sessions)", expected: "List of active sessions shown with device info, IP, and last active time." },
-          { id: "2", action: "Revoke another session", expected: "Session removed from list. That device/browser is logged out." },
-          { id: "3", action: "Click 'Revoke all other sessions'", expected: "All sessions except current one are revoked." },
+          { id: "1", action: "Trigger NextAuth Google flow", expected: "Redirected to Google → back to /auth/validateSocialLogin." },
+          { id: "2", action: "Verify validateSocialLogin processes session", expected: "Token fetched from session → stored → redirect to /dashboard." },
         ],
       },
       {
         id: "AUTH-008",
+        title: "Forgot Password & Reset",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Click 'Forgot Password' on login page", expected: "Email input form." },
+          { id: "2", action: "Enter registered email", expected: "Reset email sent. Success message." },
+          { id: "3", action: "Enter unregistered email", expected: "Error message shown." },
+          { id: "4", action: "Click reset link in email", expected: "Opens /reset-password with token." },
+          { id: "5", action: "Enter new password + confirm", expected: "Password reset succeeds." },
+          { id: "6", action: "Login with new password", expected: "Login works with new credentials." },
+        ],
+      },
+      {
+        id: "AUTH-009",
+        title: "Two-Factor Authentication (2FA) — Full Lifecycle",
+        priority: "High",
+        preconditions: "Logged in. 2FA not yet enabled.",
+        steps: [
+          { id: "1", action: "Go to Profile > Security > Enable 2FA", expected: "QR code + secret key displayed." },
+          { id: "2", action: "Scan QR with authenticator app", expected: "App generates 6-digit TOTP codes." },
+          { id: "3", action: "Enter TOTP to verify setup", expected: "2FA enabled. Backup codes displayed." },
+          { id: "4", action: "Save backup codes", expected: "Codes downloadable/copyable." },
+          { id: "5", action: "Log out and log back in", expected: "After email OTP, additional 2FA prompt appears." },
+          { id: "6", action: "Enter TOTP code", expected: "Login completes. Dashboard accessible." },
+          { id: "7", action: "Use a backup code instead of TOTP", expected: "Login succeeds. Backup code consumed." },
+          { id: "8", action: "Check 2FA status (GET /api/user/2fa/status)", expected: "Returns enabled: true." },
+          { id: "9", action: "Regenerate backup codes", expected: "Old codes invalidated. New codes shown." },
+          { id: "10", action: "Disable 2FA", expected: "2FA removed. Login no longer requires 2FA step." },
+        ],
+      },
+      {
+        id: "AUTH-010",
+        title: "Session Management",
+        priority: "Medium",
+        preconditions: "Logged in on multiple devices/browsers.",
+        steps: [
+          { id: "1", action: "Navigate to Profile > Sessions", expected: "Active sessions listed: device, IP, last active." },
+          { id: "2", action: "Revoke a specific session", expected: "That device/browser logged out." },
+          { id: "3", action: "Click 'Revoke all other sessions'", expected: "All except current revoked." },
+          { id: "4", action: "View login history", expected: "Past logins listed with date, IP, device, location." },
+        ],
+      },
+      {
+        id: "AUTH-011",
+        title: "Token Refresh",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Wait for access token to expire (or simulate 401)", expected: "Axios interceptor detects 401." },
+          { id: "2", action: "Verify auto-refresh triggers", expected: "POST /api/user/refresh-token called with refreshToken." },
+          { id: "3", action: "Verify new token stored", expected: "localStorage 'token' updated. User stays logged in seamlessly." },
+        ],
+      },
+      {
+        id: "AUTH-012",
         title: "Logout & Token Cleanup",
         priority: "High",
         steps: [
-          { id: "1", action: "Click logout button", expected: "User is logged out. Redirected to /auth/login." },
-          { id: "2", action: "Check localStorage", expected: "'token' and 'refreshToken' are removed." },
-          { id: "3", action: "Try accessing /dashboard directly", expected: "Redirected to /auth/login (withAuth guard)." },
-          { id: "4", action: "Press browser back button after logout", expected: "Does not show authenticated content. Redirected to login." },
+          { id: "1", action: "Click logout", expected: "Redirected to /auth/login." },
+          { id: "2", action: "Check localStorage", expected: "'token' and 'refreshToken' removed." },
+          { id: "3", action: "Access /dashboard directly", expected: "Redirected to /auth/login (withAuth guard)." },
+          { id: "4", action: "Press browser Back after logout", expected: "No authenticated content shown." },
+        ],
+      },
+      {
+        id: "AUTH-013",
+        title: "Email Verification & Unsubscribe",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "POST /api/user/verify-email", expected: "Email verification sent." },
+          { id: "2", action: "POST /api/user/resend-verification", expected: "New verification email sent." },
+          { id: "3", action: "Click unsubscribe link in reminder email", expected: "User unsubscribed from reminders. Confirmation page." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 3: DASHBOARD
+     ============================================================ */
   {
     id: "dashboard",
     title: "Dashboard",
     icon: "📊",
-    description: "Main dashboard stats, charts, fee tiers, recent transactions, onboarding",
+    description: "Stats cards, charts, today summary, fee tiers, recent transactions, conversions, onboarding",
     cases: [
       {
         id: "DASH-001",
-        title: "Dashboard Data Load",
+        title: "Dashboard Full Load",
         priority: "Critical",
-        preconditions: "User is logged in with at least one company and wallet set up.",
+        preconditions: "Logged in with company + wallet set up.",
         steps: [
-          { id: "1", action: "Navigate to /dashboard", expected: "Dashboard loads with stat cards (Total Revenue, Transactions, Average, Pending)." },
-          { id: "2", action: "Verify chart renders", expected: "Revenue/transaction chart displays with correct time period (default: 7d)." },
-          { id: "3", action: "Change chart period (7d, 30d, 90d, etc.)", expected: "Chart updates with new data for selected period." },
-          { id: "4", action: "Verify recent transactions table", expected: "Shows latest transactions with amount, status, date, crypto type." },
-          { id: "5", action: "Verify fee tiers section", expected: "Current fee tier displayed based on transaction volume." },
+          { id: "1", action: "Navigate to /dashboard", expected: "Dashboard loads: stat cards (Revenue, Transactions, Average, Pending)." },
+          { id: "2", action: "Verify Today Summary strip", expected: "Today's transaction count and revenue shown at top." },
+          { id: "3", action: "Verify chart renders", expected: "Revenue/transaction chart with default 7d period." },
+          { id: "4", action: "Change chart period (7d, 30d, 90d)", expected: "Chart re-renders with correct data." },
+          { id: "5", action: "Verify recent transactions table", expected: "Latest transactions: amount, status, date, crypto type." },
+          { id: "6", action: "Verify fee tiers progress", expected: "Current tier shown with progress to next tier." },
+          { id: "7", action: "Verify conversion banner (if applicable)", expected: "Auto-convert promotion/status shown if enabled." },
         ],
       },
       {
         id: "DASH-002",
         title: "Company Switcher",
         priority: "High",
-        preconditions: "User has multiple companies.",
+        preconditions: "User has 2+ companies.",
         steps: [
-          { id: "1", action: "Open company dropdown/switcher", expected: "All user's companies listed." },
-          { id: "2", action: "Switch to a different company", expected: "Dashboard data refreshes for selected company. Stats, chart, transactions update." },
-          { id: "3", action: "Verify URL/state persists on page refresh", expected: "Selected company remains active after refresh." },
+          { id: "1", action: "Open company dropdown", expected: "All companies listed." },
+          { id: "2", action: "Switch company", expected: "Dashboard data refreshes for selected company." },
+          { id: "3", action: "Refresh page", expected: "Selected company persists." },
         ],
       },
       {
         id: "DASH-003",
         title: "New User Onboarding Flow",
         priority: "High",
-        preconditions: "Newly registered user with no companies or wallets.",
+        preconditions: "Brand new user (no companies/wallets).",
         steps: [
-          { id: "1", action: "Login as new user", expected: "Dashboard shows onboarding wizard/checklist." },
-          { id: "2", action: "Complete each onboarding step (Create company, Add wallet, etc.)", expected: "Each step marked as complete. Progress indicator updates." },
-          { id: "3", action: "After all steps complete", expected: "Onboarding dismissed. Full dashboard shown with data." },
+          { id: "1", action: "Login as new user", expected: "Onboarding wizard displayed." },
+          { id: "2", action: "Check onboarding status (GET /api/user/onboarding-status)", expected: "Returns steps completed/remaining." },
+          { id: "3", action: "Complete step: Create company", expected: "Step marked complete. Progress updates." },
+          { id: "4", action: "Complete step: Add wallet", expected: "Step marked complete." },
+          { id: "5", action: "After all steps", expected: "Full dashboard shown with data." },
+        ],
+      },
+      {
+        id: "DASH-004",
+        title: "Dashboard Conversions View",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Navigate to dashboard conversions section", expected: "Recent conversions listed with amounts, rates, status." },
+          { id: "2", action: "Click on a conversion", expected: "Conversion detail: source crypto, target, rate, timestamp, status." },
+        ],
+      },
+      {
+        id: "DASH-005",
+        title: "Dashboard — Empty State",
+        priority: "Medium",
+        preconditions: "User with company but zero transactions.",
+        steps: [
+          { id: "1", action: "Navigate to /dashboard", expected: "Stats show 0 values. Chart shows empty state." },
+          { id: "2", action: "Verify 'No recent transactions' message", expected: "Empty state with call-to-action (create payment link, etc.)." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 4: COMPANY MANAGEMENT
+     ============================================================ */
   {
     id: "company",
     title: "Company Management",
     icon: "🏢",
-    description: "Create, edit, delete companies. Webhook settings, auto-convert, tax ID validation",
+    description: "Create, edit, delete companies. Webhook settings, auto-convert, tax ID, conversion history",
     cases: [
       {
         id: "COMP-001",
         title: "Create Company",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Navigate to /company (or 'Add Company' from sidebar)", expected: "Company creation form loads." },
-          { id: "2", action: "Fill in company name, type, country, address", expected: "Form validates inputs in real-time." },
-          { id: "3", action: "Submit the form", expected: "Company created successfully. Toast notification. Redirected to dashboard with new company selected." },
-          { id: "4", action: "Verify company appears in company switcher", expected: "New company listed in dropdown." },
+          { id: "1", action: "Navigate to /company or 'Add Company'", expected: "Company creation form loads." },
+          { id: "2", action: "Fill: company name, type, country, address", expected: "Real-time validation on inputs." },
+          { id: "3", action: "Upload company logo", expected: "Logo preview shown." },
+          { id: "4", action: "Submit", expected: "Company created. Toast notification. Dashboard shows new company." },
         ],
       },
       {
@@ -384,77 +505,107 @@ const TEST_SECTIONS: TestSection[] = [
         title: "Edit Company",
         priority: "High",
         steps: [
-          { id: "1", action: "Navigate to company settings/edit page", expected: "Edit form pre-filled with current company data." },
-          { id: "2", action: "Modify company name and save", expected: "Changes saved. Success toast. Updated name shown everywhere." },
+          { id: "1", action: "Open company edit form", expected: "Pre-filled with current data." },
+          { id: "2", action: "Modify company name and save", expected: "Updated everywhere (sidebar, dashboard, settings)." },
         ],
       },
       {
         id: "COMP-003",
-        title: "Webhook Settings",
-        priority: "High",
-        preconditions: "Company exists.",
+        title: "Tax ID Validation",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to company webhook settings", expected: "Webhook configuration form loads (URL, secret, events)." },
-          { id: "2", action: "Enter webhook URL and select events", expected: "Settings saved successfully." },
-          { id: "3", action: "Click 'Test Webhook'", expected: "Test payload sent to webhook URL. Result shown (success/fail)." },
-          { id: "4", action: "View webhook history", expected: "Webhook delivery log shows past deliveries with status, timestamp, response code." },
+          { id: "1", action: "Enter tax ID in company form", expected: "POST /api/company/validateTaxId called." },
+          { id: "2", action: "Enter valid tax ID format", expected: "Validation passes. Green check." },
+          { id: "3", action: "Enter invalid tax ID", expected: "Validation error shown." },
+          { id: "4", action: "Verify tax acronyms API (GET /api/tax/acronyms)", expected: "Returns tax ID names per country (e.g., VAT, EIN, GST)." },
         ],
       },
       {
         id: "COMP-004",
-        title: "Auto-Convert Settings",
-        priority: "Medium",
+        title: "Webhook Settings — Full Flow",
+        priority: "High",
+        preconditions: "Company exists.",
         steps: [
-          { id: "1", action: "Navigate to auto-convert settings for a company", expected: "Auto-convert toggle and configuration options load." },
-          { id: "2", action: "Enable auto-convert to stablecoin (e.g., USDC)", expected: "Settings saved. Incoming crypto payments will auto-convert." },
-          { id: "3", action: "View conversion history", expected: "Past conversions listed with amounts, rates, status." },
+          { id: "1", action: "Navigate to webhook settings", expected: "Webhook config form: URL, secret, events." },
+          { id: "2", action: "Enter webhook URL + select events + save", expected: "Settings saved. Success toast." },
+          { id: "3", action: "Click 'Test Webhook'", expected: "Test payload sent. Result shown (success/fail with status code)." },
+          { id: "4", action: "View webhook history", expected: "Delivery log: past payloads, status codes, timestamps." },
+          { id: "5", action: "View webhook stats", expected: "Aggregate stats: success rate, average response time." },
+          { id: "6", action: "Click on a specific webhook log entry", expected: "Full payload, headers, response body visible." },
         ],
       },
       {
         id: "COMP-005",
+        title: "Auto-Convert Settings",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Navigate to auto-convert settings", expected: "Toggle + config options load." },
+          { id: "2", action: "Enable auto-convert to USDC", expected: "Saved. Incoming crypto auto-converts." },
+          { id: "3", action: "View conversion history", expected: "Past conversions: amounts, rates, status, timestamps." },
+          { id: "4", action: "Retry a failed conversion", expected: "POST /api/company/conversion/:id/retry triggers retry." },
+        ],
+      },
+      {
+        id: "COMP-006",
         title: "Delete Company",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Click delete company", expected: "Confirmation dialog appears with warning." },
-          { id: "2", action: "Confirm deletion", expected: "Company deleted. Removed from company list. Dashboard switches to another company or shows onboarding." },
+          { id: "1", action: "Click delete company", expected: "Confirmation dialog with warning." },
+          { id: "2", action: "Confirm deletion", expected: "Company removed. Dashboard switches to another or shows onboarding." },
+        ],
+      },
+      {
+        id: "COMP-007",
+        title: "Company Transactions View",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "View transactions for a specific company (GET /api/company/getTransactions/:id)", expected: "Filtered transaction list for that company." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 5: WALLET MANAGEMENT
+     ============================================================ */
   {
     id: "wallet",
     title: "Wallet Management",
     icon: "💰",
-    description: "View wallets, add/edit/delete addresses (with OTP), transactions, network fees",
+    description: "View wallets/balances, add/edit/delete addresses (OTP-verified), validate addresses, auto-naming, network fees",
     cases: [
       {
         id: "WAL-001",
-        title: "View Wallets",
+        title: "View Wallets & Balances",
         priority: "Critical",
-        preconditions: "User has wallets set up.",
+        preconditions: "Wallets configured for company.",
         steps: [
-          { id: "1", action: "Navigate to /wallet", expected: "Wallet page loads showing FIAT and CRYPTO wallet balances." },
-          { id: "2", action: "Click on a specific wallet (e.g., BTC, ETH)", expected: "Wallet detail view shows balance, addresses, and recent transactions." },
+          { id: "1", action: "Navigate to /wallet", expected: "Wallet page: FIAT and CRYPTO balances listed." },
+          { id: "2", action: "Click on a specific wallet (BTC, ETH, etc.)", expected: "Detail view: balance, addresses, recent transactions." },
+          { id: "3", action: "Verify all 15 Nomadly1 wallets render", expected: "All crypto types shown: BTC, LTC, DOGE, ETH, TRX, USDT-ERC20/TRC20, USDC, BCH, SOL, XRP, POLYGON, RLUSD, USDT-POLYGON, RLUSD-ERC20." },
         ],
       },
       {
         id: "WAL-002",
-        title: "Add Wallet Address (with OTP verification)",
+        title: "Add Wallet Address (OTP Verified)",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Click 'Add Address' on a wallet", expected: "Address input form appears with crypto type selection." },
-          { id: "2", action: "Enter a valid wallet address", expected: "Address validated (format check). Proceeds to OTP step." },
-          { id: "3", action: "Enter OTP sent to email", expected: "Address added successfully. Appears in wallet address list." },
-          { id: "4", action: "Enter an invalid wallet address format", expected: "Validation error: 'Invalid address format'." },
+          { id: "1", action: "Click 'Add Address'", expected: "Form: crypto type, address input, label (optional)." },
+          { id: "2", action: "Enter valid wallet address", expected: "Address format validated. OTP sent." },
+          { id: "3", action: "Enter OTP", expected: "Address added. Appears in list." },
+          { id: "4", action: "Enter invalid address format", expected: "Validation error before OTP step." },
+          { id: "5", action: "Leave wallet name blank", expected: "Auto-generated friendly name assigned (e.g., 'Swift-42')." },
         ],
+        notes: "Auto-naming uses generateWalletName() from generateFriendlyName.ts.",
       },
       {
         id: "WAL-003",
         title: "Edit Wallet Address",
         priority: "High",
         steps: [
-          { id: "1", action: "Click edit on an existing address", expected: "Edit form pre-filled with current address." },
-          { id: "2", action: "Change the address and submit", expected: "OTP verification required. After OTP, address updated." },
+          { id: "1", action: "Click edit on existing address", expected: "Edit form pre-filled." },
+          { id: "2", action: "Change address + submit", expected: "OTP verification required (wallet/update/send-otp → wallet/update)." },
+          { id: "3", action: "Verify OTP and confirm", expected: "Address updated." },
         ],
       },
       {
@@ -462,48 +613,76 @@ const TEST_SECTIONS: TestSection[] = [
         title: "Delete Wallet Address",
         priority: "High",
         steps: [
-          { id: "1", action: "Click delete on a wallet address", expected: "Confirmation prompt. OTP sent for verification." },
-          { id: "2", action: "Enter OTP and confirm", expected: "Address deleted. Removed from list." },
+          { id: "1", action: "Click delete on an address", expected: "Confirmation + OTP sent (address/delete/send-otp)." },
+          { id: "2", action: "Enter OTP", expected: "Address deleted." },
         ],
       },
       {
         id: "WAL-005",
-        title: "Transaction History & Export",
-        priority: "High",
+        title: "Wallet Address Validation",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /transactions", expected: "Full transaction list loads with filters (date range, status, crypto type)." },
-          { id: "2", action: "Apply filters (e.g., last 30 days, only BTC)", expected: "List filters correctly. Count updates." },
-          { id: "3", action: "Click on a transaction", expected: "Transaction detail modal/page shows full info (hash, confirmations, fees, timestamps)." },
-          { id: "4", action: "Click 'Export' transactions", expected: "CSV/PDF download starts with filtered transaction data." },
+          { id: "1", action: "POST /api/wallet/validateWalletAddress with valid BTC address", expected: "Returns valid: true." },
+          { id: "2", action: "POST with invalid address", expected: "Returns valid: false with error message." },
+          { id: "3", action: "POST with ETH address for BTC crypto_type", expected: "Returns mismatch error." },
         ],
       },
       {
         id: "WAL-006",
-        title: "User Analytics (getUserAnalytics)",
+        title: "Network Fees & Currency Rates",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "GET /api/pay/network-fees", expected: "Returns current blockchain fees per network." },
+          { id: "2", action: "POST /api/wallet/getCurrencyRates", expected: "Returns exchange rates for all supported cryptos." },
+          { id: "3", action: "POST /api/wallet/estimateFees with amount + crypto", expected: "Returns estimated platform + blockchain fees." },
+        ],
+      },
+      {
+        id: "WAL-007",
+        title: "Transaction History & Export",
         priority: "High",
         steps: [
-          { id: "1", action: "Load dashboard after login", expected: "POST /api/wallet/getUserAnalytics returns 200 with analytics data." },
-          { id: "2", action: "Check browser Network tab", expected: "Request includes Authorization: Bearer header. No CSRF errors." },
+          { id: "1", action: "Navigate to /transactions", expected: "Full transaction list with filters." },
+          { id: "2", action: "Filter by date range", expected: "List updates correctly." },
+          { id: "3", action: "Filter by status (completed, pending, failed)", expected: "Only matching transactions shown." },
+          { id: "4", action: "Filter by crypto type", expected: "Filtered correctly." },
+          { id: "5", action: "Click on a transaction", expected: "Detail: hash, confirmations, fees, timestamps, sender/receiver." },
+          { id: "6", action: "Click 'Export'", expected: "CSV/PDF download with filtered data." },
+        ],
+      },
+      {
+        id: "WAL-008",
+        title: "Delete Wallet (Full Wallet, Not Just Address)",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Click delete wallet", expected: "OTP sent (wallet/delete/send-otp)." },
+          { id: "2", action: "Verify OTP (wallet/delete/verify)", expected: "Wallet removed from list." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 6: PAYMENT LINKS
+     ============================================================ */
   {
     id: "paylinks",
     title: "Payment Links",
     icon: "🔗",
-    description: "Create, view, manage, and share payment links",
+    description: "Create, view, edit, delete, share payment links. QR codes, success modals, currency selection",
     cases: [
       {
         id: "PAY-001",
         title: "Create Payment Link",
         priority: "Critical",
-        preconditions: "Company and wallet set up.",
+        preconditions: "Company + wallet set up.",
         steps: [
-          { id: "1", action: "Navigate to /create-pay-link", expected: "Payment link creation form loads." },
-          { id: "2", action: "Fill in amount, currency, description", expected: "Form validates inputs. Preview shown." },
-          { id: "3", action: "Submit", expected: "Payment link created. Shareable URL generated. QR code displayed." },
-          { id: "4", action: "Copy link to clipboard", expected: "Link copied. Toast notification." },
+          { id: "1", action: "Navigate to /create-pay-link", expected: "Payment link creation form." },
+          { id: "2", action: "Fill: amount, currency, description, accepted cryptos", expected: "Form validates. Preview updates." },
+          { id: "3", action: "Select accepted cryptocurrencies", expected: "Only currencies with configured wallets shown." },
+          { id: "4", action: "Submit", expected: "Link created. Success modal with shareable URL + QR code." },
+          { id: "5", action: "Copy link from success modal", expected: "Link copied. Toast notification." },
+          { id: "6", action: "Leave name blank", expected: "Auto-generated name assigned." },
         ],
       },
       {
@@ -511,83 +690,186 @@ const TEST_SECTIONS: TestSection[] = [
         title: "View & Manage Payment Links",
         priority: "High",
         steps: [
-          { id: "1", action: "Navigate to /pay-links", expected: "List of all payment links with status, amount, creation date." },
-          { id: "2", action: "Click on a payment link", expected: "Detail page shows link info, QR code, payment status, and usage stats." },
-          { id: "3", action: "Delete a payment link", expected: "Link deactivated. Confirmation dialog. Removed from list." },
+          { id: "1", action: "Navigate to /pay-links", expected: "Table: all links with name, amount, status, creation date, clicks." },
+          { id: "2", action: "Search/filter payment links", expected: "Results filtered correctly." },
+          { id: "3", action: "Click on a link row", expected: "Navigates to /pay-links/[slug] detail page." },
+        ],
+      },
+      {
+        id: "PAY-003",
+        title: "Edit Payment Link",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Navigate to /pay-links/[slug]", expected: "Edit form pre-filled with link data." },
+          { id: "2", action: "Modify amount or description", expected: "Changes saved via PUT /api/pay/links/:id." },
+          { id: "3", action: "Change accepted currencies", expected: "Updated. Checkout reflects new options." },
+        ],
+      },
+      {
+        id: "PAY-004",
+        title: "Delete Payment Link",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Click delete on a payment link", expected: "Confirmation dialog." },
+          { id: "2", action: "Confirm deletion", expected: "Link deactivated. Removed from list." },
+          { id: "3", action: "Try opening deleted link URL", expected: "Shows 'Payment link not found' or expired state." },
+        ],
+      },
+      {
+        id: "PAY-005",
+        title: "Fee Preview with Referral Discount",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "GET /api/pay/fee-preview (logged in)", expected: "Fee breakdown with referral discount applied if active." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 7: PAYMENT CHECKOUT FLOW (CUSTOMER-FACING)
+     ============================================================ */
   {
     id: "checkout",
     title: "Payment Checkout Flow (Customer-Facing)",
     icon: "💳",
-    description: "Public checkout page, crypto selection, payment processing, success/failure states",
+    description: "Full checkout: crypto selection, QR code, payment processing, success/failure/expiry, bank transfer, demo pages",
     cases: [
       {
         id: "CHK-001",
-        title: "Checkout Page Load",
+        title: "Checkout Page — Initial Load",
         priority: "Critical",
-        preconditions: "Valid payment link exists.",
+        preconditions: "Valid payment link created.",
         steps: [
-          { id: "1", action: "Open a payment link URL (as a customer)", expected: "Checkout page loads showing merchant name, amount, supported cryptocurrencies." },
-          { id: "2", action: "Select a cryptocurrency (e.g., BTC)", expected: "Payment details shown: wallet address, amount in crypto, QR code, countdown timer." },
-          { id: "3", action: "Verify fee display", expected: "Platform fee and blockchain fee clearly shown to customer." },
+          { id: "1", action: "Open payment link URL as a customer", expected: "Checkout page: merchant name, amount, supported cryptos listed." },
+          { id: "2", action: "Verify merchant branding", expected: "Company name/logo shown." },
+          { id: "3", action: "Verify fee breakdown visible", expected: "Platform fee, blockchain fee, total shown." },
         ],
       },
       {
         id: "CHK-002",
-        title: "Payment Processing States",
+        title: "Crypto Selection & Payment Details",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Navigate to /pay/payment-states-demo", expected: "Demo page loads showing all payment states." },
-          { id: "2", action: "Verify each state renders: Waiting, Confirming, Underpaid, Overpaid, Completed, Expired, Failed", expected: "All state UIs render correctly with appropriate colors, icons, and messages." },
+          { id: "1", action: "Select a cryptocurrency (e.g., BTC)", expected: "Payment address displayed. Amount in crypto calculated. QR code shown." },
+          { id: "2", action: "Verify countdown timer starts", expected: "Timer shows remaining time (e.g., 30 min)." },
+          { id: "3", action: "Copy wallet address", expected: "Address copied to clipboard." },
+          { id: "4", action: "Scan QR code with wallet app", expected: "QR encodes correct address + amount." },
+          { id: "5", action: "Switch to a different crypto", expected: "Address and amount update for new crypto." },
         ],
       },
       {
         id: "CHK-003",
-        title: "Payment Success Flow",
-        priority: "Critical",
+        title: "Bank Transfer Option",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "Complete a test payment (or navigate to /payment/success)", expected: "Success page shows confirmation with transaction ID, amount, and merchant info." },
-          { id: "2", action: "Check if webhook was triggered", expected: "Merchant webhook received payment confirmation payload." },
+          { id: "1", action: "If bank transfer enabled, select bank transfer option", expected: "Bank details shown: account number, routing, reference." },
+          { id: "2", action: "Verify reference code", expected: "Unique reference for this payment." },
         ],
       },
       {
         id: "CHK-004",
-        title: "Payment Failure / Expiry",
+        title: "Payment Verification & Confirmation",
+        priority: "Critical",
+        steps: [
+          { id: "1", action: "After sending crypto, wait for detection", expected: "Status changes to 'Confirming' with confirmation count." },
+          { id: "2", action: "Wait for sufficient confirmations", expected: "Status changes to 'Completed'. Success page shown." },
+          { id: "3", action: "Verify webhook triggered for merchant", expected: "Merchant webhook received with payment confirmation." },
+        ],
+      },
+      {
+        id: "CHK-005",
+        title: "Payment States — All Scenarios",
+        priority: "Critical",
+        steps: [
+          { id: "1", action: "Navigate to /pay/payment-states-demo", expected: "All payment states rendered: Waiting, Confirming, Completed, Underpaid, Overpaid, Expired, Failed." },
+          { id: "2", action: "Verify Underpaid state", expected: "Shows amount received vs expected. Option to send remaining." },
+          { id: "3", action: "Verify Overpaid state", expected: "Shows overpayment amount. Merchant notification." },
+          { id: "4", action: "Verify Expired state", expected: "Timer reached 0. 'Payment expired' message with retry option." },
+          { id: "5", action: "Verify Failed state", expected: "Error message with support contact or retry." },
+        ],
+      },
+      {
+        id: "CHK-006",
+        title: "Payment Success & Failed Pages",
         priority: "High",
         steps: [
-          { id: "1", action: "Let a payment expire (timeout)", expected: "Payment status changes to 'Expired'. Customer shown expiry message with retry option." },
-          { id: "2", action: "Navigate to /payment/failed", expected: "Failure page loads with error details and retry/support options." },
+          { id: "1", action: "Navigate to /payment/success", expected: "Success page: transaction ID, amount, merchant info." },
+          { id: "2", action: "Navigate to /payment/failed", expected: "Failure page: error details, retry/support options." },
+          { id: "3", action: "Navigate to /payment/verify", expected: "Payment verification page loads correctly." },
+          { id: "4", action: "Navigate to /pay/success-demo", expected: "Demo success page renders." },
+        ],
+      },
+      {
+        id: "CHK-007",
+        title: "Checkout Legal Pages",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Navigate to /pay/aml-policy", expected: "AML policy for checkout context loads." },
+          { id: "2", action: "Navigate to /pay/terms-of-service", expected: "Terms of service for checkout loads." },
+        ],
+      },
+      {
+        id: "CHK-008",
+        title: "Checkout Demo Page",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Navigate to /pay/demo", expected: "Demo checkout page loads. Allows testing full checkout flow without real payments." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 8: INVOICES & TAX
+     ============================================================ */
   {
     id: "invoices",
-    title: "Invoices",
+    title: "Invoices & Tax",
     icon: "📄",
-    description: "View, filter, and manage invoices",
+    description: "Invoice list, filtering, detail view, PDF download, tax rate lookup",
     cases: [
       {
         id: "INV-001",
-        title: "Invoice List & Details",
+        title: "Invoice List & Filtering",
         priority: "High",
-        preconditions: "User has invoices from past transactions.",
+        preconditions: "Invoices exist from past transactions.",
         steps: [
-          { id: "1", action: "Navigate to /invoices", expected: "Invoice list loads with invoice number, date, amount, status." },
-          { id: "2", action: "Click on an invoice", expected: "Invoice detail page/modal shows line items, tax, totals, payment status." },
-          { id: "3", action: "Download invoice as PDF", expected: "PDF generated and downloaded with proper formatting." },
+          { id: "1", action: "Navigate to /invoices", expected: "Invoice list: number, date, amount, status, company." },
+          { id: "2", action: "Filter by date range", expected: "Filtered results." },
+          { id: "3", action: "Filter by status (paid, pending, overdue)", expected: "Correct filtering." },
+          { id: "4", action: "Search invoices", expected: "Results match search term." },
+        ],
+      },
+      {
+        id: "INV-002",
+        title: "Invoice Detail & Download",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Click on an invoice", expected: "Detail view: line items, tax, totals, payment status, dates." },
+          { id: "2", action: "Download invoice as PDF", expected: "PDF generated with proper formatting." },
+        ],
+      },
+      {
+        id: "INV-003",
+        title: "Tax Rate & Lookup",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "GET /api/tax/rate/:countryCode (e.g., US)", expected: "Returns applicable tax rate." },
+          { id: "2", action: "GET /api/tax/lookup?country=Germany", expected: "Returns country tax info." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 9: DEVELOPER KEYS & API MANAGEMENT
+     ============================================================ */
   {
     id: "devkeys",
     title: "Developer Keys & API Management",
     icon: "🔑",
-    description: "API keys, rate limits, usage logs, customer management via API",
+    description: "API key CRUD, rate limits, usage stats, logs, plans, customer management, auto-naming",
     cases: [
       {
         id: "DEV-001",
@@ -595,50 +877,87 @@ const TEST_SECTIONS: TestSection[] = [
         priority: "Critical",
         preconditions: "Company exists.",
         steps: [
-          { id: "1", action: "Navigate to /developer-keys", expected: "API management page loads with existing keys (if any)." },
-          { id: "2", action: "Click 'Create API Key'", expected: "Form appears for key name and permissions." },
-          { id: "3", action: "Submit", expected: "API key generated. Secret shown ONCE. User prompted to copy/save it." },
-          { id: "4", action: "Verify key appears in list", expected: "New key listed with name, creation date, and status (active)." },
+          { id: "1", action: "Navigate to /developer-keys", expected: "API management page." },
+          { id: "2", action: "Click 'Create API Key'", expected: "Form: key name, permissions." },
+          { id: "3", action: "Submit with a name", expected: "Key generated. Secret shown ONCE." },
+          { id: "4", action: "Submit without a name", expected: "Auto-generated name assigned (e.g., 'Nova-7')." },
+          { id: "5", action: "Copy/save key secret", expected: "Secret copyable." },
         ],
+        notes: "Auto-naming uses generateApiKeyName() from generateFriendlyName.ts.",
       },
       {
         id: "DEV-002",
         title: "Manage API Keys",
         priority: "High",
         steps: [
-          { id: "1", action: "Toggle API key status (enable/disable)", expected: "Key status changes. Disabled keys reject API requests." },
-          { id: "2", action: "Regenerate API key", expected: "New secret generated. Old secret invalidated." },
-          { id: "3", action: "Delete API key", expected: "Key revoked and removed from list." },
-          { id: "4", action: "View API usage stats", expected: "Request counts, success/error rates, rate limit status shown." },
-          { id: "5", action: "View API logs", expected: "Recent API calls listed with timestamp, endpoint, status code, IP." },
+          { id: "1", action: "Toggle key status (enable/disable)", expected: "Status changes. Disabled keys reject requests." },
+          { id: "2", action: "Regenerate key secret", expected: "New secret. Old secret invalidated." },
+          { id: "3", action: "Delete API key", expected: "Key revoked and removed." },
         ],
       },
       {
         id: "DEV-003",
+        title: "API Usage & Logs",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "View usage stats for a key (GET /api/api/usage/:id)", expected: "Request counts, success/error rates." },
+          { id: "2", action: "View logs for a key (GET /api/api/logs/:id)", expected: "Recent calls: timestamp, endpoint, status, IP." },
+        ],
+      },
+      {
+        id: "DEV-004",
+        title: "Rate Limit Configuration",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "View current rate limits", expected: "Limits shown per key." },
+          { id: "2", action: "Update rate limit (PUT /api/api/rateLimit/:id)", expected: "New limits applied." },
+          { id: "3", action: "Exceed rate limit", expected: "429 Too Many Requests returned." },
+        ],
+      },
+      {
+        id: "DEV-005",
+        title: "API Plans (Sub-merchant)",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Create API plan", expected: "Plan created with name, limits, features." },
+          { id: "2", action: "View plans (GET /api/api/getPlans/:id)", expected: "Plans listed." },
+          { id: "3", action: "Update plan", expected: "Changes saved." },
+          { id: "4", action: "Delete plan", expected: "Plan removed." },
+        ],
+      },
+      {
+        id: "DEV-006",
         title: "Customer Management",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /customers", expected: "Customer list loads with name, email, balance, transaction count." },
-          { id: "2", action: "Click on a customer", expected: "Customer detail page shows profile, transaction history, balance." },
+          { id: "1", action: "Navigate to /customers", expected: "Customer list: name, email, balance, transactions." },
+          { id: "2", action: "Click on customer", expected: "Detail: profile, history, balance." },
+          { id: "3", action: "Update customer (PUT /api/api/updateCustomer/:id)", expected: "Changes saved." },
+          { id: "4", action: "Delete customer", expected: "Customer removed." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 10: NOTIFICATIONS
+     ============================================================ */
   {
     id: "notifications",
     title: "Notifications",
     icon: "🔔",
-    description: "In-app notifications, read/unread, preferences, push notifications",
+    description: "In-app notifications, push notifications, unread count, preferences, mark read, delete",
     cases: [
       {
         id: "NOTIF-001",
-        title: "Notification List & Actions",
+        title: "Notification List & Interactions",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /notifications (or click bell icon)", expected: "Notification list loads with recent notifications. Unread count badge shown." },
-          { id: "2", action: "Click a notification", expected: "Notification marked as read. Detail or linked page opens." },
-          { id: "3", action: "Click 'Mark All as Read'", expected: "All notifications marked as read. Unread count resets to 0." },
-          { id: "4", action: "Delete a notification", expected: "Notification removed from list." },
+          { id: "1", action: "Navigate to /notifications (or bell icon)", expected: "Notification list with unread count badge." },
+          { id: "2", action: "Verify unread count (GET /api/notification/unread-count)", expected: "Badge count matches." },
+          { id: "3", action: "Click a notification", expected: "Marked as read. Detail or linked page opens." },
+          { id: "4", action: "Click 'Mark All as Read'", expected: "All read. Badge resets to 0." },
+          { id: "5", action: "Delete a notification", expected: "Removed from list." },
         ],
       },
       {
@@ -646,128 +965,248 @@ const TEST_SECTIONS: TestSection[] = [
         title: "Notification Preferences",
         priority: "Low",
         steps: [
-          { id: "1", action: "Navigate to notification preferences (Settings or /notifications preferences)", expected: "Preference toggles load for email, push, and in-app notifications by type." },
-          { id: "2", action: "Toggle off a notification type", expected: "Preference saved. That notification type no longer sent." },
+          { id: "1", action: "GET /api/notification/preferences", expected: "Current preference toggles loaded." },
+          { id: "2", action: "Toggle off a notification type", expected: "PUT /api/notification/preferences saves. That type no longer sent." },
+          { id: "3", action: "Verify notification types list (GET /api/notification/types)", expected: "All available notification types listed." },
+        ],
+      },
+      {
+        id: "NOTIF-003",
+        title: "Push Notifications",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "GET /api/notification/push/vapid-key", expected: "VAPID public key returned." },
+          { id: "2", action: "Subscribe to push (POST /api/notification/push/subscribe)", expected: "Subscription registered." },
+          { id: "3", action: "Verify push notification received (on payment event)", expected: "Browser push notification appears." },
+          { id: "4", action: "Unsubscribe (POST /api/notification/push/unsubscribe)", expected: "No more push notifications." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 11: PROFILE & SETTINGS
+     ============================================================ */
   {
     id: "settings",
-    title: "Settings & Profile",
+    title: "Profile & Settings",
     icon: "⚙️",
-    description: "Profile updates, email/phone changes, password, 2FA, account deletion",
+    description: "Settings hub, profile updates, password change, add/remove email/phone, account deletion, login history",
     cases: [
       {
         id: "SET-001",
-        title: "Profile Update",
-        priority: "High",
+        title: "Settings Hub Page",
+        priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /profile or /settings", expected: "Profile page loads with current user info (name, email, phone, photo)." },
-          { id: "2", action: "Update display name", expected: "Name saved. Updated in sidebar and profile page." },
-          { id: "3", action: "Upload new profile photo", expected: "Photo uploaded and displayed." },
+          { id: "1", action: "Navigate to /settings", expected: "Settings cards grid: Wallet Addresses, Company Profile, Payment Settings, API Keys, Profile & Security, Notifications, Webhook Config, My Account." },
+          { id: "2", action: "Click each card", expected: "Navigates to correct page." },
         ],
       },
       {
         id: "SET-002",
-        title: "Change Email",
+        title: "Profile Update",
         priority: "High",
         steps: [
-          { id: "1", action: "Click 'Change Email' in settings", expected: "Email change form appears." },
-          { id: "2", action: "Enter new email and submit", expected: "OTP sent to new email for verification." },
-          { id: "3", action: "Verify OTP", expected: "Email updated. Confirmation shown." },
+          { id: "1", action: "Navigate to /profile", expected: "Profile page: name, email, phone, photo." },
+          { id: "2", action: "Update display name", expected: "Saved. Updated in sidebar." },
+          { id: "3", action: "Upload profile photo", expected: "Photo uploaded and shown." },
         ],
       },
       {
         id: "SET-003",
-        title: "Change Phone Number",
-        priority: "Medium",
+        title: "Password Change",
+        priority: "High",
         steps: [
-          { id: "1", action: "Click 'Change Phone' in settings", expected: "Phone change form appears." },
-          { id: "2", action: "Enter new phone and verify via OTP", expected: "Phone updated successfully." },
+          { id: "1", action: "Navigate to password change section", expected: "Current password + new password + confirm fields." },
+          { id: "2", action: "Enter wrong current password", expected: "Error: 'Incorrect password'." },
+          { id: "3", action: "Enter valid current + new password", expected: "Password updated. Success toast." },
         ],
       },
       {
         id: "SET-004",
-        title: "Login History",
-        priority: "Low",
+        title: "Change/Add Email",
+        priority: "High",
         steps: [
-          { id: "1", action: "Navigate to login history", expected: "List of past logins with date, IP, device, and location." },
+          { id: "1", action: "Click 'Change Email'", expected: "Email change form." },
+          { id: "2", action: "Enter new email + submit", expected: "OTP sent to new email." },
+          { id: "3", action: "Verify OTP", expected: "Email updated." },
+          { id: "4", action: "For phone-registered users: POST /api/user/addEmail", expected: "OTP sent. After verify, email added to account." },
         ],
       },
       {
         id: "SET-005",
+        title: "Change/Add Phone",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Click 'Change Phone'", expected: "Phone change form." },
+          { id: "2", action: "Enter new phone + verify OTP", expected: "Phone updated." },
+          { id: "3", action: "For email-registered users: POST /api/user/addPhone", expected: "Phone added after OTP verification." },
+        ],
+      },
+      {
+        id: "SET-006",
+        title: "Remove Email / Phone",
+        priority: "Low",
+        preconditions: "User has both email and phone. Cannot remove last contact method.",
+        steps: [
+          { id: "1", action: "Remove secondary email (DELETE /api/user/email)", expected: "Email removed." },
+          { id: "2", action: "Try removing the only remaining contact method", expected: "Error: Cannot remove last contact method." },
+        ],
+      },
+      {
+        id: "SET-007",
+        title: "Login History",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Navigate to login history (GET /api/user/login-history)", expected: "List: date, IP, device, location." },
+        ],
+      },
+      {
+        id: "SET-008",
         title: "Delete Account",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to account deletion in settings", expected: "Delete account option with warning message." },
-          { id: "2", action: "Confirm deletion", expected: "Account deleted. User logged out. Cannot login again with same credentials." },
+          { id: "1", action: "Navigate to account deletion", expected: "Delete option with warning." },
+          { id: "2", action: "Confirm deletion (DELETE /api/user/account)", expected: "Account deleted. Logged out. Cannot login again." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 12: REFERRAL PROGRAM
+     ============================================================ */
   {
     id: "referrals",
     title: "Referral Program",
     icon: "🎁",
-    description: "Referral code, sharing, tracking referrals, earnings, leaderboard",
+    description: "Referral code, sharing, tracking, earnings, leaderboard, apply/validate/redeem",
     cases: [
       {
         id: "REF-001",
         title: "Referral Code & Sharing",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Navigate to /referrals", expected: "Referral page loads with user's unique referral code and sharing options." },
-          { id: "2", action: "Copy referral link", expected: "Link copied to clipboard. Toast notification." },
-          { id: "3", action: "View referral list", expected: "List of referred users with status and reward info." },
-          { id: "4", action: "Check referral earnings", expected: "Total earnings from referrals displayed." },
+          { id: "1", action: "Navigate to /referrals", expected: "Referral page: unique code, sharing options." },
+          { id: "2", action: "Copy referral link", expected: "Copied. Toast notification." },
+          { id: "3", action: "View referred users (GET /api/referral/list)", expected: "List: referred users with status." },
+          { id: "4", action: "View earnings (GET /api/referral/earnings)", expected: "Total earnings from referrals." },
         ],
       },
       {
         id: "REF-002",
-        title: "Apply Referral Code (During Registration)",
+        title: "Referral Leaderboard",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "GET /api/referral/leaderboard", expected: "Top referrers listed with rank and count." },
+        ],
+      },
+      {
+        id: "REF-003",
+        title: "Apply & Validate Referral Code",
         priority: "Medium",
         steps: [
-          { id: "1", action: "During registration, enter a valid referral code", expected: "Referral validated. Discount or bonus applied." },
-          { id: "2", action: "Enter an invalid referral code", expected: "Error: 'Invalid referral code'." },
+          { id: "1", action: "During registration, enter valid referral code", expected: "POST /api/referral/validate returns valid. Discount applied." },
+          { id: "2", action: "Enter invalid referral code", expected: "Error: 'Invalid referral code'." },
+          { id: "3", action: "POST /api/referral/apply with valid code", expected: "Referral applied to account." },
+          { id: "4", action: "Check discount status (GET /api/referral/discount-status)", expected: "Shows active discount percentage and remaining duration." },
+        ],
+      },
+      {
+        id: "REF-004",
+        title: "Referee Validation & Redemption",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "POST /api/referral/referee/validate", expected: "Validates referee eligibility." },
+          { id: "2", action: "POST /api/referral/referee/redeem", expected: "Referee reward redeemed." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 13: SUBSCRIPTIONS
+     ============================================================ */
   {
     id: "subscriptions",
-    title: "Subscriptions",
+    title: "Subscriptions (Recurring Payments)",
     icon: "🔄",
-    description: "Create, view, update, and cancel recurring payment subscriptions",
+    description: "Create, view, update, cancel recurring payment subscriptions",
     cases: [
       {
         id: "SUB-001",
-        title: "Subscription CRUD",
+        title: "Subscription CRUD — Full Lifecycle",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Create a new subscription (set amount, interval, customer)", expected: "Subscription created. Listed in subscription management." },
-          { id: "2", action: "View subscription details", expected: "Shows recurring amount, interval, next charge date, status." },
-          { id: "3", action: "Update subscription (change amount or interval)", expected: "Changes saved. Next charge reflects update." },
-          { id: "4", action: "Cancel subscription", expected: "Subscription cancelled. Status changes to 'cancelled'. No further charges." },
+          { id: "1", action: "POST /api/subscription — create new subscription", expected: "Subscription created with amount, interval, customer." },
+          { id: "2", action: "GET /api/subscription — list all", expected: "All subscriptions listed." },
+          { id: "3", action: "GET /api/subscription/:id — view one", expected: "Detail: amount, interval, next charge, status, history." },
+          { id: "4", action: "PUT /api/subscription/:id — update", expected: "Amount/interval updated. Next charge reflects changes." },
+          { id: "5", action: "DELETE /api/subscription/:id — cancel", expected: "Status → cancelled. No further charges." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 14: KYC (Know Your Customer)
+     ============================================================ */
+  {
+    id: "kyc",
+    title: "KYC Verification",
+    icon: "🪪",
+    description: "KYC status, requirements, submission, resubmission, history, Veriff webhook",
+    cases: [
+      {
+        id: "KYC-001",
+        title: "KYC Status & Requirements",
+        priority: "High",
+        steps: [
+          { id: "1", action: "GET /api/kyc/status", expected: "Current KYC status: not_started, pending, verified, rejected." },
+          { id: "2", action: "GET /api/kyc/requirements", expected: "Required documents/info listed." },
+        ],
+      },
+      {
+        id: "KYC-002",
+        title: "KYC Submission Flow",
+        priority: "High",
+        steps: [
+          { id: "1", action: "POST /api/kyc/submit with required documents", expected: "KYC submission started. Status → pending." },
+          { id: "2", action: "Verify Veriff integration triggers", expected: "Veriff verification session created." },
+          { id: "3", action: "After Veriff webhook (approved)", expected: "Status → verified. Full platform access unlocked." },
+          { id: "4", action: "After Veriff webhook (rejected)", expected: "Status → rejected. Reason provided." },
+        ],
+      },
+      {
+        id: "KYC-003",
+        title: "KYC Resubmission & History",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "POST /api/kyc/resubmit after rejection", expected: "New submission started." },
+          { id: "2", action: "GET /api/kyc/history", expected: "All past submissions with dates, status, reason." },
+        ],
+      },
+    ],
+  },
+
+  /* ============================================================
+     SECTION 15: MERCHANT API (Server-to-Server)
+     ============================================================ */
   {
     id: "merchantapi",
-    title: "Merchant API (External Integration)",
+    title: "Merchant API (Server-to-Server)",
     icon: "🔌",
-    description: "Server-to-server API: create users, create payments, crypto payments, balances",
+    description: "External API for merchants: create users, payments, crypto payments, balances, transactions",
     cases: [
       {
         id: "MAPI-001",
         title: "Create User via API",
         priority: "High",
-        preconditions: "Valid API key with appropriate permissions.",
+        preconditions: "Valid API key.",
         steps: [
-          { id: "1", action: "POST /api/merchant/createUser with valid API key and user data", expected: "201 response with user ID and details." },
-          { id: "2", action: "POST without API key", expected: "401 Unauthorized response." },
-          { id: "3", action: "POST with invalid data", expected: "400 Bad Request with validation errors." },
+          { id: "1", action: "POST /api/merchant/createUser with valid API key + user data", expected: "201 with user ID." },
+          { id: "2", action: "POST without API key", expected: "401 Unauthorized." },
+          { id: "3", action: "POST with invalid data", expected: "400 Bad Request + validation errors." },
         ],
       },
       {
@@ -775,114 +1214,282 @@ const TEST_SECTIONS: TestSection[] = [
         title: "Create Payment via API",
         priority: "Critical",
         steps: [
-          { id: "1", action: "POST /api/merchant/createPayment with amount, currency, callback_url", expected: "200 response with payment_id, checkout_url, and payment address." },
-          { id: "2", action: "Open checkout_url in browser", expected: "Customer checkout page loads for this payment." },
-          { id: "3", action: "GET /api/merchant/getBalance with API key", expected: "200 response with current balances per currency." },
+          { id: "1", action: "POST /api/merchant/createPayment with amount, currency, callback_url", expected: "200 with payment_id, checkout_url, payment address." },
+          { id: "2", action: "Open checkout_url in browser", expected: "Customer checkout page loads." },
         ],
       },
       {
         id: "MAPI-003",
+        title: "Crypto Payment via API",
+        priority: "Critical",
+        steps: [
+          { id: "1", action: "POST /api/merchant/cryptoPayment", expected: "Crypto payment initiated. Address + amount returned." },
+        ],
+      },
+      {
+        id: "MAPI-004",
+        title: "Add Funds & Use Wallet via API",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "POST /api/merchant/addFunds", expected: "Funds added to customer wallet." },
+          { id: "2", action: "POST /api/merchant/useWallet", expected: "Funds deducted from wallet." },
+        ],
+      },
+      {
+        id: "MAPI-005",
+        title: "Balances & Transactions via API",
+        priority: "High",
+        steps: [
+          { id: "1", action: "GET /api/merchant/getBalance with API key", expected: "200 with balances per currency." },
+          { id: "2", action: "GET /api/merchant/getTransactions", expected: "Transaction list for merchant." },
+          { id: "3", action: "GET /api/merchant/getSingleTransaction/:id", expected: "Single transaction detail." },
+          { id: "4", action: "GET /api/merchant/getSupportedCurrency", expected: "List of supported cryptocurrencies." },
+        ],
+      },
+      {
+        id: "MAPI-006",
         title: "Webhook Delivery for API Payments",
         priority: "High",
         steps: [
-          { id: "1", action: "Complete a payment created via API", expected: "Webhook fires to configured callback_url with payment status." },
-          { id: "2", action: "Verify webhook payload signature", expected: "HMAC signature matches using webhook secret." },
+          { id: "1", action: "Complete a payment created via API", expected: "Webhook fires to callback_url." },
+          { id: "2", action: "Verify HMAC signature on webhook payload", expected: "Signature matches using webhook secret." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 16: ADMIN PANEL
+     ============================================================ */
   {
     id: "admin",
     title: "Admin Panel",
     icon: "🛡️",
-    description: "Admin login, wallet management, fee configuration, withdrawals, analytics",
+    description: "Admin login, dashboard, wallet management, fee config, transfer speed, withdrawals, KB articles, alerts",
     cases: [
       {
         id: "ADM-001",
         title: "Admin Login",
         priority: "Critical",
         steps: [
-          { id: "1", action: "Navigate to /admin/login", expected: "Admin login form loads." },
+          { id: "1", action: "Navigate to /admin/login", expected: "Admin login form." },
           { id: "2", action: "Enter admin credentials", expected: "Admin dashboard loads." },
-          { id: "3", action: "Enter wrong credentials", expected: "Error message shown. Login denied." },
+          { id: "3", action: "Enter wrong credentials", expected: "Error message. Login denied." },
         ],
       },
       {
         id: "ADM-002",
-        title: "Admin Dashboard & Management",
+        title: "Admin Dashboard",
         priority: "High",
         steps: [
-          { id: "1", action: "Navigate to /admin (admin dashboard)", expected: "Admin overview loads with system stats." },
-          { id: "2", action: "Navigate to /admin/wallet", expected: "Wallet management page with all system wallets." },
-          { id: "3", action: "Navigate to /admin/fee", expected: "Fee configuration page. Can view/edit fee tiers." },
-          { id: "4", action: "Navigate to /admin/withdraw", expected: "Withdrawal management page." },
-          { id: "5", action: "Navigate to /admin/transferSpeed", expected: "Transfer speed configuration page." },
+          { id: "1", action: "Navigate to /admin", expected: "Overview: system stats, user counts, revenue." },
+        ],
+      },
+      {
+        id: "ADM-003",
+        title: "Admin Wallet Management",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Navigate to /admin/wallet", expected: "System wallets listed with balances." },
+          { id: "2", action: "View admin fee wallet", expected: "Collected fees balance shown." },
+        ],
+      },
+      {
+        id: "ADM-004",
+        title: "Fee Tier Configuration",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Navigate to /admin/fee", expected: "Fee tiers table with volume thresholds and rates." },
+          { id: "2", action: "Edit a fee tier", expected: "Changes saved." },
+        ],
+      },
+      {
+        id: "ADM-005",
+        title: "Transfer Speed Configuration",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Navigate to /admin/transferSpeed", expected: "Transfer speed settings per network." },
+          { id: "2", action: "Update speed setting", expected: "Saved. Affects payment confirmation times." },
+        ],
+      },
+      {
+        id: "ADM-006",
+        title: "Withdrawal Management",
+        priority: "High",
+        steps: [
+          { id: "1", action: "Navigate to /admin/withdraw", expected: "Pending withdrawal requests listed." },
+          { id: "2", action: "Approve a withdrawal", expected: "Withdrawal processed." },
+          { id: "3", action: "Reject a withdrawal", expected: "Withdrawal denied. User notified." },
+        ],
+      },
+      {
+        id: "ADM-007",
+        title: "Admin Profile",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Navigate to /admin/profile", expected: "Admin profile info." },
+        ],
+      },
+      {
+        id: "ADM-008",
+        title: "Knowledge Base Admin (CRUD Articles)",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "POST /api/kb/admin/articles — create article", expected: "Article created." },
+          { id: "2", action: "PUT /api/kb/admin/articles/:id — update", expected: "Article updated." },
+          { id: "3", action: "DELETE /api/kb/admin/articles/:id — delete", expected: "Article removed from KB." },
+        ],
+      },
+      {
+        id: "ADM-009",
+        title: "Health Alerts & Monitoring",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "GET /api/admin/alerts/health", expected: "System health alerts listed." },
+          { id: "2", action: "POST /api/admin/alerts/test", expected: "Test alert sent." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 17: INTERNATIONALIZATION (i18n)
+     ============================================================ */
   {
     id: "i18n",
     title: "Internationalization (i18n)",
     icon: "🌍",
-    description: "Multi-language support, locale switching",
+    description: "Multi-language support, locale switching, RTL, persistence",
     cases: [
       {
         id: "I18N-001",
-        title: "Language Switching",
+        title: "Language Switching & Persistence",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Find language selector (footer or settings)", expected: "Dropdown/buttons for available languages." },
-          { id: "2", action: "Switch to French (fr)", expected: "All UI text changes to French. Layout adjusts for text length." },
+          { id: "1", action: "Find language selector (footer or settings)", expected: "Dropdown with available languages." },
+          { id: "2", action: "Switch to French (fr)", expected: "All UI text changes to French." },
           { id: "3", action: "Switch to Spanish (es)", expected: "UI text in Spanish." },
-          { id: "4", action: "Refresh page", expected: "Selected language persists across page refresh." },
-          { id: "5", action: "Navigate between pages", expected: "Language stays consistent across all pages." },
+          { id: "4", action: "Refresh page", expected: "Selected language persists." },
+          { id: "5", action: "Navigate between pages", expected: "Language consistent across all pages." },
+          { id: "6", action: "Test Arabic or Hebrew (if available)", expected: "RTL layout activates correctly." },
         ],
       },
     ],
   },
+
+  /* ============================================================
+     SECTION 18: REAL-TIME FEATURES
+     ============================================================ */
+  {
+    id: "realtime",
+    title: "Real-Time & SSE Events",
+    icon: "⚡",
+    description: "Server-Sent Events for live updates, payment status streaming, broadcast",
+    cases: [
+      {
+        id: "RT-001",
+        title: "SSE Event Stream",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Connect to GET /api/events/stream", expected: "SSE connection established. Heartbeat events received." },
+          { id: "2", action: "Trigger a payment event", expected: "Real-time event pushed to connected clients." },
+          { id: "3", action: "Verify dashboard updates without refresh", expected: "New transaction appears in real-time." },
+        ],
+      },
+    ],
+  },
+
+  /* ============================================================
+     SECTION 19: CROSS-CUTTING CONCERNS
+     ============================================================ */
   {
     id: "crosscut",
     title: "Cross-Cutting Concerns",
     icon: "🔀",
-    description: "Error handling, rate limiting, CORS, CSRF, responsive design, accessibility",
+    description: "Error handling, rate limiting, CORS, CSRF, responsive design, loading states, empty states, accessibility, dark mode",
     cases: [
       {
         id: "CC-001",
         title: "Error Handling & Edge Cases",
         priority: "High",
         steps: [
-          { id: "1", action: "Navigate to a non-existent URL (e.g., /xyz123)", expected: "Custom 404 page displayed (not generic Next.js error)." },
-          { id: "2", action: "Disconnect internet and try an API action", expected: "Graceful error message: 'Network error. Please check your connection.'" },
-          { id: "3", action: "Send rapid repeated requests (button mashing)", expected: "UI debounces/disables button. Rate limiter responds with 429 if needed." },
+          { id: "1", action: "Navigate to non-existent URL (e.g., /xyz123)", expected: "Custom 404 page." },
+          { id: "2", action: "Disconnect internet + try API action", expected: "'Network error' message." },
+          { id: "3", action: "Rapid repeated requests (button mashing)", expected: "Button debounced/disabled. 429 if rate limited." },
+          { id: "4", action: "Submit form with XSS payload (e.g., <script>alert(1)</script>)", expected: "Input sanitized. No script execution." },
         ],
       },
       {
         id: "CC-002",
-        title: "CSRF Protection",
+        title: "CSRF & Auth Header Protection",
         priority: "High",
         steps: [
-          { id: "1", action: "Verify POST requests include Authorization: Bearer header", expected: "All authenticated POST requests include the token. CSRF middleware skips them." },
-          { id: "2", action: "Make a POST request without Bearer token (e.g., from curl)", expected: "403 CSRF token validation failed." },
+          { id: "1", action: "Verify POST requests include Authorization: Bearer", expected: "All authenticated POST/PUT/DELETE requests have token." },
+          { id: "2", action: "Make POST without Bearer (curl)", expected: "403 CSRF validation failed." },
+          { id: "3", action: "Verify business-logic 403 does NOT redirect to login", expected: "User stays on page. Error shown in context." },
         ],
+        notes: "Critical fix area — 403 handler now distinguishes auth vs business-logic errors.",
       },
       {
         id: "CC-003",
-        title: "Responsive Design",
+        title: "Rate Limiting",
         priority: "Medium",
         steps: [
-          { id: "1", action: "Test on iPhone viewport (375x667)", expected: "All pages render correctly. No horizontal scroll. Touch targets >= 44px." },
-          { id: "2", action: "Test on iPad viewport (768x1024)", expected: "Tablet layout activates. Sidebar collapses to hamburger." },
-          { id: "3", action: "Test on desktop (1920x1080)", expected: "Full desktop layout. Sidebar visible. Charts scale properly." },
+          { id: "1", action: "Send 20+ rapid login attempts", expected: "Rate limiter triggers: 429 Too Many Requests." },
+          { id: "2", action: "Send 10+ OTP requests in 1 minute", expected: "OTP rate limiter triggers." },
+          { id: "3", action: "Normal usage after cooldown", expected: "Rate limit resets. Requests succeed." },
         ],
       },
       {
         id: "CC-004",
-        title: "Performance Checks",
+        title: "Responsive Design — All Viewports",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "iPhone (375x667)", expected: "All pages mobile-friendly. No horizontal scroll. Touch targets >= 44px." },
+          { id: "2", action: "iPad (768x1024)", expected: "Tablet layout. Sidebar collapses." },
+          { id: "3", action: "Desktop (1920x1080)", expected: "Full layout. Sidebar visible. Charts scale." },
+          { id: "4", action: "Ultra-wide (2560x1440)", expected: "Content centered. No broken layouts." },
+        ],
+      },
+      {
+        id: "CC-005",
+        title: "Dark / Light Mode",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Toggle dark mode", expected: "All pages switch. Text readable. No broken contrast." },
+          { id: "2", action: "Toggle back to light mode", expected: "Clean switch. All elements visible." },
+          { id: "3", action: "Refresh in each mode", expected: "Preference persists." },
+        ],
+      },
+      {
+        id: "CC-006",
+        title: "Loading & Empty States",
+        priority: "Medium",
+        steps: [
+          { id: "1", action: "Navigate to dashboard on slow connection (throttle to 3G)", expected: "Skeleton loaders or spinners shown during data fetch." },
+          { id: "2", action: "View transactions with no data", expected: "Empty state: friendly message + CTA." },
+          { id: "3", action: "View invoices with no data", expected: "Empty state message." },
+          { id: "4", action: "View payment links with no data", expected: "Empty state with 'Create your first link' CTA." },
+        ],
+      },
+      {
+        id: "CC-007",
+        title: "Browser Navigation",
         priority: "Low",
         steps: [
-          { id: "1", action: "Run Lighthouse audit on homepage", expected: "Performance > 80. No critical render-blocking resources." },
-          { id: "2", action: "Check API response times in Network tab", expected: "API responses < 2s for dashboard, < 500ms for simple queries." },
+          { id: "1", action: "Use browser Back/Forward through the app", expected: "All pages render correctly. No blank screens." },
+          { id: "2", action: "Open multiple tabs as same user", expected: "No conflicts. Each tab works independently." },
+          { id: "3", action: "Refresh any page", expected: "Page reloads with correct state." },
+        ],
+      },
+      {
+        id: "CC-008",
+        title: "Performance",
+        priority: "Low",
+        steps: [
+          { id: "1", action: "Lighthouse audit on homepage", expected: "Performance > 80." },
+          { id: "2", action: "API response times (Network tab)", expected: "Dashboard < 2s, simple queries < 500ms." },
+          { id: "3", action: "Check JS bundle size", expected: "No extremely large chunks (> 500KB gzipped)." },
         ],
       },
     ],
