@@ -133,7 +133,7 @@ const HeroSection = () => {
             variant="primary"
             label={tLanding("startAcceptingCrypto")}
           />
-          <HomeButton variant="outlined" label={tLanding("learnMore")} />
+          <HomeButton variant="outlined" label={tLanding("learnMore")} navigateTo="/blog" />
         </ButtonsRow>
       </TopSection>
 
