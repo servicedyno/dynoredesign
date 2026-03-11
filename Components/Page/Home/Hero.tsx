@@ -5,6 +5,10 @@ import useIsMobile from "@/hooks/useIsMobile";
 import Image from "next/image";
 import { memo, useMemo } from "react";
 import { useTranslation } from "react-i18next";
+
+/* Tiny shimmer placeholder — used for SVG assets that don't support auto-blur */
+const SHIMMER_BLUR =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iMC4zIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjIyMjQ0Ii8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMzMzMzNTUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMyMjIyNDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=";
 import {
   BitcoinFloat,
   ButtonsRow,
@@ -102,6 +106,9 @@ const HeroSection = () => {
               sizes="80px"
               className="bitcoinImg"
               draggable={false}
+              priority
+              placeholder="blur"
+              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             />
           </BitcoinFloat>
 
@@ -113,6 +120,9 @@ const HeroSection = () => {
               sizes="80px"
               className="ethereumImg"
               draggable={false}
+              priority
+              placeholder="blur"
+              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             />
           </EthereumFloat>
         </TitleArea>
@@ -137,6 +147,9 @@ const HeroSection = () => {
                 sizes="60px"
                 className="litecoinDesktopImg"
                 draggable={false}
+                priority
+                placeholder="blur"
+                blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
               />
             </LitecoinDesktopFloat>
 
@@ -148,7 +161,8 @@ const HeroSection = () => {
               className="dashboardDesktopImg"
               priority
               quality={85}
-              placeholder={isSafariLike ? "blur" : undefined}
+              placeholder="blur"
+              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
               draggable={false}
             />
           </DashboardDesktopBox>
@@ -162,7 +176,9 @@ const HeroSection = () => {
             sizes="(max-width: 768px) 280px, 320px"
             className={isIOS ? "walletImgIOS" : "walletImg"}
             quality={80}
-            placeholder={isSafariLike ? "blur" : undefined}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             draggable={false}
           />
         </WalletCard>
@@ -175,7 +191,9 @@ const HeroSection = () => {
             sizes="(max-width: 768px) 280px, 350px"
             className={isIOS ? "paymentImgIOS" : "paymentImg"}
             quality={80}
-            placeholder={isSafariLike ? "blur" : undefined}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             draggable={false}
           />
         </PaymentCard>
@@ -190,7 +208,9 @@ const HeroSection = () => {
             sizes="280px"
             className={isIOS ? "walletMobileImgIOS" : "walletMobileImg"}
             quality={80}
-            placeholder={isSafariLike ? "blur" : undefined}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             draggable={false}
           />
         </MobileWalletBox>
@@ -203,7 +223,9 @@ const HeroSection = () => {
             sizes="280px"
             className={isIOS ? "paymentMobileImgIOS" : "paymentMobileImg"}
             quality={80}
-            placeholder={isSafariLike ? "blur" : undefined}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
             draggable={false}
           />
         </MobilePaymentBox>
@@ -216,6 +238,9 @@ const HeroSection = () => {
             sizes="60px"
             className={isIOS ? "litecoinMobileImgIOS" : "litecoinMobileImg"}
             draggable={false}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
           />
         </LitecoinMobileFloat>
 
@@ -228,8 +253,9 @@ const HeroSection = () => {
             className={isIOS ? "dashboardMobileImgIOS" : "dashboardMobileImg"}
             draggable={false}
             quality={85}
-            placeholder={isSafariLike ? "blur" : undefined}
-            priority={Boolean(isMobile)}
+            priority
+            placeholder="blur"
+            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
           />
         </DashboardMobileBox>
       </MobileSection>

@@ -87,6 +87,7 @@ const WhyChooseDynopaySection = () => {
                       width={28}
                       height={28}
                       draggable={false}
+                      loading="eager"
                     />
                   </WhyChooseDynoPayIcon>
 

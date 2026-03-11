@@ -24,6 +24,10 @@ import CompanySelectorImage_svg from "@/assets/Images/home/company-dropdown.svg"
 import PaymentLinkAddImage_png from "@/assets/Images/home/payment-link-create.png";
 import PaymentLinkAddImage_svg from "@/assets/Images/home/payment-link-create.svg";
 
+/* Tiny shimmer placeholder for SVG images (non-Safari) */
+const SHIMMER_BLUR =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iMC4zIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjIyMjQ0Ii8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMzMzMzNTUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMyMjIyNDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=";
+
 type DeviceOS = "ios" | "android" | "web";
 type DeviceBrowser = "safari" | "chrome" | "firefox" | "edge" | "other";
 
@@ -150,7 +154,8 @@ const GoLiveSection: React.FC = () => {
                         alt={tLanding(card.titleKey)}
                         quality={80}
                         loading="lazy"
-                        placeholder={isSafariLike ? "blur" : undefined}
+                        placeholder="blur"
+                        blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
                         className={imgWidthVariant}
                         draggable={false}
                       />

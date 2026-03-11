@@ -12,6 +12,10 @@ import CheckCircleRoundedIcon from "@mui/icons-material/CheckCircleRounded";
 import UseCaseBanner from "@/Components/UI/UseCaseBanner";
 import useIsMobile from "@/hooks/useIsMobile";
 
+/* Tiny shimmer placeholder for lazy-loaded SVG images */
+const SHIMMER_BLUR =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iMC4zIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjIyMjQ0Ii8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMzMzMzNTUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMyMjIyNDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=";
+
 const UseCaseCard = styled(Box)(({ theme }) => ({
   backgroundColor: theme.palette.background.paper,
   borderRadius: "20px",
@@ -163,6 +167,9 @@ const UseCaseSection = () => {
                       alt={t(useCase.titleKey)}
                       width={163}
                       height={133}
+                      loading="lazy"
+                      placeholder="blur"
+                      blurDataURL={SHIMMER_BLUR}
                       style={{
                         objectFit: "cover",
                         height: "100%",

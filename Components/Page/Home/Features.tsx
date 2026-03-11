@@ -35,10 +35,16 @@ import ProgressCounterIcon from "@/assets/Icons/home/trend-down-icon.svg";
 import WebhookIcon from "@/assets/Icons/home/webhook-icon.svg";
 import { useDevice } from "@/hooks/useDevice";
 
+/* Tiny shimmer placeholder for SVG images (non-Safari) */
+const SHIMMER_BLUR =
+  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iMC4zIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjIyMjQ0Ii8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMzMzMzNTUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMyMjIyNDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=";
+
 const FeaturesSection = () => {
   const isMobile = useIsMobile("md");
   const { os, browser } = useDevice();
   const { t } = useTranslation("landing");
+
+  const isSafariLike = os === "ios" || browser === "safari";
 
   const cardData = [
     {
@@ -156,7 +162,8 @@ const FeaturesSection = () => {
                       alt={t(card.titleKey)}
                       quality={80}
                       loading="lazy"
-                      placeholder={os === "ios" || browser === "safari" ? "blur" : undefined}
+                      placeholder="blur"
+                      blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
                       style={{
                         width: isMobile ? "110%" : "100%",
                         height: "100%",
@@ -222,7 +229,8 @@ const FeaturesSection = () => {
                       alt={t(card.titleKey)}
                       quality={80}
                       loading="lazy"
-                      placeholder={os === "ios" || browser === "safari" ? "blur" : undefined}
+                      placeholder="blur"
+                      blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
                       style={{
                         width: "110%",
                         height: "100%",
