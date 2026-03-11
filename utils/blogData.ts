@@ -22,7 +22,7 @@ export const blogPosts: BlogPost[] = [
     coverImage: "",
     category: "Integration Guide",
     readTime: "8 min read",
-    publishedAt: "2026-06-15",
+    publishedAt: "2026-03-07",
     author: {
       name: "Dynopay Team",
       role: "Engineering",
@@ -123,7 +123,7 @@ Accepting crypto payments in 2026 is easier than ever. With Dynopay's single API
     coverImage: "",
     category: "Business Strategy",
     readTime: "6 min read",
-    publishedAt: "2026-05-28",
+    publishedAt: "2026-03-05",
     author: {
       name: "Dynopay Team",
       role: "Product",
@@ -196,7 +196,7 @@ Stablecoin settlement is the best of both worlds: you get the benefits of accept
     coverImage: "",
     category: "Cost Analysis",
     readTime: "7 min read",
-    publishedAt: "2026-05-10",
+    publishedAt: "2026-03-03",
     author: {
       name: "Dynopay Team",
       role: "Business Development",
@@ -281,7 +281,7 @@ Switching to crypto payments doesn't mean abandoning credit cards. Most merchant
     coverImage: "",
     category: "Developer Guide",
     readTime: "5 min read",
-    publishedAt: "2026-06-01",
+    publishedAt: "2026-03-06",
     author: {
       name: "Dynopay Team",
       role: "Developer Relations",
