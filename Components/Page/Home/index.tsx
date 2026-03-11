@@ -5,6 +5,7 @@ import FeaturesSection from "./Features";
 import GoLiveSection from "./GoLive";
 import HeroSection from "./Hero";
 import SocialProofSection from "./SocialProof";
+import TrustBadgesSection from "./TrustBadges";
 import UseCaseSection from "./UseCase";
 import WhyChooseDynopaySection from "./WhyChooseDynoPay";
 import { HomeContainer, HomeFullWidthContainer, HomeWrapper } from "./styled";
@@ -39,6 +40,10 @@ const HomePage: FC<HomePageProps> = () => {
       <HomeFullWidthContainer>
         <FeeSection />
       </HomeFullWidthContainer>
+
+      <HomeContainer>
+        <TrustBadgesSection />
+      </HomeContainer>
 
       <HomeContainer>
         <UseCaseSection />

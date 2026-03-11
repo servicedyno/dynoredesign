@@ -73,5 +73,6 @@
   "footerApiStatus": "Estado de la API",
   "footerSupport": "Ayuda y Soporte",
   "footerCopyright": "© {{year}} Dynotech Innovations, LDA. Todos los derechos reservados",
-  "headerFees": "Tarifas"
+  "headerFees": "Tarifas",
+  "blog": "Blog"
 }

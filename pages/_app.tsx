@@ -106,9 +106,10 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       "/system-status",
       "/documentation",
       "/fees",
+      "/blog",
     ]);
 
-    if (homePaths.has(pathname)) return "home";
+    if (homePaths.has(pathname) || pathname.startsWith("/blog/")) return "home";
 
     if (
       pathname.startsWith("/auth") ||
@@ -175,6 +176,7 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       "/":                         "home",
       "/fees":                     "fees",
       "/documentation":            "documentation",
+      "/blog":                     "blog",
       "/system-status":            "systemStatus",
       "/terms-conditions":         "termsConditions",
       "/privacy-policy":           "privacyPolicy",

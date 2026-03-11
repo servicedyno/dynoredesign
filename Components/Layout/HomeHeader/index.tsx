@@ -35,7 +35,7 @@ import {
 
 type SectionId = "how-it-works" | "features" | "use-cases";
 
-type TranslationKey = "howItWorks" | "features" | "useCases" | "documentation" | "headerFees";
+type TranslationKey = "howItWorks" | "features" | "useCases" | "documentation" | "headerFees" | "blog";
 
 interface HeaderItem {
   translationKey: TranslationKey;
@@ -55,6 +55,7 @@ const HEADER_ITEMS: readonly HeaderItem[] = [
   { translationKey: "useCases", sectionId: "use-cases", path: "/" },
   { translationKey: "headerFees", path: "/fees", external: false },
   { translationKey: "documentation", path: "/documentation", external: false },
+  { translationKey: "blog", path: "/blog", external: false },
 ] as const;
 
 /* ================= COMPONENT ================= */
