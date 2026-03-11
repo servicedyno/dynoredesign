@@ -92,8 +92,8 @@ export const csrfProtection = (req: Request, res: Response, next: NextFunction):
     return next();
   }
 
-  // Skip exempt paths
-  const path = req.path.toLowerCase();
+  // Skip exempt paths (normalize double-slashes from proxy/baseURL issues)
+  const path = req.path.replace(/\/+/g, "/").toLowerCase();
   if (EXEMPT_PATHS.some((exempt) => path.startsWith(exempt.toLowerCase()))) {
     return next();
   }

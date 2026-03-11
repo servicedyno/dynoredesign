@@ -1,7 +1,7 @@
 import unAuthorizedHelper from "@/helpers/unAutorizedHelper";
 import axios from "axios";
 
-const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+const apiBaseUrl = (process.env.NEXT_PUBLIC_BASE_URL || "").replace(/\/+$/, "");
 console.log("url for base", apiBaseUrl);
 
 const axiosBaseApi = axios.create({
@@ -64,12 +64,14 @@ axiosBaseApi.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config;
 
-    // Skip auth redirect for checkout/payment pages — customers are not logged-in merchants
+    // Skip auth redirect for public pages (homepage, checkout, fees, etc.) — visitors are not logged in
     const isCheckoutPage = typeof window !== "undefined" && window.location.pathname.startsWith("/pay");
+    const isPublicPage = typeof window !== "undefined" && ["/", "/fees", "/terms-conditions", "/privacy-policy", "/aml-policy", "/system-status", "/documentation"].includes(window.location.pathname);
+    const hasToken = typeof window !== "undefined" && !!localStorage.getItem("token");
 
     if (error.response?.status === 401 && !isAuthEndpoint(originalRequest?.url || "")) {
-      // On checkout pages, don't redirect to merchant login — just reject the error
-      if (isCheckoutPage) {
+      // On public/checkout pages without a token, don't redirect — just reject the error
+      if ((isCheckoutPage || isPublicPage) && !hasToken) {
         return Promise.reject(error);
       }
 
@@ -142,8 +144,14 @@ axiosBaseApi.interceptors.response.use(
     }
 
     // Handle 403 (Unauthorized/Login Expired) - redirect to login
+    // Only redirect if the user was actually logged in (has a token).
+    // Public pages (homepage, checkout) may trigger 403 from CSRF or other
+    // non-auth reasons — redirecting unauthenticated visitors to login is wrong.
     if (error.response?.status === 403) {
-      unAuthorizedHelper(error);
+      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
+      if (token) {
+        unAuthorizedHelper(error);
+      }
       return Promise.reject(error);
     }
 
