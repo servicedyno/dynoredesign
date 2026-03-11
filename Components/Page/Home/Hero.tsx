@@ -92,6 +92,7 @@ const HeroSection = () => {
         <TitleArea>
           <HomeSectionTitle
             type="large"
+            headingAs="h1"
             badgeText={tLanding("heroBadge")}
             title={tLanding("heroTitle")}
             highlightText={tLanding("heroHighlight")}

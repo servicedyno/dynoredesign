@@ -139,6 +139,35 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
 
   const { t: tTitle, i18n } = useTranslation("pageTitles");
 
+  // ─── Dynamic <html lang> ───
+  useEffect(() => {
+    if (typeof document !== "undefined" && i18n.language) {
+      document.documentElement.lang = i18n.language;
+    }
+  }, [i18n.language]);
+
+  const SITE_URL = "https://dynopay.com";
+  const OG_IMAGE = `${SITE_URL}/dynopay-favicon.png`;
+  const SUPPORTED_LANGS = ["en", "pt", "fr", "es", "de", "nl"];
+
+  // ─── Private routes that should NOT be indexed ───
+  const isPrivatePage = useMemo(() => {
+    const privatePrefixes = [
+      "/dashboard", "/transactions", "/pay-links", "/create-pay-link",
+      "/wallet", "/customers", "/developer-keys", "/invoices",
+      "/company", "/profile", "/notifications", "/referrals",
+      "/settings", "/help-support", "/admin", "/auth",
+      "/reset-password", "/payment/verify",
+    ];
+    return privatePrefixes.some((p) => pathname === p || pathname.startsWith(p + "/"));
+  }, [pathname]);
+
+  const canonicalUrl = useMemo(() => {
+    // Strip dynamic segments for a clean canonical
+    const cleanPath = pathname.replace(/\[.*?\]/g, "").replace(/\/+$/, "");
+    return `${SITE_URL}${cleanPath || "/"}`;
+  }, [pathname]);
+
   const { pageTitle, pageDescription: metaDescription } = useMemo(() => {
     // Map route paths to translation keys
     const routeKeyMap: Record<string, string> = {
@@ -203,6 +232,29 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       pageDescription: key ? tTitle(`${key}_desc`) : tTitle("default_desc"),
     };
   }, [pathname, tTitle, i18n.language]);
+
+  // ─── JSON-LD Structured Data ───
+  const jsonLd = useMemo(() => {
+    const org = {
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "name": "DynoPay",
+      "url": SITE_URL,
+      "logo": OG_IMAGE,
+      "description": "Accept cryptocurrency payments easily with DynoPay. Bitcoin, Ethereum, USDT and more.",
+      "sameAs": [
+        "https://x.com/Dynopaycom"
+      ]
+    };
+    const webSite = {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "DynoPay",
+      "url": SITE_URL,
+      "description": "Cryptocurrency payment gateway for businesses"
+    };
+    return JSON.stringify([org, webSite]);
+  }, []);
 
   const pageSetterProps: LayoutSetterProps = {
     setPageName,
@@ -285,8 +337,45 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       <Head>
         <title>{pageTitle}</title>
         <meta name="description" content={metaDescription} />
+
+        {/* ─── Viewport ─── */}
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5" />
+
+        {/* ─── Canonical URL ─── */}
+        <link rel="canonical" href={canonicalUrl} />
+
+        {/* ─── Robots: noindex for private pages ─── */}
+        {isPrivatePage && <meta name="robots" content="noindex, nofollow" />}
+
+        {/* ─── Open Graph ─── */}
+        <meta property="og:type" content={pathname === "/" ? "website" : "article"} />
         <meta property="og:title" content={pageTitle} />
         <meta property="og:description" content={metaDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={OG_IMAGE} />
+        <meta property="og:site_name" content="DynoPay" />
+        <meta property="og:locale" content={i18n.language || "en"} />
+
+        {/* ─── Twitter Cards ─── */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={metaDescription} />
+        <meta name="twitter:image" content={OG_IMAGE} />
+        <meta name="twitter:site" content="@Dynopaycom" />
+
+        {/* ─── hreflang tags for i18n ─── */}
+        {SUPPORTED_LANGS.map((lang) => (
+          <link key={lang} rel="alternate" hrefLang={lang} href={canonicalUrl} />
+        ))}
+        <link rel="alternate" hrefLang="x-default" href={canonicalUrl} />
+
+        {/* ─── JSON-LD Structured Data ─── */}
+        {pathname === "/" && (
+          <script
+            type="application/ld+json"
+            dangerouslySetInnerHTML={{ __html: jsonLd }}
+          />
+        )}
       </Head>
       {renderWithLayout()}
     </MuiThemeProvider>

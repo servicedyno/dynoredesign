@@ -14,6 +14,8 @@ export interface HomeSectionTitleProps {
   subtitle: string;
   align?: HomeSectionTitleAlign;
   sx?: SxProps<Theme>;
+  /** HTML heading element to render. Use "h1" only for the hero section. Defaults to "h2". */
+  headingAs?: "h1" | "h2" | "h3";
 }
 
 const HomeSectionTitle: React.FC<HomeSectionTitleProps> = ({
@@ -24,6 +26,7 @@ const HomeSectionTitle: React.FC<HomeSectionTitleProps> = ({
   subtitle,
   type = "large",
   align = "center",
+  headingAs = "h2",
 }) => {
   const isMobile = useIsMobile("md");
 
@@ -45,7 +48,7 @@ const HomeSectionTitle: React.FC<HomeSectionTitleProps> = ({
     <Wrapper sx={sx} data-align={align}>
       {badgeText ? <Badge data-align={align}>{badgeText}</Badge> : null}
 
-      <Heading variant="h1" data-type={type} data-align={align}>
+      <Heading variant={headingAs} component={headingAs} data-type={type} data-align={align}>
         {renderedTitle}
       </Heading>
 

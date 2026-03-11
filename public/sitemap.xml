@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml">
+  <!-- Homepage -->
+  <url>
+    <loc>https://dynopay.com/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="de" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="nl" href="https://dynopay.com/"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://dynopay.com/"/>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <!-- Fees -->
+  <url>
+    <loc>https://dynopay.com/fees</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Documentation -->
+  <url>
+    <loc>https://dynopay.com/documentation</loc>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- System Status -->
+  <url>
+    <loc>https://dynopay.com/system-status</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Terms & Conditions -->
+  <url>
+    <loc>https://dynopay.com/terms-conditions</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- Privacy Policy -->
+  <url>
+    <loc>https://dynopay.com/privacy-policy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+
+  <!-- AML Policy -->
+  <url>
+    <loc>https://dynopay.com/aml-policy</loc>
+    <changefreq>yearly</changefreq>
+    <priority>0.4</priority>
+  </url>
+</urlset>

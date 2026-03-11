@@ -10,7 +10,7 @@ export const MainBox = styled(Box)(({ theme }) => ({
   transition: "background-color 0.3s ease, color 0.3s ease",
 }));
 
-export const MainSection = styled(Box)(() => ({
+export const MainSection = styled("main")(() => ({
   flex: 1,
   display: "flex",
   flexDirection: "column",

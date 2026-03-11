@@ -10,7 +10,7 @@ import {
   Typography,
 } from "@mui/material";
 
-export const FixedHeader = styled(Box)(({ theme }) => ({
+export const FixedHeader = styled("header")(({ theme }) => ({
   position: "fixed",
   top: 0,
   left: 0,
@@ -72,7 +72,7 @@ export const RightGroup = styled(Box)({
   gap: "12px",
 });
 
-export const NavLinks = styled(Box)(({ theme }) => ({
+export const NavLinks = styled("nav")(({ theme }) => ({
   display: "flex",
   gap: 30,
   letterSpacing: "0px",

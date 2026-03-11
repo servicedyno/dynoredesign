@@ -1,6 +1,6 @@
 import { Box, Typography, styled } from "@mui/material";
 
-export const FooterWrapper = styled(Box)(({ theme }) => ({
+export const FooterWrapper = styled("footer")(({ theme }) => ({
   backgroundColor: theme.palette.mode === "dark" ? "#0B0D17" : "#131520",
   marginTop: "auto",
   paddingTop: 64,
@@ -121,7 +121,7 @@ export const SocialItem = styled(Box)({
   },
 });
 
-export const Navigation = styled(Box)({
+export const Navigation = styled("nav")({
   color: "#FCFBF8",
   textDecoration: "underline",
   fontSize: 14,
