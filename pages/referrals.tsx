@@ -169,7 +169,6 @@ const Referrals = ({ setPageName, setPageDescription }: pageProps) => {
   return (
     <>
       <Head>
-        <title>Dynopay - Referrals</title>
         <meta name="description" content="Referral program" />
       </Head>
       <Box sx={{ px: isMobile ? "16px" : 0 }}>

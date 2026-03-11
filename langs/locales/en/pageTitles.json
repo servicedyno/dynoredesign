@@ -1,0 +1,136 @@
+{
+  "default_title": "DynoPay — Crypto Payment Gateway",
+  "default_desc": "DynoPay — Accept crypto payments and settle in stablecoins. The simplest way to integrate cryptocurrency payments.",
+
+  "home_title": "DynoPay — Accept Crypto, Settle in Stablecoins",
+  "home_desc": "Accept BTC, ETH, and other crypto — automatically convert volatile payments into USDT or USDC with DynoPay.",
+
+  "fees_title": "Transparent Fees | DynoPay",
+  "fees_desc": "See exactly what you pay — no hidden charges. DynoPay's crypto payment processing fees explained.",
+
+  "documentation_title": "API Documentation | DynoPay",
+  "documentation_desc": "Integrate crypto payments into your application with the DynoPay API.",
+
+  "systemStatus_title": "System Status | DynoPay",
+  "systemStatus_desc": "Real-time operational status of DynoPay services and APIs.",
+
+  "termsConditions_title": "Terms & Conditions | DynoPay",
+  "termsConditions_desc": "Terms and conditions for using the DynoPay crypto payment platform.",
+
+  "privacyPolicy_title": "Privacy Policy | DynoPay",
+  "privacyPolicy_desc": "How DynoPay collects, uses, and protects your personal data.",
+
+  "amlPolicy_title": "AML Policy | DynoPay",
+  "amlPolicy_desc": "DynoPay's Anti-Money Laundering compliance policy.",
+
+  "authLogin_title": "Log In | DynoPay",
+  "authLogin_desc": "Sign in to your DynoPay merchant account.",
+
+  "authRegister_title": "Create Account | DynoPay",
+  "authRegister_desc": "Register a new DynoPay merchant account and start accepting crypto.",
+
+  "authValidateSocialLogin_title": "Verifying Login | DynoPay",
+  "authValidateSocialLogin_desc": "Completing your social login…",
+
+  "resetPassword_title": "Reset Password | DynoPay",
+  "resetPassword_desc": "Reset your DynoPay account password.",
+
+  "dashboard_title": "Dashboard | DynoPay",
+  "dashboard_desc": "Overview of your crypto payment activity.",
+
+  "transactions_title": "Transactions | DynoPay",
+  "transactions_desc": "View and manage all your crypto transactions.",
+
+  "payLinks_title": "Payment Links | DynoPay",
+  "payLinks_desc": "Create and manage crypto payment links.",
+
+  "editPayLink_title": "Edit Payment Link | DynoPay",
+  "editPayLink_desc": "Edit your payment link details.",
+
+  "createPayLink_title": "Create Payment Link | DynoPay",
+  "createPayLink_desc": "Create a new crypto payment link.",
+
+  "wallet_title": "Wallets | DynoPay",
+  "wallet_desc": "Manage your cryptocurrency wallets.",
+
+  "customers_title": "Customers | DynoPay",
+  "customers_desc": "View and manage your customer records.",
+
+  "developerKeys_title": "API Keys | DynoPay",
+  "developerKeys_desc": "Manage your DynoPay API keys and integrations.",
+
+  "invoices_title": "Invoices & Tax | DynoPay",
+  "invoices_desc": "Tax-compliant invoices and export reports.",
+
+  "company_title": "Company | DynoPay",
+  "company_desc": "Manage your company profile and settings.",
+
+  "profile_title": "Profile | DynoPay",
+  "profile_desc": "Manage your account profile.",
+
+  "notifications_title": "Notifications | DynoPay",
+  "notifications_desc": "Your latest alerts and notifications.",
+
+  "referrals_title": "Referrals | DynoPay",
+  "referrals_desc": "Invite others and earn rewards with DynoPay.",
+
+  "settings_title": "Settings | DynoPay",
+  "settings_desc": "Configure your DynoPay account preferences.",
+
+  "helpSupport_title": "Help & Support | DynoPay",
+  "helpSupport_desc": "Get help with DynoPay features and troubleshooting.",
+
+  "helpArticle_title": "Help Article | DynoPay",
+  "helpArticle_desc": "DynoPay help center article.",
+
+  "pay_title": "Pay | DynoPay",
+  "pay_desc": "Complete your crypto payment.",
+
+  "payDemo_title": "Checkout Demo | DynoPay",
+  "payDemo_desc": "Demo of the DynoPay checkout experience.",
+
+  "payAmlPolicy_title": "AML Policy — Checkout | DynoPay",
+  "payAmlPolicy_desc": "Anti-Money Laundering policy for DynoPay payments.",
+
+  "payTermsOfService_title": "Terms of Service — Checkout | DynoPay",
+  "payTermsOfService_desc": "Terms of service for DynoPay checkout.",
+
+  "paymentStatesDemo_title": "Payment States Demo | DynoPay",
+  "paymentStatesDemo_desc": "Demo of DynoPay payment state transitions.",
+
+  "paySuccessDemo_title": "Success Demo | DynoPay",
+  "paySuccessDemo_desc": "Demo of DynoPay payment success flow.",
+
+  "payment_title": "Payment | DynoPay",
+  "payment_desc": "Processing your crypto payment.",
+
+  "paymentSuccess_title": "Payment Successful | DynoPay",
+  "paymentSuccess_desc": "Your crypto payment was processed successfully.",
+
+  "paymentFailed_title": "Payment Failed | DynoPay",
+  "paymentFailed_desc": "Your crypto payment could not be processed.",
+
+  "paymentVerify_title": "Verifying Payment | DynoPay",
+  "paymentVerify_desc": "Verifying your crypto payment on the blockchain.",
+
+  "admin_title": "Admin Dashboard | DynoPay",
+  "admin_desc": "DynoPay administration panel.",
+
+  "adminLogin_title": "Admin Login | DynoPay",
+  "adminLogin_desc": "Sign in to the DynoPay admin panel.",
+
+  "adminFee_title": "Fee Management | DynoPay Admin",
+  "adminFee_desc": "Manage platform fee tiers and settings.",
+
+  "adminWallet_title": "Wallet Management | DynoPay Admin",
+  "adminWallet_desc": "Admin wallet configuration.",
+
+  "adminWithdraw_title": "Withdrawals | DynoPay Admin",
+  "adminWithdraw_desc": "Manage withdrawal requests.",
+
+  "adminTransferSpeed_title": "Transfer Speed | DynoPay Admin",
+  "adminTransferSpeed_desc": "Configure blockchain transfer speed settings.",
+
+  "adminProfile_title": "Admin Profile | DynoPay",
+  "adminProfile_desc": "Manage your admin profile."
+}

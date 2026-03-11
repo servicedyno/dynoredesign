@@ -868,7 +868,6 @@ const DocumentationPage = () => {
   return (
     <>
       <Head>
-        <title>API Documentation | Dynopay</title>
         <meta name="description" content="Integrate crypto payments into your application with the Dynopay API." />
       </Head>
 

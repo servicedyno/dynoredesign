@@ -1,0 +1,136 @@
+{
+  "default_title": "DynoPay — Crypto Betalingsgateway",
+  "default_desc": "DynoPay — Accepteer crypto-betalingen en verreken in stablecoins. De eenvoudigste manier om cryptovaluta-betalingen te integreren.",
+
+  "home_title": "DynoPay — Accepteer Crypto, Verreken in Stablecoins",
+  "home_desc": "Accepteer BTC, ETH en andere crypto's — converteer volatiele betalingen automatisch naar USDT of USDC met DynoPay.",
+
+  "fees_title": "Transparante Tarieven | DynoPay",
+  "fees_desc": "Bekijk precies wat u betaalt — geen verborgen kosten. De crypto-betalingsverwerkingskosten van DynoPay uitgelegd.",
+
+  "documentation_title": "API-Documentatie | DynoPay",
+  "documentation_desc": "Integreer crypto-betalingen in uw applicatie met de DynoPay API.",
+
+  "systemStatus_title": "Systeemstatus | DynoPay",
+  "systemStatus_desc": "Realtime operationele status van DynoPay-diensten en API's.",
+
+  "termsConditions_title": "Algemene Voorwaarden | DynoPay",
+  "termsConditions_desc": "Algemene voorwaarden voor het gebruik van het DynoPay crypto-betalingsplatform.",
+
+  "privacyPolicy_title": "Privacybeleid | DynoPay",
+  "privacyPolicy_desc": "Hoe DynoPay uw persoonlijke gegevens verzamelt, gebruikt en beschermt.",
+
+  "amlPolicy_title": "AML-Beleid | DynoPay",
+  "amlPolicy_desc": "DynoPays nalevingsbeleid tegen witwassen van geld.",
+
+  "authLogin_title": "Inloggen | DynoPay",
+  "authLogin_desc": "Log in op uw DynoPay-verkopersaccount.",
+
+  "authRegister_title": "Account Aanmaken | DynoPay",
+  "authRegister_desc": "Registreer een nieuw DynoPay-verkopersaccount en begin met het accepteren van crypto.",
+
+  "authValidateSocialLogin_title": "Aanmelding Verifiëren | DynoPay",
+  "authValidateSocialLogin_desc": "Uw sociale aanmelding wordt voltooid…",
+
+  "resetPassword_title": "Wachtwoord Herstellen | DynoPay",
+  "resetPassword_desc": "Herstel het wachtwoord van uw DynoPay-account.",
+
+  "dashboard_title": "Dashboard | DynoPay",
+  "dashboard_desc": "Overzicht van uw crypto-betalingsactiviteit.",
+
+  "transactions_title": "Transacties | DynoPay",
+  "transactions_desc": "Bekijk en beheer al uw crypto-transacties.",
+
+  "payLinks_title": "Betaallinks | DynoPay",
+  "payLinks_desc": "Maak en beheer crypto-betaallinks.",
+
+  "editPayLink_title": "Betaallink Bewerken | DynoPay",
+  "editPayLink_desc": "Bewerk de details van uw betaallink.",
+
+  "createPayLink_title": "Betaallink Aanmaken | DynoPay",
+  "createPayLink_desc": "Maak een nieuwe crypto-betaallink aan.",
+
+  "wallet_title": "Portemonnees | DynoPay",
+  "wallet_desc": "Beheer uw cryptovaluta-portemonnees.",
+
+  "customers_title": "Klanten | DynoPay",
+  "customers_desc": "Bekijk en beheer uw klantgegevens.",
+
+  "developerKeys_title": "API-Sleutels | DynoPay",
+  "developerKeys_desc": "Beheer uw DynoPay API-sleutels en integraties.",
+
+  "invoices_title": "Facturen & Belasting | DynoPay",
+  "invoices_desc": "Belastingconforme facturen en exportrapporten.",
+
+  "company_title": "Bedrijf | DynoPay",
+  "company_desc": "Beheer uw bedrijfsprofiel en instellingen.",
+
+  "profile_title": "Profiel | DynoPay",
+  "profile_desc": "Beheer uw accountprofiel.",
+
+  "notifications_title": "Meldingen | DynoPay",
+  "notifications_desc": "Uw laatste waarschuwingen en meldingen.",
+
+  "referrals_title": "Verwijzingen | DynoPay",
+  "referrals_desc": "Nodig anderen uit en verdien beloningen met DynoPay.",
+
+  "settings_title": "Instellingen | DynoPay",
+  "settings_desc": "Configureer uw DynoPay-accountvoorkeuren.",
+
+  "helpSupport_title": "Help & Ondersteuning | DynoPay",
+  "helpSupport_desc": "Krijg hulp bij DynoPay-functies en probleemoplossing.",
+
+  "helpArticle_title": "Helpartikel | DynoPay",
+  "helpArticle_desc": "DynoPay helpcentrum-artikel.",
+
+  "pay_title": "Betalen | DynoPay",
+  "pay_desc": "Voltooi uw crypto-betaling.",
+
+  "payDemo_title": "Checkout-Demo | DynoPay",
+  "payDemo_desc": "Demo van de DynoPay-checkout-ervaring.",
+
+  "payAmlPolicy_title": "AML-Beleid — Checkout | DynoPay",
+  "payAmlPolicy_desc": "Anti-witwasbeleid voor DynoPay-betalingen.",
+
+  "payTermsOfService_title": "Servicevoorwaarden — Checkout | DynoPay",
+  "payTermsOfService_desc": "Servicevoorwaarden voor DynoPay-checkout.",
+
+  "paymentStatesDemo_title": "Betalingsstatus-Demo | DynoPay",
+  "paymentStatesDemo_desc": "Demo van DynoPay-betalingsstatusovergangen.",
+
+  "paySuccessDemo_title": "Succes-Demo | DynoPay",
+  "paySuccessDemo_desc": "Demo van de succesvolle DynoPay-betalingsstroom.",
+
+  "payment_title": "Betaling | DynoPay",
+  "payment_desc": "Uw crypto-betaling wordt verwerkt.",
+
+  "paymentSuccess_title": "Betaling Geslaagd | DynoPay",
+  "paymentSuccess_desc": "Uw crypto-betaling is succesvol verwerkt.",
+
+  "paymentFailed_title": "Betaling Mislukt | DynoPay",
+  "paymentFailed_desc": "Uw crypto-betaling kon niet worden verwerkt.",
+
+  "paymentVerify_title": "Betaling Verifiëren | DynoPay",
+  "paymentVerify_desc": "Uw crypto-betaling wordt geverifieerd op de blockchain.",
+
+  "admin_title": "Admin-Dashboard | DynoPay",
+  "admin_desc": "DynoPay-beheerpaneel.",
+
+  "adminLogin_title": "Admin-Aanmelding | DynoPay",
+  "adminLogin_desc": "Log in op het DynoPay-beheerpaneel.",
+
+  "adminFee_title": "Tariefbeheer | DynoPay Admin",
+  "adminFee_desc": "Beheer platformtariefniveaus en instellingen.",
+
+  "adminWallet_title": "Portemonnee-Beheer | DynoPay Admin",
+  "adminWallet_desc": "Admin-portemonnee-configuratie.",
+
+  "adminWithdraw_title": "Opnames | DynoPay Admin",
+  "adminWithdraw_desc": "Beheer opnameverzoeken.",
+
+  "adminTransferSpeed_title": "Overdrachtssnelheid | DynoPay Admin",
+  "adminTransferSpeed_desc": "Configureer blockchain-overdrachtssnelheidsinstellingen.",
+
+  "adminProfile_title": "Admin-Profiel | DynoPay",
+  "adminProfile_desc": "Beheer uw beheerdersprofiel."
+}

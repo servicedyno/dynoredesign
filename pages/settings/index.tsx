@@ -101,7 +101,6 @@ const SettingsPage = ({
   return (
     <>
       <Head>
-        <title>Settings - Dynopay</title>
       </Head>
       <Box sx={{ px: { xs: 2, md: 0 }, py: { xs: 1, md: 0 }, maxWidth: "1200px" }}>
         {/* Card Grid */}

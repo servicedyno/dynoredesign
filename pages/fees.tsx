@@ -215,7 +215,6 @@ const FeesPage = () => {
   return (
     <>
       <Head>
-        <title>{t("pageTitle")}</title>
       </Head>
 
       <PageWrapper>

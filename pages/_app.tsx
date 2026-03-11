@@ -9,6 +9,7 @@ import Head from "next/head";
 import React, { ReactNode, useEffect, useMemo, useState } from "react";
 import NProgress from "nprogress";
 import dynamic from "next/dynamic";
+import { useTranslation } from "react-i18next";
 
 import type { SxProps, Theme } from "@mui/material";
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
@@ -136,71 +137,72 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
   // Page Titles & Meta
   // -----------------------------
 
-  const { pageTitle, pageDescription: metaDescription } = useMemo(() => {
-    const BRAND = "DynoPay";
+  const { t: tTitle, i18n } = useTranslation("pageTitles");
 
-    const titles: Record<string, { title: string; desc: string }> = {
+  const { pageTitle, pageDescription: metaDescription } = useMemo(() => {
+    // Map route paths to translation keys
+    const routeKeyMap: Record<string, string> = {
       // ─── Public / Landing ───
-      "/":                    { title: `${BRAND} — Accept Crypto, Settle in Stablecoins`,       desc: "Accept BTC, ETH, and other crypto — automatically convert volatile payments into USDT or USDC with DynoPay." },
-      "/fees":                { title: `Transparent Fees | ${BRAND}`,                            desc: "See exactly what you pay — no hidden charges. DynoPay's crypto payment processing fees explained." },
-      "/documentation":       { title: `API Documentation | ${BRAND}`,                          desc: "Integrate crypto payments into your application with the DynoPay API." },
-      "/system-status":       { title: `System Status | ${BRAND}`,                              desc: "Real-time operational status of DynoPay services and APIs." },
-      "/terms-conditions":    { title: `Terms & Conditions | ${BRAND}`,                         desc: "Terms and conditions for using the DynoPay crypto payment platform." },
-      "/privacy-policy":      { title: `Privacy Policy | ${BRAND}`,                             desc: "How DynoPay collects, uses, and protects your personal data." },
-      "/aml-policy":          { title: `AML Policy | ${BRAND}`,                                 desc: "DynoPay's Anti-Money Laundering compliance policy." },
+      "/":                         "home",
+      "/fees":                     "fees",
+      "/documentation":            "documentation",
+      "/system-status":            "systemStatus",
+      "/terms-conditions":         "termsConditions",
+      "/privacy-policy":           "privacyPolicy",
+      "/aml-policy":               "amlPolicy",
 
       // ─── Auth ───
-      "/auth/login":          { title: `Log In | ${BRAND}`,                                     desc: "Sign in to your DynoPay merchant account." },
-      "/auth/register":       { title: `Create Account | ${BRAND}`,                             desc: "Register a new DynoPay merchant account and start accepting crypto." },
-      "/auth/validateSocialLogin": { title: `Verifying Login | ${BRAND}`,                       desc: "Completing your social login…" },
-      "/reset-password":      { title: `Reset Password | ${BRAND}`,                             desc: "Reset your DynoPay account password." },
+      "/auth/login":               "authLogin",
+      "/auth/register":            "authRegister",
+      "/auth/validateSocialLogin": "authValidateSocialLogin",
+      "/reset-password":           "resetPassword",
 
       // ─── Dashboard / App ───
-      "/dashboard":           { title: `Dashboard | ${BRAND}`,                                  desc: "Overview of your crypto payment activity." },
-      "/transactions":        { title: `Transactions | ${BRAND}`,                               desc: "View and manage all your crypto transactions." },
-      "/pay-links":           { title: `Payment Links | ${BRAND}`,                              desc: "Create and manage crypto payment links." },
-      "/pay-links/[slug]":    { title: `Edit Payment Link | ${BRAND}`,                          desc: "Edit your payment link details." },
-      "/create-pay-link":     { title: `Create Payment Link | ${BRAND}`,                        desc: "Create a new crypto payment link." },
-      "/wallet":              { title: `Wallets | ${BRAND}`,                                    desc: "Manage your cryptocurrency wallets." },
-      "/customers":           { title: `Customers | ${BRAND}`,                                  desc: "View and manage your customer records." },
-      "/developer-keys":      { title: `API Keys | ${BRAND}`,                                   desc: "Manage your DynoPay API keys and integrations." },
-      "/invoices":            { title: `Invoices & Tax | ${BRAND}`,                             desc: "Tax-compliant invoices and export reports." },
-      "/company":             { title: `Company | ${BRAND}`,                                    desc: "Manage your company profile and settings." },
-      "/profile":             { title: `Profile | ${BRAND}`,                                    desc: "Manage your account profile." },
-      "/notifications":       { title: `Notifications | ${BRAND}`,                              desc: "Your latest alerts and notifications." },
-      "/referrals":           { title: `Referrals | ${BRAND}`,                                  desc: "Invite others and earn rewards with DynoPay." },
-      "/settings":            { title: `Settings | ${BRAND}`,                                   desc: "Configure your DynoPay account preferences." },
-      "/help-support":        { title: `Help & Support | ${BRAND}`,                             desc: "Get help with DynoPay features and troubleshooting." },
-      "/help-support/[slug]": { title: `Help Article | ${BRAND}`,                               desc: "DynoPay help center article." },
+      "/dashboard":                "dashboard",
+      "/transactions":             "transactions",
+      "/pay-links":                "payLinks",
+      "/pay-links/[slug]":         "editPayLink",
+      "/create-pay-link":          "createPayLink",
+      "/wallet":                   "wallet",
+      "/customers":                "customers",
+      "/developer-keys":           "developerKeys",
+      "/invoices":                 "invoices",
+      "/company":                  "company",
+      "/profile":                  "profile",
+      "/notifications":            "notifications",
+      "/referrals":                "referrals",
+      "/settings":                 "settings",
+      "/help-support":             "helpSupport",
+      "/help-support/[slug]":      "helpArticle",
 
       // ─── Checkout / Pay ───
-      "/pay":                 { title: `Pay | ${BRAND}`,                                        desc: "Complete your crypto payment." },
-      "/pay/demo":            { title: `Checkout Demo | ${BRAND}`,                              desc: "Demo of the DynoPay checkout experience." },
-      "/pay/aml-policy":      { title: `AML Policy — Checkout | ${BRAND}`,                      desc: "Anti-Money Laundering policy for DynoPay payments." },
-      "/pay/terms-of-service":{ title: `Terms of Service — Checkout | ${BRAND}`,                desc: "Terms of service for DynoPay checkout." },
-      "/pay/payment-states-demo": { title: `Payment States Demo | ${BRAND}`,                    desc: "Demo of DynoPay payment state transitions." },
-      "/pay/success-demo":    { title: `Success Demo | ${BRAND}`,                               desc: "Demo of DynoPay payment success flow." },
-      "/payment":             { title: `Payment | ${BRAND}`,                                    desc: "Processing your crypto payment." },
-      "/payment/success":     { title: `Payment Successful | ${BRAND}`,                         desc: "Your crypto payment was processed successfully." },
-      "/payment/failed":      { title: `Payment Failed | ${BRAND}`,                             desc: "Your crypto payment could not be processed." },
-      "/payment/verify":      { title: `Verifying Payment | ${BRAND}`,                          desc: "Verifying your crypto payment on the blockchain." },
+      "/pay":                      "pay",
+      "/pay/demo":                 "payDemo",
+      "/pay/aml-policy":           "payAmlPolicy",
+      "/pay/terms-of-service":     "payTermsOfService",
+      "/pay/payment-states-demo":  "paymentStatesDemo",
+      "/pay/success-demo":         "paySuccessDemo",
+      "/payment":                  "payment",
+      "/payment/success":          "paymentSuccess",
+      "/payment/failed":           "paymentFailed",
+      "/payment/verify":           "paymentVerify",
 
       // ─── Admin ───
-      "/admin":               { title: `Admin Dashboard | ${BRAND}`,                            desc: "DynoPay administration panel." },
-      "/admin/login":         { title: `Admin Login | ${BRAND}`,                                desc: "Sign in to the DynoPay admin panel." },
-      "/admin/fee":           { title: `Fee Management | ${BRAND} Admin`,                       desc: "Manage platform fee tiers and settings." },
-      "/admin/wallet":        { title: `Wallet Management | ${BRAND} Admin`,                    desc: "Admin wallet configuration." },
-      "/admin/withdraw":      { title: `Withdrawals | ${BRAND} Admin`,                          desc: "Manage withdrawal requests." },
-      "/admin/transferSpeed": { title: `Transfer Speed | ${BRAND} Admin`,                       desc: "Configure blockchain transfer speed settings." },
-      "/admin/profile":       { title: `Admin Profile | ${BRAND}`,                              desc: "Manage your admin profile." },
+      "/admin":                    "admin",
+      "/admin/login":              "adminLogin",
+      "/admin/fee":                "adminFee",
+      "/admin/wallet":             "adminWallet",
+      "/admin/withdraw":           "adminWithdraw",
+      "/admin/transferSpeed":      "adminTransferSpeed",
+      "/admin/profile":            "adminProfile",
     };
 
-    const match = titles[pathname];
+    const key = routeKeyMap[pathname];
     return {
-      pageTitle: match?.title ?? `${BRAND} — Crypto Payment Gateway`,
-      pageDescription: match?.desc ?? "DynoPay — Accept crypto payments and settle in stablecoins. The simplest way to integrate cryptocurrency payments.",
+      pageTitle: key ? tTitle(`${key}_title`) : tTitle("default_title"),
+      pageDescription: key ? tTitle(`${key}_desc`) : tTitle("default_desc"),
     };
-  }, [pathname]);
+  }, [pathname, tTitle, i18n.language]);
 
   const pageSetterProps: LayoutSetterProps = {
     setPageName,

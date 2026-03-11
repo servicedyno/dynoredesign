@@ -75,7 +75,6 @@ export default function Home({
   return (
     <>
       <Head>
-        <title>Dynopay - Dashboard</title>
         <meta name="description" content="Dynopay - Cryptocurrency Payment Gateway" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
       </Head>
