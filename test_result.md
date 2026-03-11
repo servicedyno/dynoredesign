@@ -389,6 +389,30 @@ frontend:
         agent: "testing"
         comment: "VERIFIED: Existing customer JWT flow still works perfectly. POST /api/user/createUser with x-api-key creates customer and returns JWT token. Using both x-api-key + Authorization Bearer token for subsequent cryptoPayment calls works correctly. Backward compatibility maintained."
 
+  - task: "Blog Year Update 2025 → 2026"
+    implemented: true
+    working: true
+    file: "utils/blogData.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Updated all 2025 references to 2026 in blogData.ts: titles, dates (publishedAt), and content text. All 4 blog posts updated. Verified on blog list and post pages."
+
+  - task: "Social Sharing Buttons on Blog Posts"
+    implemented: true
+    working: true
+    file: "pages/blog/[slug].tsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Added social sharing buttons (X/Twitter, LinkedIn, Facebook, WhatsApp) to blog post pages. Buttons appear both below the author section (top) and after the article content (bottom, centered). Uses SVG icons with hover effects. Opens share links in new tabs with pre-filled post title and URL."
+
 metadata:
   created_by: "testing_agent"
   version: "3.0"

@@ -16,20 +16,20 @@ export interface BlogPost {
 export const blogPosts: BlogPost[] = [
   {
     slug: "how-to-accept-crypto-payments-on-your-website",
-    title: "How to Accept Crypto Payments on Your Website in 2025",
+    title: "How to Accept Crypto Payments on Your Website in 2026",
     excerpt:
       "A step-by-step guide to integrating cryptocurrency payments into your e-commerce store or SaaS product — no blockchain expertise required.",
     coverImage: "",
     category: "Integration Guide",
     readTime: "8 min read",
-    publishedAt: "2025-06-15",
+    publishedAt: "2026-06-15",
     author: {
       name: "Dynopay Team",
       role: "Engineering",
     },
     content: `## Why Accept Crypto Payments?
 
-Cryptocurrency payments are no longer niche. In 2025, over **$10 billion** in merchant transactions are processed through crypto payment gateways annually. Here's why businesses are making the switch:
+Cryptocurrency payments are no longer niche. In 2026, over **$10 billion** in merchant transactions are processed through crypto payment gateways annually. Here's why businesses are making the switch:
 
 - **Zero chargebacks** — Crypto transactions are final, eliminating fraud-related losses
 - **Lower fees** — Typical processing fees of 0.5–1% vs 2.9% + $0.30 for credit cards
@@ -110,7 +110,7 @@ Worried about crypto price volatility? Dynopay can automatically convert incomin
 
 ## Conclusion
 
-Accepting crypto payments in 2025 is easier than ever. With Dynopay's single API call integration, you can be up and running in minutes — not days. No blockchain expertise required, no complex infrastructure to manage.
+Accepting crypto payments in 2026 is easier than ever. With Dynopay's single API call integration, you can be up and running in minutes — not days. No blockchain expertise required, no complex infrastructure to manage.
 
 [Get started for free →](https://dynopay.com/auth/register)
 `,
@@ -123,7 +123,7 @@ Accepting crypto payments in 2025 is easier than ever. With Dynopay's single API
     coverImage: "",
     category: "Business Strategy",
     readTime: "6 min read",
-    publishedAt: "2025-05-28",
+    publishedAt: "2026-05-28",
     author: {
       name: "Dynopay Team",
       role: "Product",
@@ -190,13 +190,13 @@ Stablecoin settlement is the best of both worlds: you get the benefits of accept
   },
   {
     slug: "bitcoin-vs-credit-card-fees-comparison",
-    title: "Bitcoin vs Credit Card Fees: A 2025 Cost Comparison for Merchants",
+    title: "Bitcoin vs Credit Card Fees: A 2026 Cost Comparison for Merchants",
     excerpt:
       "A detailed breakdown of processing fees showing how crypto payments can save your business thousands per year compared to traditional card processing.",
     coverImage: "",
     category: "Cost Analysis",
     readTime: "7 min read",
-    publishedAt: "2025-05-10",
+    publishedAt: "2026-05-10",
     author: {
       name: "Dynopay Team",
       role: "Business Development",
@@ -254,7 +254,7 @@ Chargebacks are the silent killer of e-commerce profits. The average merchant lo
 
 ## But What About Customer Adoption?
 
-The common concern: \"Do my customers even have crypto?\" The answer in 2025 is increasingly yes:
+The common concern: \"Do my customers even have crypto?\" The answer in 2026 is increasingly yes:
 - **420 million** people worldwide own cryptocurrency
 - **40% of millennials** have purchased crypto
 - Crypto payments grew **300%** year-over-year in e-commerce
@@ -281,7 +281,7 @@ Switching to crypto payments doesn't mean abandoning credit cards. Most merchant
     coverImage: "",
     category: "Developer Guide",
     readTime: "5 min read",
-    publishedAt: "2025-06-01",
+    publishedAt: "2026-06-01",
     author: {
       name: "Dynopay Team",
       role: "Developer Relations",
