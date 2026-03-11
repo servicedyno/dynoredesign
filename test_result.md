@@ -122,10 +122,10 @@ backend:
         comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://initial-config-17.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
+        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://setup-wizard-125.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://initial-config-17.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
+        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://setup-wizard-125.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -358,7 +358,7 @@ metadata:
   version: "3.0"
   test_sequence: 3
   run_ui: true
-  backend_url: "https://initial-config-17.preview.emergentagent.com"
+  backend_url: "https://ed36bca6-d97b-4f60-b20f-5c7cf42323f9.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:

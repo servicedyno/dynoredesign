@@ -4,7 +4,7 @@
 - **Email**: nomadly@moxx.co
 - **Password**: Katiekendra123@
 - **Company**: Nomadly1
-- **Pod URL**: https://initial-config-17.preview.emergentagent.com
+- **Pod URL**: https://setup-wizard-125.preview.emergentagent.com
 
 ---
 
