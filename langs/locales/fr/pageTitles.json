@@ -1,136 +1,136 @@
 {
-  "default_title": "DynoPay — Passerelle de Paiement Crypto",
-  "default_desc": "DynoPay — Acceptez les paiements crypto et réglez en stablecoins. Le moyen le plus simple d'intégrer les paiements en cryptomonnaies.",
+  "default_title": "DynoPay — Passerelle de Paiement en Cryptomonnaies pour Entreprises",
+  "default_desc": "DynoPay est une passerelle de paiement en cryptomonnaies qui permet aux commerçants d'accepter Bitcoin, Ethereum et stablecoins avec un règlement instantané en USDT ou USDC. Frais réduits et intégration API simple.",
 
-  "home_title": "DynoPay — Acceptez la Crypto, Réglez en Stablecoins",
-  "home_desc": "Acceptez BTC, ETH et d'autres cryptos — convertissez automatiquement les paiements volatils en USDT ou USDC avec DynoPay.",
+  "home_title": "DynoPay — Passerelle de Paiement Crypto | Acceptez Bitcoin et Réglez en Stablecoins",
+  "home_desc": "Acceptez Bitcoin, Ethereum, Litecoin et plus de 20 cryptomonnaies avec conversion automatique en USDT ou USDC. DynoPay est la passerelle de paiement crypto pour les commerçants qui veulent un règlement en stablecoins, des frais bas et une API simple.",
 
-  "fees_title": "Frais Transparents | DynoPay",
-  "fees_desc": "Voyez exactement ce que vous payez — pas de frais cachés. Les frais de traitement des paiements crypto de DynoPay expliqués.",
+  "fees_title": "Frais de Traitement des Paiements Crypto — Tarifs Transparents | DynoPay",
+  "fees_desc": "Consultez les frais de la passerelle de paiement crypto DynoPay — aucun frais caché, aucun coût mensuel. Comparez nos faibles frais de transaction pour les paiements Bitcoin, Ethereum et stablecoins.",
 
-  "documentation_title": "Documentation API | DynoPay",
-  "documentation_desc": "Intégrez les paiements crypto dans votre application avec l'API DynoPay.",
+  "documentation_title": "Documentation API — Intégrez les Paiements Crypto | DynoPay",
+  "documentation_desc": "Intégrez les paiements en cryptomonnaies dans votre site web ou application avec l'API REST DynoPay. Webhooks, liens de paiement, checkout Bitcoin et Ethereum — documentation complète.",
 
-  "systemStatus_title": "État du Système | DynoPay",
-  "systemStatus_desc": "État opérationnel en temps réel des services et API de DynoPay.",
+  "systemStatus_title": "État du Système — API et Disponibilité des Paiements | DynoPay",
+  "systemStatus_desc": "État opérationnel en temps réel du traitement des paiements, de la passerelle API, des services de portefeuille et de la livraison des webhooks DynoPay.",
 
-  "termsConditions_title": "Conditions Générales | DynoPay",
-  "termsConditions_desc": "Conditions générales d'utilisation de la plateforme de paiement crypto DynoPay.",
+  "termsConditions_title": "Conditions Générales | DynoPay Passerelle de Paiement Crypto",
+  "termsConditions_desc": "Conditions générales d'utilisation de la passerelle de paiement en cryptomonnaies et des services marchands DynoPay.",
 
-  "privacyPolicy_title": "Politique de Confidentialité | DynoPay",
-  "privacyPolicy_desc": "Comment DynoPay collecte, utilise et protège vos données personnelles.",
+  "privacyPolicy_title": "Politique de Confidentialité | DynoPay Passerelle de Paiement Crypto",
+  "privacyPolicy_desc": "Comment DynoPay collecte, utilise et protège vos données personnelles en tant que fournisseur de paiement en cryptomonnaies.",
 
-  "amlPolicy_title": "Politique AML | DynoPay",
-  "amlPolicy_desc": "Politique de conformité anti-blanchiment de DynoPay.",
+  "amlPolicy_title": "Politique AML — Anti-Blanchiment d'Argent | DynoPay",
+  "amlPolicy_desc": "Politique de conformité Anti-Blanchiment d'Argent (AML) de DynoPay pour le traitement des paiements en cryptomonnaies et l'intégration des commerçants.",
 
-  "authLogin_title": "Connexion | DynoPay",
-  "authLogin_desc": "Connectez-vous à votre compte marchand DynoPay.",
+  "authLogin_title": "Connexion Commerçant | DynoPay",
+  "authLogin_desc": "Connectez-vous à votre tableau de bord commerçant DynoPay pour gérer les paiements crypto, transactions et portefeuilles.",
 
-  "authRegister_title": "Créer un Compte | DynoPay",
-  "authRegister_desc": "Créez un nouveau compte marchand DynoPay et commencez à accepter la crypto.",
+  "authRegister_title": "Créer un Compte Commerçant | DynoPay",
+  "authRegister_desc": "Créez un compte commerçant DynoPay gratuit et commencez à accepter les paiements en cryptomonnaies en quelques minutes.",
 
   "authValidateSocialLogin_title": "Vérification de la Connexion | DynoPay",
-  "authValidateSocialLogin_desc": "Finalisation de votre connexion sociale…",
+  "authValidateSocialLogin_desc": "Finalisation de la vérification de votre connexion sociale.",
 
   "resetPassword_title": "Réinitialiser le Mot de Passe | DynoPay",
-  "resetPassword_desc": "Réinitialisez le mot de passe de votre compte DynoPay.",
+  "resetPassword_desc": "Réinitialisez le mot de passe de votre compte commerçant DynoPay en toute sécurité.",
 
-  "dashboard_title": "Tableau de Bord | DynoPay",
-  "dashboard_desc": "Aperçu de votre activité de paiement crypto.",
+  "dashboard_title": "Tableau de Bord Commerçant | DynoPay",
+  "dashboard_desc": "Aperçu de votre activité de paiement en cryptomonnaies — volume, transactions et soldes de portefeuille.",
 
-  "transactions_title": "Transactions | DynoPay",
-  "transactions_desc": "Consultez et gérez toutes vos transactions crypto.",
+  "transactions_title": "Historique des Transactions | DynoPay",
+  "transactions_desc": "Consultez et gérez toutes vos transactions de paiement en Bitcoin, Ethereum et stablecoins.",
 
-  "payLinks_title": "Liens de Paiement | DynoPay",
-  "payLinks_desc": "Créez et gérez des liens de paiement crypto.",
+  "payLinks_title": "Liens de Paiement Crypto | DynoPay",
+  "payLinks_desc": "Créez et gérez des liens de paiement en cryptomonnaies partageables — aucune programmation requise.",
 
   "editPayLink_title": "Modifier le Lien de Paiement | DynoPay",
-  "editPayLink_desc": "Modifiez les détails de votre lien de paiement.",
+  "editPayLink_desc": "Modifiez le montant, la devise et les paramètres de votre lien de paiement crypto.",
 
-  "createPayLink_title": "Créer un Lien de Paiement | DynoPay",
-  "createPayLink_desc": "Créez un nouveau lien de paiement crypto.",
+  "createPayLink_title": "Créer un Lien de Paiement Crypto | DynoPay",
+  "createPayLink_desc": "Générez un nouveau lien de paiement en cryptomonnaies pour accepter les paiements Bitcoin, Ethereum ou stablecoins.",
 
-  "wallet_title": "Portefeuilles | DynoPay",
-  "wallet_desc": "Gérez vos portefeuilles de cryptomonnaies.",
+  "wallet_title": "Portefeuilles Crypto | DynoPay",
+  "wallet_desc": "Gérez vos adresses de portefeuille Bitcoin, Ethereum, Litecoin, USDT et USDC.",
 
-  "customers_title": "Clients | DynoPay",
-  "customers_desc": "Consultez et gérez vos fiches clients.",
+  "customers_title": "Gestion des Clients | DynoPay",
+  "customers_desc": "Consultez et gérez vos fiches clients et historique de paiements.",
 
-  "developerKeys_title": "Clés API | DynoPay",
-  "developerKeys_desc": "Gérez vos clés API et intégrations DynoPay.",
+  "developerKeys_title": "Clés API et Intégrations | DynoPay",
+  "developerKeys_desc": "Gérez vos clés API DynoPay pour l'intégration des paiements en cryptomonnaies.",
 
-  "invoices_title": "Factures et Taxes | DynoPay",
-  "invoices_desc": "Factures conformes à la fiscalité et rapports d'exportation.",
+  "invoices_title": "Factures et Rapports Fiscaux | DynoPay",
+  "invoices_desc": "Générez des factures de cryptomonnaies conformes à la fiscalité et exportez des rapports de transactions.",
 
-  "company_title": "Entreprise | DynoPay",
-  "company_desc": "Gérez le profil et les paramètres de votre entreprise.",
+  "company_title": "Paramètres de l'Entreprise | DynoPay",
+  "company_desc": "Gérez le profil de votre entreprise, vos préférences de paiement et options de règlement.",
 
-  "profile_title": "Profil | DynoPay",
-  "profile_desc": "Gérez votre profil de compte.",
+  "profile_title": "Profil du Compte | DynoPay",
+  "profile_desc": "Gérez le profil et les paramètres de sécurité de votre compte commerçant DynoPay.",
 
-  "notifications_title": "Notifications | DynoPay",
-  "notifications_desc": "Vos dernières alertes et notifications.",
+  "notifications_title": "Notifications de Paiement | DynoPay",
+  "notifications_desc": "Vos dernières alertes de paiement, mises à jour de transactions et notifications de compte.",
 
-  "referrals_title": "Parrainages | DynoPay",
-  "referrals_desc": "Invitez d'autres personnes et gagnez des récompenses avec DynoPay.",
+  "referrals_title": "Programme de Parrainage | DynoPay",
+  "referrals_desc": "Invitez d'autres commerçants sur DynoPay et gagnez des récompenses sur leur volume de transactions.",
 
-  "settings_title": "Paramètres | DynoPay",
-  "settings_desc": "Configurez les préférences de votre compte DynoPay.",
+  "settings_title": "Paramètres du Compte | DynoPay",
+  "settings_desc": "Configurez les préférences de votre compte DynoPay, webhooks et paramètres d'auto-conversion.",
 
-  "helpSupport_title": "Aide et Support | DynoPay",
-  "helpSupport_desc": "Obtenez de l'aide sur les fonctionnalités et le dépannage de DynoPay.",
+  "helpSupport_title": "Aide et Support | DynoPay Passerelle de Paiement Crypto",
+  "helpSupport_desc": "Obtenez de l'aide pour l'intégration DynoPay, les problèmes de paiement, la configuration du portefeuille et le dépannage API.",
 
   "helpArticle_title": "Article d'Aide | DynoPay",
-  "helpArticle_desc": "Article du centre d'aide DynoPay.",
+  "helpArticle_desc": "Base de connaissances DynoPay — guides pour l'intégration des paiements crypto et la configuration du compte commerçant.",
 
-  "pay_title": "Payer | DynoPay",
-  "pay_desc": "Complétez votre paiement crypto.",
+  "pay_title": "Checkout Crypto | DynoPay",
+  "pay_desc": "Complétez votre paiement en cryptomonnaies en toute sécurité via le checkout DynoPay.",
 
-  "payDemo_title": "Démo du Paiement | DynoPay",
-  "payDemo_desc": "Démonstration de l'expérience de paiement DynoPay.",
+  "payDemo_title": "Démo du Checkout — Testez les Paiements Crypto | DynoPay",
+  "payDemo_desc": "Découvrez comment fonctionne le checkout crypto DynoPay — démo en direct des paiements Bitcoin, Ethereum et stablecoins.",
 
-  "payAmlPolicy_title": "Politique AML — Paiement | DynoPay",
-  "payAmlPolicy_desc": "Politique anti-blanchiment pour les paiements DynoPay.",
+  "payAmlPolicy_title": "Politique AML — Checkout | DynoPay",
+  "payAmlPolicy_desc": "Politique Anti-Blanchiment d'Argent pour les paiements en cryptomonnaies traités via le checkout DynoPay.",
 
-  "payTermsOfService_title": "Conditions de Service — Paiement | DynoPay",
-  "payTermsOfService_desc": "Conditions de service pour le paiement DynoPay.",
+  "payTermsOfService_title": "Conditions de Service — Checkout | DynoPay",
+  "payTermsOfService_desc": "Conditions de service pour les paiements crypto traités via le checkout DynoPay.",
 
   "paymentStatesDemo_title": "Démo des États de Paiement | DynoPay",
-  "paymentStatesDemo_desc": "Démonstration des transitions d'état de paiement DynoPay.",
+  "paymentStatesDemo_desc": "Démo des transitions d'état de paiement en cryptomonnaies et du flux de confirmation DynoPay.",
 
-  "paySuccessDemo_title": "Démo de Succès | DynoPay",
-  "paySuccessDemo_desc": "Démonstration du flux de paiement réussi DynoPay.",
+  "paySuccessDemo_title": "Démo de Paiement Réussi | DynoPay",
+  "paySuccessDemo_desc": "Démo du flux de confirmation de paiement crypto réussi DynoPay.",
 
-  "payment_title": "Paiement | DynoPay",
-  "payment_desc": "Traitement de votre paiement crypto.",
+  "payment_title": "Traitement du Paiement | DynoPay",
+  "payment_desc": "Votre paiement en cryptomonnaies est en cours de traitement et de confirmation sur la blockchain.",
 
-  "paymentSuccess_title": "Paiement Réussi | DynoPay",
-  "paymentSuccess_desc": "Votre paiement crypto a été traité avec succès.",
+  "paymentSuccess_title": "Paiement Confirmé | DynoPay",
+  "paymentSuccess_desc": "Votre paiement en cryptomonnaies a été confirmé sur la blockchain et réglé avec succès.",
 
   "paymentFailed_title": "Paiement Échoué | DynoPay",
-  "paymentFailed_desc": "Votre paiement crypto n'a pas pu être traité.",
+  "paymentFailed_desc": "Votre paiement en cryptomonnaies n'a pas pu être traité. Veuillez réessayer ou contacter le support.",
 
-  "paymentVerify_title": "Vérification du Paiement | DynoPay",
-  "paymentVerify_desc": "Vérification de votre paiement crypto sur la blockchain.",
+  "paymentVerify_title": "Vérification du Paiement Blockchain | DynoPay",
+  "paymentVerify_desc": "Vérification de votre paiement en cryptomonnaies sur la blockchain — en attente des confirmations réseau.",
 
   "admin_title": "Tableau de Bord Admin | DynoPay",
-  "admin_desc": "Panneau d'administration DynoPay.",
+  "admin_desc": "Administration de la plateforme DynoPay et gestion des commerçants.",
 
   "adminLogin_title": "Connexion Admin | DynoPay",
   "adminLogin_desc": "Connectez-vous au panneau d'administration DynoPay.",
 
   "adminFee_title": "Gestion des Frais | DynoPay Admin",
-  "adminFee_desc": "Gérez les niveaux de frais et les paramètres de la plateforme.",
+  "adminFee_desc": "Gérez les niveaux de frais de traitement des paiements en cryptomonnaies et les paramètres des commerçants.",
 
   "adminWallet_title": "Gestion des Portefeuilles | DynoPay Admin",
-  "adminWallet_desc": "Configuration des portefeuilles d'administration.",
+  "adminWallet_desc": "Configurez les adresses de portefeuille de la plateforme et les options de règlement blockchain.",
 
   "adminWithdraw_title": "Retraits | DynoPay Admin",
-  "adminWithdraw_desc": "Gérez les demandes de retrait.",
+  "adminWithdraw_desc": "Gérez les demandes de retrait de cryptomonnaies des commerçants.",
 
   "adminTransferSpeed_title": "Vitesse de Transfert | DynoPay Admin",
-  "adminTransferSpeed_desc": "Configurez les paramètres de vitesse de transfert blockchain.",
+  "adminTransferSpeed_desc": "Configurez la vitesse de transfert blockchain et les frais de gas pour le traitement des paiements.",
 
   "adminProfile_title": "Profil Admin | DynoPay",
-  "adminProfile_desc": "Gérez votre profil d'administrateur."
+  "adminProfile_desc": "Gérez le profil de votre compte administrateur DynoPay."
 }
