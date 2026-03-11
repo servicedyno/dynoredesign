@@ -241,19 +241,61 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
       "name": "DynoPay",
       "url": SITE_URL,
       "logo": OG_IMAGE,
-      "description": "Accept cryptocurrency payments easily with DynoPay. Bitcoin, Ethereum, USDT and more.",
+      "description": "DynoPay is a cryptocurrency payment gateway that enables businesses to accept Bitcoin, Ethereum, and stablecoins with automatic settlement in USDT or USDC.",
+      "foundingDate": "2024",
       "sameAs": [
         "https://x.com/Dynopaycom"
-      ]
+      ],
+      "contactPoint": {
+        "@type": "ContactPoint",
+        "contactType": "customer support",
+        "availableLanguage": ["English", "Portuguese", "French", "Spanish", "German", "Dutch"]
+      }
     };
     const webSite = {
       "@context": "https://schema.org",
       "@type": "WebSite",
       "name": "DynoPay",
       "url": SITE_URL,
-      "description": "Cryptocurrency payment gateway for businesses"
+      "description": "Cryptocurrency payment gateway — accept Bitcoin, Ethereum, and 20+ cryptocurrencies with instant stablecoin settlement.",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": `${SITE_URL}/documentation?q={search_term_string}`,
+        "query-input": "required name=search_term_string"
+      }
     };
-    return JSON.stringify([org, webSite]);
+    const product = {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "DynoPay Crypto Payment Gateway",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Web",
+      "url": SITE_URL,
+      "description": "Accept cryptocurrency payments on your website or app. Bitcoin, Ethereum, Litecoin, USDT, USDC and more — with automatic stablecoin settlement and low processing fees.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD",
+        "description": "Free to start — pay only per transaction"
+      },
+      "featureList": [
+        "Accept Bitcoin (BTC) payments",
+        "Accept Ethereum (ETH) payments",
+        "Accept USDT and USDC stablecoin payments",
+        "Automatic conversion to stablecoins",
+        "Low transaction fees",
+        "Developer-friendly REST API",
+        "Shareable payment links — no code required",
+        "Real-time webhook notifications",
+        "Multi-currency merchant dashboard",
+        "Built-in tax compliance and invoicing"
+      ],
+      "creator": {
+        "@type": "Organization",
+        "name": "DynoPay"
+      }
+    };
+    return JSON.stringify([org, webSite, product]);
   }, []);
 
   const pageSetterProps: LayoutSetterProps = {

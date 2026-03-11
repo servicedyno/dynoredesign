@@ -1,6 +1,12 @@
-# DynoPay Robots.txt
+# DynoPay — Cryptocurrency Payment Gateway
+# https://dynopay.com
 User-agent: *
 Allow: /
+Allow: /fees
+Allow: /documentation
+Allow: /system-status
+
+# Private / Authenticated Pages
 Disallow: /dashboard
 Disallow: /transactions
 Disallow: /pay-links
