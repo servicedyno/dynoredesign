@@ -1434,8 +1434,24 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
         );
       }
 
-      // Generate access token and return
-      const resData = await getAccessToken(user.dataValues.user_id);
+      // Update last login IP
+      const ipAddress = req.headers["x-forwarded-for"] || req.socket?.remoteAddress || "unknown";
+      await userModel.update(
+        { last_login_ip: typeof ipAddress === "string" ? ipAddress : String(ipAddress) },
+        { where: { user_id: user.dataValues.user_id } }
+      );
+
+      // Create session with refresh token (same as OTP login)
+      const sessionData = await createSession(user.dataValues, req as any);
+      const { password: _pw, telegram_id: _tid, ...userDataClean } = user.dataValues;
+      const resData = {
+        userData: userDataClean,
+        accessToken: sessionData.accessToken,
+        refreshToken: sessionData.refreshToken,
+        expiresIn: sessionData.expiresIn,
+        session_id: sessionData.session_id,
+        token_type: "Bearer",
+      };
       return successResponseHelper(res, 200, "Login Successful!", resData);
     }
 
@@ -1473,7 +1489,16 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
       });
     }
 
-    const resData = await getAccessToken(createdUser.dataValues.user_id);
+    const sessionDataNew = await createSession(createdUser.dataValues, req as any);
+    const { password: _pw2, telegram_id: _tid2, ...newUserDataClean } = createdUser.dataValues;
+    const resData = {
+      userData: newUserDataClean,
+      accessToken: sessionDataNew.accessToken,
+      refreshToken: sessionDataNew.refreshToken,
+      expiresIn: sessionDataNew.expiresIn,
+      session_id: sessionDataNew.session_id,
+      token_type: "Bearer",
+    };
 
     // Send welcome email
     try {

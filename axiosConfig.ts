@@ -143,14 +143,31 @@ axiosBaseApi.interceptors.response.use(
       }
     }
 
-    // Handle 403 (Unauthorized/Login Expired) - redirect to login
-    // Only redirect if the user was actually logged in (has a token).
-    // Public pages (homepage, checkout) may trigger 403 from CSRF or other
-    // non-auth reasons — redirecting unauthenticated visitors to login is wrong.
+    // Handle 403 — only redirect to login for auth-related 403 errors.
+    // Business-logic 403 (e.g. "no companies", "not your company") should NOT
+    // redirect to login or remove the token.
     if (error.response?.status === 403) {
-      const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
-      if (token) {
-        unAuthorizedHelper(error);
+      const responseMsg = (
+        error.response?.data?.message ||
+        error.response?.data?.error ||
+        ""
+      ).toLowerCase();
+
+      const isAuthRelated =
+        responseMsg.includes("token") ||
+        responseMsg.includes("jwt") ||
+        responseMsg.includes("authentication") ||
+        responseMsg.includes("login again") ||
+        responseMsg.includes("expired");
+
+      if (isAuthRelated) {
+        const token =
+          typeof window !== "undefined"
+            ? localStorage.getItem("token")
+            : null;
+        if (token) {
+          unAuthorizedHelper(error);
+        }
       }
       return Promise.reject(error);
     }

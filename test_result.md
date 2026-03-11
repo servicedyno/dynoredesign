@@ -389,6 +389,18 @@ frontend:
         agent: "testing"
         comment: "VERIFIED: Existing customer JWT flow still works perfectly. POST /api/user/createUser with x-api-key creates customer and returns JWT token. Using both x-api-key + Authorization Bearer token for subsequent cryptoPayment calls works correctly. Backward compatibility maintained."
 
+  - task: "Google Sign-In 403 Cascade Fix"
+    implemented: true
+    working: true
+    files: ["axiosConfig.ts", "helpers/unAutorizedHelper.ts", "backend/controller/userController.ts", "pages/auth/login.tsx"]
+    stuck_count: 0
+    priority: "critical"
+    needs_retesting: true
+    status_history:
+      - working: true
+        agent: "main"
+        comment: "Fixed Google sign-in redirect-to-login issue. Root cause: axios 403 interceptor treated ALL 403 responses as auth failures, causing token removal and login redirect. For new Google users with no companies, getCompany returns a business-logic 403 which triggered the cascade. Fix: (1) 403 interceptor now checks response message for auth-related keywords before redirecting (2) Backend googleSignIn now creates proper sessions with refreshToken (3) Frontend passes refreshToken to Redux store."
+
   - task: "Blog Year Update 2025 → 2026"
     implemented: true
     working: true

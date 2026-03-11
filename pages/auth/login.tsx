@@ -844,7 +844,7 @@ export default function Login() {
                 const { data, message } = res?.data || {};
                 if (data?.userData && data?.accessToken) {
                   dispatch({ type: TOAST_SHOW, payload: { message: message || "Login successful" } });
-                  dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });
+                  dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken, refreshToken: data.refreshToken } });
                 } else {
                   throw new Error("Invalid response");
                 }
