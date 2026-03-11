@@ -353,17 +353,53 @@ frontend:
         agent: "testing"
         comment: "VERIFIED: Mobile view (375x812) working correctly. URL correctly contains '/pay' and NOT redirected to /auth/login or homepage. Payment page loads properly on mobile with payment card/container visible. Cryptocurrency button visible after scroll. Mobile menu/hamburger visible. Responsive layout working correctly."
 
+  - task: "Userless Payment - cryptoPayment without customer token"
+    implemented: true
+    working: true
+    file: "/backend/routes/merchantApiRouter.ts, /backend/middleware/legacyApiAuthMiddleware.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: POST /api/user/cryptoPayment with ONLY x-api-key header (no Authorization) successfully creates payment. Returns 200 with transaction_id, qr_code, address, and amount. The legacyApiAuthMiddleware auto-creates default 'legacy-api-*' customer when no JWT provided. Multiple currencies tested (BTC, ETH). Error handling working correctly for missing parameters."
+
+  - task: "Userless Payment - createPayment without customer token"
+    implemented: true
+    working: true
+    file: "/backend/routes/merchantApiRouter.ts, /backend/middleware/legacyApiAuthMiddleware.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: POST /api/user/createPayment with ONLY x-api-key header (no Authorization) successfully creates checkout payment. Returns 200 with redirect_url to hosted checkout page. Error handling working for missing redirect_uri parameter. The legacyApiAuthMiddleware properly handles userless flow."
+
+  - task: "Userless Payment - existing flow with customer token still works"
+    implemented: true
+    working: true
+    file: "/backend/routes/merchantApiRouter.ts"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+      - working: true
+        agent: "testing"
+        comment: "VERIFIED: Existing customer JWT flow still works perfectly. POST /api/user/createUser with x-api-key creates customer and returns JWT token. Using both x-api-key + Authorization Bearer token for subsequent cryptoPayment calls works correctly. Backward compatibility maintained."
+
 metadata:
   created_by: "testing_agent"
   version: "3.0"
-  test_sequence: 3
+  test_sequence: 4
   run_ui: true
-  backend_url: "https://getting-started-108.preview.emergentagent.com"
+  backend_url: "https://96de2b60-9a72-42e0-9698-9c828be96fa7.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
   current_focus:
-    - "Comprehensive frontend testing: COMPLETED"
+    - "Userless Payment backend testing"
   stuck_tasks: []
   test_all: false
   test_priority: "high_first"
@@ -372,11 +408,9 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Backend endpoints all verified: checkPhone (200, validPhone:false for unknown), checkEmail (200, validEmail:true for nomadly@moxx.co), status (operational), login (returns login_otp_session), addEmail/addPhone/verifyAddEmail/verifyAddPhone all return 403 without auth. All working. Now running comprehensive frontend testing."
+    message: "Testing userless payment feature. The legacyApiAuthMiddleware in /backend/middleware/legacyApiAuthMiddleware.ts allows API calls with ONLY x-api-key header (no Authorization/Bearer token). When no valid customer JWT is provided, it auto-creates a 'legacy-api-*' default customer via findOrCreateDefaultCustomer(). Endpoints to test: POST /api/user/cryptoPayment, POST /api/user/createPayment, POST /api/user/addFunds - all should work with only x-api-key. Also verify the existing flow WITH customer token still works (POST /api/user/createUser then use token). The API key is encrypted and validated against tbl_api table. To get a valid API key, query: SELECT \"apiKey\" FROM tbl_api LIMIT 1. The backend URL is https://96de2b60-9a72-42e0-9698-9c828be96fa7.preview.emergentagent.com."
   - agent: "testing"
-    message: "CRITICAL BUG FIXED: axiosConfig.ts was missing '/' in baseURL construction (line 8 and 111). Changed 'apiBaseUrl + \"api/\"' to 'apiBaseUrl + \"/api/\"'. This was causing all API calls to fail with ERR_NAME_NOT_RESOLVED. After fix: email check API working, phone check API working, login flow functional. Comprehensive frontend testing completed successfully."
-  - agent: "main"
-    message: "Removed BrandPanel animation (LiveBrandContent carousel) from login.tsx and register.tsx. Removed SplitLayoutWrapper/BrandPanel/FormPanel wrappers. Forms now render centered using AuthContainer within a full-page flex Box with alignItems:center. Verified via screenshots: both login and register pages show centered forms with no left-side animation."
+    message: "COMPREHENSIVE USERLESS PAYMENT TESTING COMPLETED: All 3 userless payment tasks now working perfectly. Successfully tested with API keys retrieved from database (Company 39, 3, 9). Key findings: (1) legacyApiAuthMiddleware correctly validates x-api-key and auto-creates default customers with email format 'legacy-api-{companyId}-{timestamp}@dynopay.internal'. (2) All endpoints work with ONLY x-api-key: cryptoPayment, createPayment, addFunds, getBalance, getTransactions, getSupportedCurrency. (3) Existing customer JWT flow remains functional - backward compatibility maintained. (4) Error handling working correctly. (5) CSRF protection properly excludes x-api-key requests. The userless payment feature is production-ready and fully functional."
 
 # Testing Protocol
 # DO NOT EDIT THIS SECTION
