@@ -856,13 +856,22 @@ setupRefereeCodeReminderCron();
 // Setup payment link reminder cron job (every hour)
 setupPaymentLinkReminderCron();
 
+// ═══════════════════════════════════════════════════════════════════════
+// RELIABILITY: Payment Watchdog — detect stuck payments every 2 minutes
+// ═══════════════════════════════════════════════════════════════════════
+cron.schedule("*/2 * * * *", async function () {
+  try {
+    const { watchdogCheck } = await import("./services/paymentReliability");
+    await watchdogCheck();
+  } catch (err: unknown) {
+    const errMsg = err instanceof Error ? err.message : String(err);
+    log(`Cron: Payment watchdog failed: ${errMsg}`, "error");
+  }
+});
+
 // Stablecoin Conversion: Process pending conversions via Binance
 // Runs every N minutes (configurable via BINANCE_CONVERT_INTERVAL_MINUTES)
-// Warning: Setting to 1 min may cause Binance API rate limiting / IP bans
-const convertIntervalMinutes = Math.max(parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10, 5);
-if (parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") < 5) {
-  console.warn(`[DynoPay] ⚠️ BINANCE_CONVERT_INTERVAL_MINUTES=${process.env.BINANCE_CONVERT_INTERVAL_MINUTES} is below minimum (5). Using ${convertIntervalMinutes} minutes.`);
-}
+const convertIntervalMinutes = Math.max(parseInt(process.env.BINANCE_CONVERT_INTERVAL_MINUTES || "10") || 10, 1);
 cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
   const lockAcquired = await acquireLock("cron:stablecoinConversion", 240, 1, 100, true);
   if (!lockAcquired) { log("Cron: stablecoinConversion skipped (already running)", "info"); return; }
@@ -1000,6 +1009,15 @@ const startServer = async () => {
     const { default: pushSubscriptionModel } = await import("./models/pushSubscriptionModel");
     await pushSubscriptionModel.sync(syncOptions);
     log('Push subscription table synced.', 'info');
+    
+    // Sync Payment Journal model (reliability layer)
+    try {
+      const { initPaymentJournal } = await import("./services/paymentReliability");
+      await initPaymentJournal();
+      log('Payment Journal table synced.', 'info');
+    } catch (journalErr: any) {
+      log(`Payment Journal sync failed (non-critical): ${journalErr.message}`, 'warn');
+    }
     
     // Sync company model (for auto-convert fields)
     await companyModel.sync(syncOptions);

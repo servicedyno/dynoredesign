@@ -218,6 +218,23 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       hasTxId: !!items.txId,
     });
 
+    // ── RELIABILITY: Journal payment detection to PostgreSQL ──
+    try {
+      const { journalStateTransition } = require("./paymentReliability");
+      await journalStateTransition({
+        paymentId: items.payment_id || items.ref || `addr-${address}`,
+        txId: payload.txId,
+        address,
+        currency: items?.currency || payload.asset || 'unknown',
+        event: 'payment_detected',
+        fromState: items.status || 'unknown',
+        toState: 'processing',
+        amount: Number(payload.amount),
+        companyId: Number(items?.company_id || queryCompanyId) || null,
+        metadata: { source: data.source, expectedAmount: items.amount },
+      });
+    } catch (_journalErr) { /* non-blocking */ }
+
     // ── 5. Amount validation ──────────────────────────────────────────────────
     const incomingAmount = Number(payload.amount);
     if (!Number.isFinite(incomingAmount) || incomingAmount <= 0) {
@@ -698,6 +715,23 @@ async function handleNewTransaction(
     // Success: update Redis
     // Soft-enforce: processing → successful (PROCESSING → PAYOUT_COMPLETE)
     softValidate("processing", "successful", paymentId, "crypto-verification-success");
+
+    // ── RELIABILITY: Journal payment completion to PostgreSQL ──
+    try {
+      const { journalStateTransition } = require("./paymentReliability");
+      await journalStateTransition({
+        paymentId: items.payment_id || items.ref || paymentId,
+        txId: payload.txId,
+        address,
+        currency: items?.currency || payload.asset || 'unknown',
+        event: 'payment_completed',
+        fromState: 'processing',
+        toState: 'payout_complete',
+        amount: Number(finalReceivedAmount),
+        companyId: Number(items?.company_id) || null,
+        metadata: { source: 'webhookProcessor', originalExpected: expectedAmount },
+      });
+    } catch (_journalErr) { /* non-blocking */ }
 
     await setRedisItem(redisKey, {
       ...items, status: "successful", txId: payload.txId,

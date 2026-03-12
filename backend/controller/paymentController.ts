@@ -2868,15 +2868,83 @@ const settleCryptoTransaction = async ({
 }) => {
   // Get the address - use wallet_address if available, otherwise use address
   const fromAddress = tempAddressData.wallet_address || tempAddressData.address;
+  const paymentId = tempAddressData.payment_id || `unknown-${Date.now()}`;
   
   try {
+    // ── RELIABILITY GUARD 1: Settlement Idempotency ──────────────────────────
+    // Prevent double-spend if this function is retried after a successful Tatum call
+    const {
+      checkSettlementIdempotency,
+      markSettlementInProgress,
+      markSettlementCompleted,
+      markSettlementFailed,
+      validateWalletSeparation,
+      journalStateTransition,
+    } = require("../services/paymentReliability");
+
+    const idempotencyCheck = await checkSettlementIdempotency(paymentId, fromAddress, currency);
+    if (idempotencyCheck.alreadySettled) {
+      cronLogger.warn(
+        `[settleCryptoTransaction] ⛔ Idempotency guard: Settlement already exists for payment ${paymentId}. ` +
+        `TX: ${idempotencyCheck.existingTxId || 'in-progress'}. Skipping duplicate.`
+      );
+      return idempotencyCheck.existingTxId
+        ? { txId: idempotencyCheck.existingTxId, status: 'already_settled' }
+        : { txId: null, status: 'settlement_in_progress' };
+    }
+
+    // Mark settlement as in-progress (atomic claim)
+    await markSettlementInProgress(paymentId);
+
     const adminWalletAddress = getAdminWalletAddress(currency);
 
     if (!adminWalletAddress) {
+      await markSettlementFailed(paymentId, `No admin wallet for ${currency}`);
       throw new Error(
         `Admin wallet address not configured for ${currency} in environment variables.`
       );
     }
+
+    // ── RELIABILITY GUARD 2: Admin ≠ Merchant Wallet ─────────────────────────
+    // Prevent admin fees from being sent to the merchant wallet
+    if (userAddress) {
+      const walletCheck = validateWalletSeparation(
+        adminWalletAddress,
+        userAddress,
+        currency,
+        Number((tempAddressData as any).current_company_id) || null
+      );
+      if (!walletCheck.valid) {
+        cronLogger.error(`[settleCryptoTransaction] ⛔ WALLET GUARD BLOCKED: ${walletCheck.reason}`);
+        await markSettlementFailed(paymentId, walletCheck.reason || 'Wallet validation failed');
+        // Don't throw — journal and continue with admin-only settlement
+        // The merchant amount will stay in the temp address for manual recovery
+        cronLogger.warn(`[settleCryptoTransaction] ⚠️ Falling back to admin-only settlement for ${paymentId}. Merchant amount retained in temp address for manual recovery.`);
+        await journalStateTransition({
+          paymentId,
+          txId: transactionId,
+          address: fromAddress,
+          currency,
+          event: 'wallet_guard_blocked',
+          fromState: 'processing',
+          toState: 'manual_review',
+          amount: Number(userAmount),
+          metadata: { reason: walletCheck.reason, adminWallet: adminWalletAddress, merchantWallet: userAddress },
+        });
+      }
+    }
+
+    // Journal the settlement start
+    await journalStateTransition({
+      paymentId,
+      txId: transactionId,
+      address: fromAddress,
+      currency,
+      event: 'settlement_started',
+      fromState: 'processing',
+      toState: 'settling',
+      amount: Number(receivedAmount) + Number(userAmount || 0),
+    });
 
     // Get private key - merchant pool addresses use different field names
     const privateKeyField = isMerchantPool ? tempAddressData.private_key : tempAddressData.privateKey;
@@ -3367,6 +3435,33 @@ const settleCryptoTransaction = async ({
       });
       await setRedisTTL(`outgoing-tx-${settlementTxHash}`, 7200); // 2 hour TTL
       cronLogger.info(`[settleCryptoTransaction] Marked TX ${settlementTxHash} as outgoing (settlement)`);
+
+      // ── RELIABILITY: Mark settlement as completed + journal to PostgreSQL ──
+      try {
+        const { markSettlementCompleted, journalStateTransition } = require("../services/paymentReliability");
+        await markSettlementCompleted(
+          paymentId,
+          settlementTxHash,
+          fromAddress,
+          currency,
+          merchantSendAmount,
+          Number(receivedAmount),
+          Number((tempAddressData as any).current_company_id) || null
+        );
+        await journalStateTransition({
+          paymentId,
+          txId: transactionId,
+          address: fromAddress,
+          currency,
+          event: 'settlement_tx_broadcast',
+          fromState: 'settling',
+          toState: 'payout_pending_confirmation',
+          amount: merchantSendAmount + Number(receivedAmount),
+          metadata: { settlementTxHash, merchantAmount: merchantSendAmount, adminAmount: Number(receivedAmount) },
+        });
+      } catch (reliabilityErr) {
+        cronLogger.warn(`[settleCryptoTransaction] Non-critical: reliability journaling failed: ${(reliabilityErr as Error).message}`);
+      }
     }
 
     // Also mark gas funding TX as outgoing (SmartGas)
@@ -3490,6 +3585,13 @@ const settleCryptoTransaction = async ({
     };
   } catch (error) {
     const message = getErrorMessage(error);
+    
+    // ── RELIABILITY: Mark settlement as failed to allow retry ──
+    try {
+      const { markSettlementFailed } = require("../services/paymentReliability");
+      await markSettlementFailed(paymentId, message);
+    } catch (_) { /* non-critical */ }
+    
     apiLogger.error(
       "Failed to transfer funds",
       {

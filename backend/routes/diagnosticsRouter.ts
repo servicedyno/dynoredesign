@@ -1025,4 +1025,68 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
   }
 });
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// RELIABILITY: Payment Journal & System Health Diagnostics
+// ═══════════════════════════════════════════════════════════════════════════════
+
+router.get("/reliability/health", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+  try {
+    const { watchdogCheck, checkQueueBackpressure } = require("../services/paymentReliability");
+    const { getQueueHealth } = require("../services/webhookQueue");
+    const { TatumCircuitBreaker } = require("../utils/circuitBreaker");
+
+    const [watchdog, backpressure, queueHealth] = await Promise.all([
+      watchdogCheck(),
+      checkQueueBackpressure(),
+      getQueueHealth(),
+    ]);
+
+    res.json({
+      status: "ok",
+      timestamp: new Date().toISOString(),
+      watchdog,
+      queue: {
+        ...queueHealth,
+        backpressure: {
+          accept: backpressure.accept,
+          utilizationPercent: backpressure.utilizationPercent,
+        },
+      },
+      circuitBreaker: {
+        tatum: TatumCircuitBreaker.getStats(),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
+router.get("/reliability/journal", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const PaymentJournal = require("../models/paymentJournalModel").default;
+    const { Op } = require("sequelize");
+
+    const paymentId = req.query.payment_id as string;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 200);
+    const event = req.query.event as string;
+
+    const where: Record<string, unknown> = {};
+    if (paymentId) where.payment_id = paymentId;
+    if (event) where.event = event;
+
+    const entries = await PaymentJournal.findAll({
+      where,
+      order: [["created_at", "DESC"]],
+      limit,
+    });
+
+    res.json({
+      count: entries.length,
+      entries: entries.map((e: any) => e.dataValues),
+    });
+  } catch (err) {
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;

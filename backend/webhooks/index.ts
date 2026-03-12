@@ -578,6 +578,20 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
+    // ── RELIABILITY: Queue backpressure check ─────────────────────────────
+    // Reject new webhooks when the system is overwhelmed to prevent cascading failures
+    try {
+      const { checkQueueBackpressure } = require("../services/paymentReliability");
+      const backpressure = await checkQueueBackpressure();
+      if (!backpressure.accept) {
+        webhookLogs.error(`[tatumCryptoWebHook] ⛔ BACKPRESSURE: Rejecting webhook — ${backpressure.reason}`);
+        // Return 503 to trigger Tatum retry (they'll back off and retry later)
+        return res.status(503).json({ error: "Service temporarily overloaded", retryAfter: 30 });
+      }
+    } catch (_bpErr) {
+      // Non-blocking — if backpressure check fails, allow the webhook
+    }
+
     // Enqueue for async processing by BullMQ worker
     await enqueueWebhook({
       payload: {
