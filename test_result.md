@@ -122,10 +122,10 @@ backend:
         comment: "Re-configured pod URLs to current pod (07269ee3-2783-4715-9a5c-bd7492b47754). Updated .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL) and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL). Reinstalled all deps. Homepage, login page, checkout page all verified working. New payment links (e.g. #923) correctly use the current pod URL."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://first-run-6.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
+        comment: "Re-configured all pod URLs to current-pod-config-2. Updated frontend/.env (REACT_APP_BACKEND_URL), .env.local (NEXT_PUBLIC_BASE_URL, NEXT_PUBLIC_SERVER_URL), and backend/.env (SERVER_URL, CHECKOUT_URL, FRONTEND_URL) - all pointing to https://quick-start-110.preview.emergentagent.com. Installed all dependencies (yarn for /app and /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational)."
       - working: true
         agent: "main"
-        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://first-run-6.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
+        comment: "Re-configured all pod URLs to current pod (100f9b25-8e2e-4084-b2d4-d59843b8f8c7). Updated: (1) /app/.env.local with NEXT_PUBLIC_BASE_URL and NEXT_PUBLIC_SERVER_URL, (2) /app/frontend/.env with REACT_APP_BACKEND_URL, (3) /app/backend/.env with SERVER_URL, CHECKOUT_URL, FRONTEND_URL - all pointing to https://quick-start-110.preview.emergentagent.com. Installed all deps (yarn for /app, /app/backend, pip for backend Python). All services running. Frontend 200, Backend API 200 (operational), Login 200, Checkout /pay 200."
 
   - task: "Dashboard Today Summary API"
     implemented: true
@@ -430,7 +430,7 @@ metadata:
   version: "3.0"
   test_sequence: 4
   run_ui: true
-  backend_url: "https://first-run-6.preview.emergentagent.com"
+  backend_url: "https://quick-start-110.preview.emergentagent.com"
   test_credentials: "nomadly@moxx.co / Katiekendra123@"
 
 test_plan:
@@ -444,7 +444,7 @@ test_plan:
 
 agent_communication:
   - agent: "main"
-    message: "Testing userless payment feature. The legacyApiAuthMiddleware in /backend/middleware/legacyApiAuthMiddleware.ts allows API calls with ONLY x-api-key header (no Authorization/Bearer token). When no valid customer JWT is provided, it auto-creates a 'legacy-api-*' default customer via findOrCreateDefaultCustomer(). Endpoints to test: POST /api/user/cryptoPayment, POST /api/user/createPayment, POST /api/user/addFunds - all should work with only x-api-key. Also verify the existing flow WITH customer token still works (POST /api/user/createUser then use token). The API key is encrypted and validated against tbl_api table. To get a valid API key, query: SELECT \"apiKey\" FROM tbl_api LIMIT 1. The backend URL is https://first-run-6.preview.emergentagent.com."
+    message: "Testing userless payment feature. The legacyApiAuthMiddleware in /backend/middleware/legacyApiAuthMiddleware.ts allows API calls with ONLY x-api-key header (no Authorization/Bearer token). When no valid customer JWT is provided, it auto-creates a 'legacy-api-*' default customer via findOrCreateDefaultCustomer(). Endpoints to test: POST /api/user/cryptoPayment, POST /api/user/createPayment, POST /api/user/addFunds - all should work with only x-api-key. Also verify the existing flow WITH customer token still works (POST /api/user/createUser then use token). The API key is encrypted and validated against tbl_api table. To get a valid API key, query: SELECT \"apiKey\" FROM tbl_api LIMIT 1. The backend URL is https://quick-start-110.preview.emergentagent.com."
   - agent: "testing"
     message: "COMPREHENSIVE USERLESS PAYMENT TESTING COMPLETED: All 3 userless payment tasks now working perfectly. Successfully tested with API keys retrieved from database (Company 39, 3, 9). Key findings: (1) legacyApiAuthMiddleware correctly validates x-api-key and auto-creates default customers with email format 'legacy-api-{companyId}-{timestamp}@dynopay.internal'. (2) All endpoints work with ONLY x-api-key: cryptoPayment, createPayment, addFunds, getBalance, getTransactions, getSupportedCurrency. (3) Existing customer JWT flow remains functional - backward compatibility maintained. (4) Error handling working correctly. (5) CSRF protection properly excludes x-api-key requests. The userless payment feature is production-ready and fully functional."
 

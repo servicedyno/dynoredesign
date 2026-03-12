@@ -6,7 +6,7 @@ Tests the "Userless Payment" feature that allows payments with ONLY x-api-key he
 (no customer JWT token required). The legacyApiAuthMiddleware auto-creates a default 
 customer when no valid JWT is provided.
 
-Backend URL: https://first-run-6.preview.emergentagent.com
+Backend URL: https://quick-start-110.preview.emergentagent.com
 """
 
 import requests
@@ -16,7 +16,7 @@ import sys
 from typing import Dict, Any, Optional, Tuple
 
 # Configuration
-BASE_URL = "https://first-run-6.preview.emergentagent.com"
+BASE_URL = "https://quick-start-110.preview.emergentagent.com"
 LOGIN_EMAIL = "nomadly@moxx.co"
 LOGIN_PASSWORD = "Katiekendra123@"
 
