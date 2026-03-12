@@ -3357,8 +3357,9 @@ const findUtxoOutputIndex = async (
     } else {
       cronLogger.warn(`[findUtxoOutputIndex] No vout data in tx ${txHash} for ${currency}`);
 
-      // BUG-2 FIX: Fallback to public blockchain API when Tatum returns no vout data
+      // Fallback chain for BTC: mempool.space → blockstream.info
       if (currency === 'BTC') {
+        // Fallback 1: mempool.space
         try {
           cronLogger.info(`[findUtxoOutputIndex] Attempting mempool.space fallback for BTC tx ${txHash}`);
           const mempoolResponse = await fetch(`https://mempool.space/api/tx/${txHash}`);
@@ -3383,6 +3384,91 @@ const findUtxoOutputIndex = async (
         } catch (fallbackErr: unknown) {
           const fbErr = fallbackErr as { message?: string };
           cronLogger.warn(`[findUtxoOutputIndex] mempool.space fallback failed: ${fbErr.message}`);
+        }
+
+        // Fallback 2: blockstream.info (independent infrastructure from mempool.space)
+        try {
+          cronLogger.info(`[findUtxoOutputIndex] Attempting blockstream.info fallback for BTC tx ${txHash}`);
+          const blockstreamResponse = await fetch(`https://blockstream.info/api/tx/${txHash}`);
+          if (blockstreamResponse.ok) {
+            const blockstreamTx = await blockstreamResponse.json() as {
+              vout?: Array<{ value?: number; scriptpubkey_address?: string }>;
+            };
+            if (blockstreamTx?.vout) {
+              const addressLower = address.toLowerCase();
+              for (let i = 0; i < blockstreamTx.vout.length; i++) {
+                const output = blockstreamTx.vout[i];
+                if (output.scriptpubkey_address && output.scriptpubkey_address.toLowerCase() === addressLower) {
+                  cronLogger.info(`[findUtxoOutputIndex] ✅ blockstream.info fallback: Found output index ${i} for ${address} in tx ${txHash}`);
+                  return i;
+                }
+              }
+              cronLogger.warn(`[findUtxoOutputIndex] blockstream.info: Address ${address} not found in outputs of tx ${txHash}`);
+            }
+          } else {
+            cronLogger.warn(`[findUtxoOutputIndex] blockstream.info returned ${blockstreamResponse.status} for tx ${txHash}`);
+          }
+        } catch (fallbackErr: unknown) {
+          const fbErr = fallbackErr as { message?: string };
+          cronLogger.warn(`[findUtxoOutputIndex] blockstream.info fallback failed: ${fbErr.message}`);
+        }
+      }
+
+      // Fallback for LTC: blockcypher.com
+      if (currency === 'LTC') {
+        try {
+          cronLogger.info(`[findUtxoOutputIndex] Attempting blockcypher.com fallback for LTC tx ${txHash}`);
+          const bcResponse = await fetch(`https://api.blockcypher.com/v1/ltc/main/txs/${txHash}`);
+          if (bcResponse.ok) {
+            const bcTx = await bcResponse.json() as {
+              outputs?: Array<{ value?: number; addresses?: string[] }>;
+            };
+            if (bcTx?.outputs) {
+              const addressLower = address.toLowerCase();
+              for (let i = 0; i < bcTx.outputs.length; i++) {
+                const output = bcTx.outputs[i];
+                const matchesAddr = output.addresses?.some(
+                  (a: string) => a.toLowerCase() === addressLower
+                );
+                if (matchesAddr) {
+                  cronLogger.info(`[findUtxoOutputIndex] ✅ blockcypher.com fallback: Found output index ${i} for ${address} in LTC tx ${txHash}`);
+                  return i;
+                }
+              }
+            }
+          }
+        } catch (fallbackErr: unknown) {
+          const fbErr = fallbackErr as { message?: string };
+          cronLogger.warn(`[findUtxoOutputIndex] blockcypher.com LTC fallback failed: ${fbErr.message}`);
+        }
+      }
+
+      // Fallback for DOGE: blockcypher.com
+      if (currency === 'DOGE') {
+        try {
+          cronLogger.info(`[findUtxoOutputIndex] Attempting blockcypher.com fallback for DOGE tx ${txHash}`);
+          const bcResponse = await fetch(`https://api.blockcypher.com/v1/doge/main/txs/${txHash}`);
+          if (bcResponse.ok) {
+            const bcTx = await bcResponse.json() as {
+              outputs?: Array<{ value?: number; addresses?: string[] }>;
+            };
+            if (bcTx?.outputs) {
+              const addressLower = address.toLowerCase();
+              for (let i = 0; i < bcTx.outputs.length; i++) {
+                const output = bcTx.outputs[i];
+                const matchesAddr = output.addresses?.some(
+                  (a: string) => a.toLowerCase() === addressLower
+                );
+                if (matchesAddr) {
+                  cronLogger.info(`[findUtxoOutputIndex] ✅ blockcypher.com fallback: Found output index ${i} for ${address} in DOGE tx ${txHash}`);
+                  return i;
+                }
+              }
+            }
+          }
+        } catch (fallbackErr: unknown) {
+          const fbErr = fallbackErr as { message?: string };
+          cronLogger.warn(`[findUtxoOutputIndex] blockcypher.com DOGE fallback failed: ${fbErr.message}`);
         }
       }
     }

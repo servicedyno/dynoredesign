@@ -4226,13 +4226,26 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
         // ENHANCED LOGGING: Payment completion tracking
         const wasPartialPayment = tempData?.previousAmount && Number(tempData.previousAmount) > 0;
-        cronLogger.info(`[cryptoVerification] ✅ PAYMENT ${wasPartialPayment ? 'COMPLETED (after partial)' : 'RECEIVED (full)'}:
+        const originalExpected = Number(tempData?.originalExpectedAmount || tempData?.amount || 0);
+        const isUnderpaid = totalAmountReceived < originalExpected && originalExpected > 0;
+        const underpaymentDelta = isUnderpaid ? (originalExpected - totalAmountReceived) : 0;
+
+        let paymentLabel: string;
+        if (wasPartialPayment) {
+          paymentLabel = 'COMPLETED (after partial)';
+        } else if (isUnderpaid) {
+          paymentLabel = 'RECEIVED (underpaid — accepted via Direct API tolerance)';
+        } else {
+          paymentLabel = 'RECEIVED (full)';
+        }
+
+        cronLogger.info(`[cryptoVerification] ✅ PAYMENT ${paymentLabel}:
           - Address: ${address}
           - Transaction ID: ${transactionId}
           - Total Received: ${totalAmountReceived} ${tempCurrency}
           - Previous Payments: ${tempData?.previousAmount || 0} ${tempCurrency}
           - Was Partial: ${wasPartialPayment ? 'YES' : 'NO'}
-          - Original Expected: ${tempData?.originalExpectedAmount || tempData?.amount} ${tempCurrency}`);
+          - Original Expected: ${originalExpected} ${tempCurrency}${isUnderpaid ? `\n          - Underpayment Shortfall: ${underpaymentDelta.toFixed(8)} ${tempCurrency} (${((underpaymentDelta / originalExpected) * 100).toFixed(2)}%)` : ''}`);
 
         // Check fee_payer mode
         const fee_payer = tempData?.fee_payer || 'company';
@@ -4909,6 +4922,21 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               amount_crypto: tempAmount,
               amount_usd: Number(newAmount[0]?.amount || 0),
             } : null,
+            
+            // ENHANCED: Underpayment detection (if applicable)
+            underpayment: (() => {
+              const origExpected = Number(tempData?.originalExpectedAmount || tempData?.amount || 0);
+              const totalRcvd = Number(totalAmountReceived);
+              if (origExpected > 0 && totalRcvd < origExpected) {
+                return {
+                  shortfall_crypto: Number((origExpected - totalRcvd).toFixed(8)),
+                  shortfall_percent: Number(((origExpected - totalRcvd) / origExpected * 100).toFixed(2)),
+                  original_expected: origExpected,
+                  accepted_reason: linkId ? 'minor_underpayment_within_threshold' : 'direct_api_immediate_settlement',
+                };
+              }
+              return null;
+            })(),
             
             // Metadata & timestamp
             meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
@@ -7008,7 +7036,19 @@ const checkFeeBalance = async () => {
         
         cronLogger.info(`Fee balance alert sent successfully to ${adminEmail}`);
       } else {
-        cronLogger.info("Fee balance alert already sent recently, skipping");
+        // Quiet mode: Only log once per hour instead of every cron tick (every 15 min)
+        // This reduces log noise while still confirming the system is aware of the low balance
+        const sentData2 = await getRedisItem("admin_fee_alert");
+        if (sentData2) {
+          const { expiresAt, lastSkipLog } = sentData2 as Record<string, unknown>;
+          const now = Date.now();
+          const lastLogTime = Number(lastSkipLog || 0);
+          // Log "skipping" message at most once per hour
+          if (now - lastLogTime > 60 * 60 * 1000) {
+            cronLogger.info(`[checkFeeBalance] Low-balance alert suppressed (already sent, expires in ${Math.round((Number(expiresAt) - now) / 3600000)}h). Wallets with issues:${textData.replace(/\n/g, ' | ')}`);
+            await setRedisItem("admin_fee_alert", { ...sentData2, lastSkipLog: now });
+          }
+        }
       }
     }
   } catch (e) {

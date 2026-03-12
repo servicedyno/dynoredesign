@@ -354,6 +354,21 @@ const processAddress = async (addr: any, result: {
       }
 
       try {
+        // FIX BUG-3: Check if this address is being actively processed by a webhook handler.
+        // The webhook processor stores data in Redis (via cryptoRedisKey) during processing.
+        // If the Redis key has an active status (processing/retrying), the balance API may
+        // return stale data (e.g., 0 for unconfirmed mempool txs). Skip to avoid false "no balance".
+        const activeRedisData = await getRedisItem(cryptoRedisKey);
+        if (activeRedisData && typeof activeRedisData === 'object') {
+          const activeStatus = (activeRedisData as Record<string, unknown>).status as string | undefined;
+          const activeTxId = (activeRedisData as Record<string, unknown>).txId as string | undefined;
+          if (activeStatus && ['pending', 'processing', 'retrying', 'detected'].includes(activeStatus)) {
+            cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} — webhook actively processing (status=${activeStatus}, txId=${activeTxId?.substring(0, 12)}...), skipping balance check`);
+            result.skippedTooRecent++;
+            return;
+          }
+        }
+
         let balance: number;
         let balanceResult;
 

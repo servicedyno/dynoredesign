@@ -207,9 +207,10 @@ const TATUM_RATE_IDS: Record<string, string> = {
 };
 
 // Negative cache for Tatum rate API failures — avoid hammering failing pairs
-// Key: "tatum_fail:{crypto}:{fiat}", Value: timestamp of last failure
-const tatumFailureCache = new Map<string, number>();
-const TATUM_FAILURE_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes (reduced from 10 to recover faster)
+// Key: "tatum_fail:{crypto}:{fiat}", Value: { timestamp, is403 }
+const tatumFailureCache = new Map<string, { timestamp: number; is403: boolean }>();
+const TATUM_FAILURE_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes for transient errors
+const TATUM_403_CACHE_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours for 403 (pair permanently unsupported)
 
 /**
  * Get crypto rate from Tatum in any fiat (already paid for, reliable, no extra cost)
@@ -222,8 +223,13 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
   // Check negative cache — skip pairs that recently failed (avoids log spam)
   const failKey = `tatum_fail:${crypto}:${fiat}`;
   const lastFail = tatumFailureCache.get(failKey);
-  if (lastFail && (Date.now() - lastFail) < TATUM_FAILURE_CACHE_TTL_MS) {
-    return null; // Silently skip — already logged on first failure
+  if (lastFail) {
+    const ttl = lastFail.is403 ? TATUM_403_CACHE_TTL_MS : TATUM_FAILURE_CACHE_TTL_MS;
+    if ((Date.now() - lastFail.timestamp) < ttl) {
+      return null; // Silently skip — already logged on first failure
+    }
+    // Cache expired — remove and retry
+    tatumFailureCache.delete(failKey);
   }
 
   const apiKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
@@ -249,13 +255,13 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
   } catch (error: unknown) {
     const err = error as { response?: { status?: number }; message?: string };
     // Cache the failure to avoid hammering and log spam
-    tatumFailureCache.set(failKey, Date.now());
+    const is403 = err.response?.status === 403;
+    tatumFailureCache.set(failKey, { timestamp: Date.now(), is403 });
     // Log once per failure window (not every cron tick)
     if (!lastFail) {
-      const is403 = err.response?.status === 403;
       const suffix = is403
-        ? `(Tatum 403 — pair may not be supported directly; cross-rate recovery will fill the gap)`
-        : `(suppressing for 10 min)`;
+        ? `(Tatum 403 — pair permanently unsupported; cached for 24h. Cross-rate recovery will fill the gap)`
+        : `(transient error; cached for 2 min)`;
       apiLogger.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
     }
   }
