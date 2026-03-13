@@ -40,7 +40,6 @@ import { PercentageChip } from "./styled";
 import ConversionBanner from "./ConversionBanner";
 import TodaySummaryStrip from "./TodaySummaryStrip";
 import FeeFreeWidget from "./FeeFreeWidget";
-import { useSelector } from "react-redux";
 
 const formatDate = (date: Date): string => {
   const months = [
@@ -249,10 +248,6 @@ const DashboardLeftSection = () => {
   const router = useRouter();
   const [showAllWallets, setShowAllWallets] = useState(false);
 
-  // Get company ID for fee-free widget
-  const companyState = useSelector((state: any) => state.companyReducer);
-  const companyId = companyState?.companyList?.[0]?.company_id || null;
-
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const statCardsContainerRef = useRef<HTMLDivElement>(null);
   const isDraggingRef = useRef(false);
@@ -419,11 +414,9 @@ const DashboardLeftSection = () => {
       <TodaySummaryStrip todaySummary={stats.todaySummary} loading={loading} />
 
       {/* Fee-Free Promotion Widget */}
-      {companyId && (
-        <Box sx={{ mx: { xs: 2, md: 0 }, mb: 0 }}>
-          <FeeFreeWidget companyId={companyId} />
-        </Box>
-      )}
+      <Box sx={{ mx: { xs: 2, md: 0 }, mb: 0 }}>
+        <FeeFreeWidget />
+      </Box>
 
       {/* Getting Started Banner - shows when user has zero transactions */}
       {totalTransactions === 0 && !loading && (

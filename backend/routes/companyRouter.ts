@@ -48,7 +48,7 @@ companyRouter.get("/conversion-history/:id", authMiddleware, companyOwnershipMid
 companyRouter.get("/conversion/:conversionId", authMiddleware, companyController.getConversionDetail);
 companyRouter.post("/conversion/:conversionId/retry", authMiddleware, companyController.retryConversion);
 
-// Fee-Free Trial Status
-companyRouter.get("/fee-free-status/:id", authMiddleware, companyOwnershipMiddleware, companyController.getFeeFreeStatus);
+// Fee-Free Trial Status (user-based)
+companyRouter.get("/fee-free-status", authMiddleware, companyController.getFeeFreeStatus);
 
 export default companyRouter;

@@ -164,7 +164,7 @@ const findMatchingTier = (tiers: FeeTier[], amount: number, context: string): Fe
 export const calculateTransactionFees = async (
   blockchain: string,
   amount: number,
-  companyId?: number
+  userId?: number
 ) => {
   const config = await getBlockchainConfig(blockchain);
   if (!config) {
@@ -179,25 +179,24 @@ export const calculateTransactionFees = async (
   const totalDeduction = fixedFee + transactionFee;
   let userReceives = amount - totalDeduction;
 
-  // Phase 2: Fee-free override for trial merchants
+  // Phase 2: Fee-free override for trial users
   let feeFreeApplied = false;
   let feeFreeDiscount = 0;
   let feeFreeRemaining = 0;
 
-  if (companyId) {
+  if (userId) {
     try {
       const { calculateFeeFreeDiscount } = require("./feeFreeService");
-      const discount = await calculateFeeFreeDiscount(companyId, amount);
+      const discount = await calculateFeeFreeDiscount(userId, amount);
       
       if (discount.fee_free_amount > 0) {
-        // Calculate the proportion of the transaction that's fee-free
         const freeRatio = discount.fee_free_amount / amount;
         feeFreeDiscount = totalDeduction * freeRatio;
         feeFreeApplied = true;
         feeFreeRemaining = discount.remaining_after;
         userReceives = amount - (totalDeduction - feeFreeDiscount);
         
-        log(`[FeeFree] Company ${companyId}: $${discount.fee_free_amount}/$${amount} fee-free, discount $${feeFreeDiscount.toFixed(2)}`, 'info');
+        log(`[FeeFree] User ${userId}: $${discount.fee_free_amount}/$${amount} fee-free, discount $${feeFreeDiscount.toFixed(2)}`, 'info');
       }
     } catch (e: any) {
       log(`[FeeFree] Fee-free check failed (non-critical): ${e.message}`, 'warn');

@@ -140,6 +140,25 @@ const userModel = sequelize.define(
       allowNull: true,
       comment: "Last company the user was working with, restored on next login",
     },
+    // Phase 2: Fee-Free Trial Tracking (user-based)
+    cumulative_volume_usd: {
+      type: DataTypes.DECIMAL(14, 2),
+      allowNull: false,
+      defaultValue: 0,
+      comment: "Total transaction volume in USD processed by this user",
+    },
+    fee_free_remaining_usd: {
+      type: DataTypes.DECIMAL(14, 2),
+      allowNull: false,
+      defaultValue: 500,
+      comment: "Remaining fee-free volume in USD (starts at FREE_TRIAL_VOLUME_USD, default 500)",
+    },
+    fee_tier: {
+      type: DataTypes.STRING(20),
+      allowNull: false,
+      defaultValue: "trial",
+      comment: "Fee tier: trial (fee-free period), standard (normal fees), premium (volume discount)",
+    },
   },
   {
     tableName: "tbl_user",

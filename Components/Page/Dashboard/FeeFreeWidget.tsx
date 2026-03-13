@@ -14,22 +14,16 @@ interface FeeFreeData {
   cumulative_volume_usd: number;
 }
 
-interface FeeFreeWidgetProps {
-  companyId: number | string | null;
-}
-
-const FeeFreeWidget: React.FC<FeeFreeWidgetProps> = ({ companyId }) => {
+const FeeFreeWidget: React.FC = () => {
   const theme = useTheme();
   const isMobile = useIsMobile("md");
   const [data, setData] = useState<FeeFreeData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!companyId) return;
-
     const fetchStatus = async () => {
       try {
-        const res = await axiosBaseApi.get(`company/fee-free-status/${companyId}`);
+        const res = await axiosBaseApi.get("company/fee-free-status");
         setData(res.data.data);
       } catch {
         // Silently fail — widget is non-critical
@@ -39,9 +33,9 @@ const FeeFreeWidget: React.FC<FeeFreeWidgetProps> = ({ companyId }) => {
     };
 
     fetchStatus();
-  }, [companyId]);
+  }, []);
 
-  // Don't render if no data, still loading, or fee-free period is over
+  // Don't render if no data or still loading
   if (loading || !data) return null;
 
   const remaining = data.fee_free_remaining_usd;

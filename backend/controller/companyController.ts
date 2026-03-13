@@ -1711,16 +1711,16 @@ const retryConversion = async (req: express.Request, res: express.Response) => {
 
 const getFeeFreeStatus = async (req: express.Request, res: express.Response) => {
   try {
-    const companyId = parseInt(req.params.id);
-    if (!companyId) {
-      return errorResponseHelper(res, 400, "Company ID is required");
+    const userId = (req as any).user?.user_id || (req as any).userId;
+    if (!userId) {
+      return errorResponseHelper(res, 401, "Authentication required");
     }
 
     const { getFeeFreeStatus: fetchFeeFreeStatus } = require("../services/feeFreeService");
-    const status = await fetchFeeFreeStatus(companyId);
+    const status = await fetchFeeFreeStatus(userId);
 
     if (!status) {
-      return errorResponseHelper(res, 404, "Company not found");
+      return errorResponseHelper(res, 404, "User not found");
     }
 
     return successResponseHelper(res, 200, "Fee-free status retrieved", status);

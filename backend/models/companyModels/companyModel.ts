@@ -125,25 +125,6 @@ const companyModel = sequelize.define(
       allowNull: true,
       comment: "Blockchain network for stablecoin withdrawal: ERC20, TRC20, POLYGON, BEP20, SOL",
     },
-    // Phase 2: Fee-Free Trial Tracking
-    cumulative_volume_usd: {
-      type: DataTypes.DECIMAL(14, 2),
-      allowNull: false,
-      defaultValue: 0,
-      comment: "Total transaction volume in USD processed by this company",
-    },
-    fee_free_remaining_usd: {
-      type: DataTypes.DECIMAL(14, 2),
-      allowNull: false,
-      defaultValue: 500,
-      comment: "Remaining fee-free volume in USD (starts at FREE_TRIAL_VOLUME_USD, default 500)",
-    },
-    fee_tier: {
-      type: DataTypes.STRING(20),
-      allowNull: false,
-      defaultValue: "trial",
-      comment: "Fee tier: trial (fee-free period), standard (normal fees), premium (volume discount)",
-    },
   },
   {
     tableName: "tbl_company",
