@@ -120,6 +120,9 @@ export function startWebhookWorker(
     {
       connection: redisConnection,
       concurrency: 5, // Process up to 5 webhooks in parallel
+      lockDuration: 300000,      // 5 minutes — prevents stall on heavy cron bursts
+      stalledInterval: 60000,    // Check stalled every 60s (default 30s is too aggressive)
+      maxStalledCount: 3,        // Allow 3 stall recoveries before marking failed (default 1 = instant failure)
       limiter: {
         max: 10,
         duration: 1000, // Max 10 jobs per second (avoid overwhelming Tatum API)
@@ -204,10 +207,20 @@ export function startWebhookWorker(
       }
 
       // Check queue for stuck jobs (waiting jobs but nothing active)
-      const [waiting, active] = await Promise.all([
+      const [waiting, active, delayed, failed] = await Promise.all([
         webhookQueue.getWaitingCount(),
         webhookQueue.getActiveCount(),
+        webhookQueue.getDelayedCount(),
+        webhookQueue.getFailedCount(),
       ]);
+
+      // Alert on delayed or failed jobs that might be silently stuck
+      if (delayed > 0) {
+        webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${delayed} delayed jobs (retrying with backoff)`);
+      }
+      if (failed > 0) {
+        webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${failed} failed jobs — check DLQ or reconciliation`);
+      }
 
       if (waiting > 0 && active === 0) {
         webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${waiting} waiting jobs, 0 active — possible worker stall`);
@@ -230,7 +243,7 @@ export function startWebhookWorker(
         if (worker) (worker as any).__stallCount = 0;
       }
 
-      webhookLogs.info(`[WebhookQueue] ✅ Health check OK — worker running, waiting=${waiting}, active=${active}`);
+      webhookLogs.info(`[WebhookQueue] ✅ Health check OK — worker running, waiting=${waiting}, active=${active}, delayed=${delayed}, failed=${failed}`);
     } catch (err) {
       webhookLogs.error(`[WebhookQueue] Health check error: ${(err as Error).message}`);
     }

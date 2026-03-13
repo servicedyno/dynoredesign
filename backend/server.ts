@@ -1119,8 +1119,8 @@ const startServer = async () => {
     if (enableBackgroundJobs) {
     runStartupReconciliation()
       .then(stats => {
-        const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.tatumMissed;
-        log(`Reconciliation complete: ${total} items re-queued (stuck=${stats.stuckPayments}, failed=${stats.failedPayments}, failedState=${stats.failedStatePayments}, tatum=${stats.tatumMissed})`, 'info');
+        const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.bullmqFailedJobs + stats.tatumMissed;
+        log(`Reconciliation complete: ${total} items re-queued (stuck=${stats.stuckPayments}, failed=${stats.failedPayments}, failedState=${stats.failedStatePayments}, bullmq=${stats.bullmqFailedJobs}, tatum=${stats.tatumMissed})`, 'info');
         if (stats.errors.length > 0) {
           log(`Reconciliation warnings: ${stats.errors.join('; ')}`, 'warn');
         }

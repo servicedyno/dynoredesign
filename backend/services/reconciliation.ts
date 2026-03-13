@@ -11,7 +11,7 @@
 
 import { webhookLogs } from "../utils/loggers";
 import { redis as redisClient, getRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
-import { enqueueWebhook, WebhookJobData } from "./webhookQueue";
+import { enqueueWebhook, WebhookJobData, webhookQueue } from "./webhookQueue";
 import { captureError } from "./errorMonitoringService";
 import { parseState, PaymentState } from "./paymentStateMachine";
 import axios from "axios";
@@ -24,10 +24,11 @@ export async function runStartupReconciliation(): Promise<{
   stuckPayments: number;
   failedPayments: number;
   failedStatePayments: number;
+  bullmqFailedJobs: number;
   tatumMissed: number;
   errors: string[];
 }> {
-  const stats = { stuckPayments: 0, failedPayments: 0, failedStatePayments: 0, tatumMissed: 0, errors: [] as string[] };
+  const stats = { stuckPayments: 0, failedPayments: 0, failedStatePayments: 0, bullmqFailedJobs: 0, tatumMissed: 0, errors: [] as string[] };
 
   webhookLogs.info("[Reconciliation] Starting startup reconciliation...");
 
@@ -74,7 +75,19 @@ export async function runStartupReconciliation(): Promise<{
     webhookLogs.error(`[Reconciliation] ${msg}`);
   }
 
-  const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.tatumMissed;
+  // ── Strategy 5: BullMQ internal failed jobs ──────────────────────────────────
+  // Catches jobs that were silently lost due to stalls, worker crashes, or Redis hiccups.
+  // These jobs never updated Redis state, so Strategies 1-4 can't find them.
+  try {
+    stats.bullmqFailedJobs = await reconcileBullMQFailedJobs();
+    webhookLogs.info(`[Reconciliation] BullMQ failed jobs re-queued: ${stats.bullmqFailedJobs}`);
+  } catch (err) {
+    const msg = `BullMQ failed job reconciliation failed: ${(err as Error).message}`;
+    stats.errors.push(msg);
+    webhookLogs.error(`[Reconciliation] ${msg}`);
+  }
+
+  const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.bullmqFailedJobs + stats.tatumMissed;
   webhookLogs.info(`[Reconciliation] Complete. Total re-queued: ${total}, Errors: ${stats.errors.length}`);
 
   if (total > 0) {
@@ -485,4 +498,84 @@ export async function clearStaleTatumWebhooks(): Promise<{
   }
 
   return stats;
+}
+
+
+/**
+ * Strategy 5: BullMQ internal failed jobs recovery.
+ * 
+ * Catches jobs that were silently lost due to:
+ * - Worker stalls (event loop blocked, lockDuration exceeded)
+ * - Redis connectivity hiccups during processing
+ * - Worker crashes mid-processing
+ * 
+ * These jobs never updated the Redis crypto-* keys, so Strategies 1-4 can't find them.
+ * This directly queries BullMQ's failed job list and re-enqueues them.
+ */
+async function reconcileBullMQFailedJobs(): Promise<number> {
+  let requeued = 0;
+  
+  try {
+    const failedJobs = await webhookQueue.getFailed(0, 100); // Get up to 100 failed jobs
+    
+    if (failedJobs.length === 0) {
+      webhookLogs.info("[Reconciliation] Strategy 5: No BullMQ failed jobs found");
+      return 0;
+    }
+    
+    webhookLogs.info(`[Reconciliation] Strategy 5: Found ${failedJobs.length} BullMQ failed jobs`);
+    
+    const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // 7 days
+    const now = Date.now();
+    
+    for (const job of failedJobs) {
+      try {
+        const jobData = job.data as WebhookJobData;
+        const jobAge = now - (job.timestamp || 0);
+        
+        // Skip jobs older than 7 days
+        if (jobAge > maxAgeMs) {
+          webhookLogs.info(`[Reconciliation] Strategy 5: Skipping old BullMQ job ${job.id} (${Math.round(jobAge / 86400000)}d old)`);
+          continue;
+        }
+        
+        // Check if this tx was already processed successfully
+        const txId = jobData?.payload?.txId;
+        if (!txId) {
+          webhookLogs.warn(`[Reconciliation] Strategy 5: Skipping job ${job.id} — no txId in payload`);
+          continue;
+        }
+        
+        const alreadyProcessed = await getRedisItem(`processed-tx-${txId}`);
+        if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
+          webhookLogs.info(`[Reconciliation] Strategy 5: Skipping ${job.id} — tx ${txId} already processed`);
+          // Clean up the failed job since it was actually processed
+          try { await job.remove(); } catch (_) { /* ignore */ }
+          continue;
+        }
+        
+        // Re-enqueue the failed job
+        webhookLogs.info(`[Reconciliation] Strategy 5: Re-queuing BullMQ failed job ${job.id} (tx: ${txId}, failed: ${job.failedReason})`);
+        
+        await enqueueWebhook(
+          { ...jobData, source: "reconciliation" },
+          { jobId: `bullmq-recovery-${txId}-${Date.now()}` }
+        );
+        
+        // Remove the failed job to prevent re-processing on next reconciliation
+        try { await job.remove(); } catch (_) { /* ignore */ }
+        
+        requeued++;
+      } catch (jobErr) {
+        webhookLogs.error(`[Reconciliation] Strategy 5: Error processing failed job ${job.id}: ${(jobErr as Error).message}`);
+      }
+    }
+    
+    webhookLogs.info(`[Reconciliation] Strategy 5: Re-queued ${requeued} of ${failedJobs.length} BullMQ failed jobs`);
+  } catch (err) {
+    webhookLogs.error(`[Reconciliation] Strategy 5: Error querying BullMQ failed jobs: ${(err as Error).message}`);
+    throw err;
+  }
+  
+  return requeued;
 }
