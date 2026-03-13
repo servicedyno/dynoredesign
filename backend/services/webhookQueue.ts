@@ -73,7 +73,7 @@ export interface WebhookJobData {
     address_id?: number;
   };
   receivedAt: string;
-  source: "webhook" | "reconciliation";
+  source: "webhook" | "reconciliation" | "admin-replay";
 }
 
 // ── Enqueue Webhook ───────────────────────────────────────────────────────────
@@ -354,7 +354,7 @@ async function sendDLQAlert(jobData: WebhookJobData, jobId: string, attempts: nu
         ${dataRow('Transaction ID', `<code style="font-size: 12px; word-break: break-all;">${payload.txId}</code>`, false)}
         ${dataRow('Address', `<code style="font-size: 12px; word-break: break-all;">${payload.address || 'N/A'}</code>`, false)}
         ${dataRow('Amount', `<strong>${payload.amount}</strong> ${payload.asset || 'unknown'}`)}
-        ${dataRow('Source', source === 'reconciliation' ? 'Startup Reconciliation' : 'Live Webhook')}
+        ${dataRow('Source', source === 'reconciliation' ? 'Startup Reconciliation' : source === 'admin-replay' ? 'Admin Replay' : 'Live Webhook')}
         ${dataRow('Attempts', `${attempts} (all failed)`)}
         ${dataRow('Status', statusBadge('Dead Letter Queue', 'error'))}
         ${dataRow('Job ID', `<code style="font-size: 12px;">${jobId}</code>`, true)}

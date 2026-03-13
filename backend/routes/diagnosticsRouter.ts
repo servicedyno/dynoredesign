@@ -9,6 +9,8 @@ import { getTunnelStatus } from "../services/sshTunnelManager";
 import { dynoPayEmailTemplate } from "../helper/sendEmail";
 import { baseEmailTemplate, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
 import adminAuthMiddleware from "../middleware/adminAuthMiddleware";
+import { enqueueWebhook } from "../services/webhookQueue";
+import { webhookLogs } from "../utils/loggers";
 
 const router = express.Router();
 
@@ -637,6 +639,88 @@ import { fundGasIfNeeded } from "../services/merchantPool/merchantPoolSweep";
 import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 import { getAdminWalletAddress } from "../utils/adminUtils";
 import { cronLogger } from "../utils/loggers";
+
+/**
+ * POST /diagnostics/replay-webhook
+ * Re-enqueues a crypto webhook into BullMQ for reprocessing.
+ * Requires admin auth.
+ * Body: {
+ *   address: string,        // Crypto address that received the payment
+ *   amount: string,         // Amount received (e.g. "0.006256")
+ *   txId: string,           // On-chain transaction ID
+ *   asset: string,          // Currency (e.g. "BTC", "ETH", "USDT")
+ *   company_id?: number,    // Optional: Company ID
+ *   user_id?: number,       // Optional: User ID
+ *   address_id?: number,    // Optional: Address ID
+ *   clear_processed?: boolean // Optional: Clear the processed-tx key first (default: true)
+ * }
+ */
+router.post("/replay-webhook", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  const { address, amount, txId, asset, company_id, user_id, address_id, clear_processed } = req.body;
+
+  if (!address || !amount || !txId || !asset) {
+    return res.status(400).json({ error: "address, amount, txId, and asset are required" });
+  }
+
+  try {
+    // Optionally clear the processed-tx key so the webhook processor doesn't skip it
+    const shouldClear = clear_processed !== false; // default true
+    if (shouldClear) {
+      const { redis } = require("../utils/redisInstance");
+      const processedKey = `processed-tx-${txId}`;
+      const existed = await redis.del(processedKey);
+      webhookLogs.info(`[ReplayWebhook] Cleared processed-tx key for ${txId} (existed: ${!!existed})`);
+    }
+
+    // Build the webhook payload matching Tatum format
+    const webhookPayload = {
+      address,
+      amount: String(amount),
+      txId,
+      asset,
+      blockNumber: 0,
+      type: "native",
+    };
+
+    // Enqueue into BullMQ
+    await enqueueWebhook(
+      {
+        payload: webhookPayload,
+        queryParams: {
+          company_id: company_id ? Number(company_id) : undefined,
+          user_id: user_id ? Number(user_id) : undefined,
+          address_id: address_id ? Number(address_id) : undefined,
+        },
+        source: "admin-replay",
+        receivedAt: new Date().toISOString(),
+      },
+      { jobId: `replay-${txId}-${Date.now()}` }
+    );
+
+    webhookLogs.info(`[ReplayWebhook] ✅ Replayed webhook for tx ${txId} (${amount} ${asset} → ${address})`);
+
+    return res.status(200).json({
+      success: true,
+      message: `Webhook replayed for tx ${txId}`,
+      details: {
+        address,
+        amount,
+        txId,
+        asset,
+        company_id,
+        processedKeyCleared: shouldClear,
+      },
+    });
+  } catch (err) {
+    webhookLogs.error(`[ReplayWebhook] Failed to replay webhook for tx ${txId}: ${(err as Error).message}`);
+    return res.status(500).json({
+      error: "Failed to replay webhook",
+      message: (err as Error).message,
+    });
+  }
+});
+
+
 
 /**
  * POST /diagnostics/recover-stuck-payment
