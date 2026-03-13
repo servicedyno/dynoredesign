@@ -62,6 +62,11 @@ const trialPaymentLinkModel = sequelize.define(
       allowNull: true,
       comment: "Email entered when claiming funds (null until claimed)",
     },
+    settlement_wallet_address: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "Merchant's wallet address for settling funds (matching paid_currency)",
+    },
     status: {
       type: DataTypes.STRING(20),
       defaultValue: "active",

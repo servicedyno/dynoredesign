@@ -42,6 +42,25 @@ interface ManageLinkData {
   can_claim: boolean;
 }
 
+// Placeholder examples for wallet address fields by crypto type
+function getWalletPlaceholder(currency: string): string {
+  const placeholders: Record<string, string> = {
+    BTC: "bc1q... or 1A1zP1...",
+    ETH: "0x742d35Cc6634...",
+    "USDT-ERC20": "0x742d35Cc6634...",
+    "USDT-TRC20": "TVYg4GhJk9dE...",
+    "USDC-ERC20": "0x742d35Cc6634...",
+    TRX: "TVYg4GhJk9dE...",
+    LTC: "ltc1q... or LbTj...",
+    DOGE: "DH5yaie...",
+    SOL: "5eykt4UsFv8P...",
+    XRP: "rN7Cvq...",
+    RLUSD: "rN7Cvq...",
+  };
+  return placeholders[currency] || "Enter your wallet address";
+}
+
+
 const STATUS_CONFIG: Record<string, { color: string; icon: string; label: string; bgColor: string }> = {
   active: { color: "#3b82f6", icon: "mdi:clock-outline", label: "Awaiting Payment", bgColor: "rgba(59,130,246,0.1)" },
   paid: { color: "#22c55e", icon: "mdi:check-circle", label: "Payment Received", bgColor: "rgba(34,197,94,0.1)" },
@@ -65,6 +84,7 @@ export default function ManageTrialLinkPage() {
   const [claimEmail, setClaimEmail] = useState("");
   const [password, setPassword] = useState("");
   const [companyName, setCompanyName] = useState("");
+  const [walletAddress, setWalletAddress] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [claimError, setClaimError] = useState<string | null>(null);
@@ -104,6 +124,12 @@ export default function ManageTrialLinkPage() {
     e.preventDefault();
     if (!token || typeof token !== "string") return;
 
+    // Validate wallet address is provided
+    if (!walletAddress.trim()) {
+      setClaimError(`Please enter your ${linkData?.paid_currency || "crypto"} wallet address`);
+      return;
+    }
+
     setClaimError(null);
     setSubmitting(true);
 
@@ -113,6 +139,7 @@ export default function ManageTrialLinkPage() {
         email: claimEmail.trim(),
         password,
         company_name: companyName || undefined,
+        wallet_address: walletAddress.trim(),
       });
       setClaimSuccess(true);
     } catch (err: any) {
@@ -191,7 +218,7 @@ export default function ManageTrialLinkPage() {
             Funds Claimed Successfully!
           </Typography>
           <Typography sx={{ color: textSecondary, fontSize: 14, mb: 1 }}>
-            Your account has been created and {currencySymbol}{Number(linkData.amount).toFixed(2)} {linkData.currency} will be credited.
+            Your account has been created and {currencySymbol}{Number(linkData.amount).toFixed(2)} {linkData.currency} will be settled to your {linkData.paid_currency} wallet.
           </Typography>
           <Typography sx={{ color: theme.palette.primary.main, fontSize: 13, fontWeight: 600, mb: 3 }}>
             Your first $500 in transactions are fee-free!
@@ -322,7 +349,7 @@ export default function ManageTrialLinkPage() {
                   Create your DynoPay account to claim
                 </Typography>
                 <Typography sx={{ color: textSecondary, fontSize: 12, mb: 2 }}>
-                  Set up your account and your funds will be credited instantly.
+                  Set up your account and provide your {linkData.paid_currency} wallet to receive funds.
                 </Typography>
 
                 {claimError && <Alert severity="error" sx={{ mb: 2, fontSize: 13 }}>{claimError}</Alert>}
@@ -345,6 +372,7 @@ export default function ManageTrialLinkPage() {
                   fullWidth
                   size="small"
                   required
+                  helperText="At least 8 characters"
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -365,6 +393,37 @@ export default function ManageTrialLinkPage() {
                   sx={{ mb: 2, ...inputSx }}
                 />
 
+                {/* Wallet Address — required, matching the crypto used for payment */}
+                <Divider sx={{ borderColor, mb: 2 }} />
+                <Box sx={{ 
+                  display: "flex", alignItems: "center", gap: 1, mb: 1,
+                  p: 1.5, borderRadius: 2,
+                  bgcolor: isDark ? "rgba(245,166,35,0.06)" : "rgba(245,166,35,0.04)",
+                  border: `1px solid ${isDark ? "rgba(245,166,35,0.2)" : "rgba(245,166,35,0.12)"}`,
+                }}>
+                  <Icon icon="mdi:wallet-outline" width={20} color="#F5A623" style={{ flexShrink: 0 }} />
+                  <Typography sx={{ color: textPrimary, fontSize: 12 }}>
+                    You were paid in <strong>{linkData.paid_currency}</strong>. Provide your {linkData.paid_currency} wallet address so we can send you the funds.
+                  </Typography>
+                </Box>
+                <TextField
+                  label={`Your ${linkData.paid_currency} Wallet Address`}
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  placeholder={getWalletPlaceholder(linkData.paid_currency || "")}
+                  fullWidth
+                  size="small"
+                  required
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <Icon icon="mdi:wallet-outline" width={18} color={textSecondary} />
+                      </InputAdornment>
+                    ),
+                  }}
+                  sx={{ mt: 1.5, mb: 2, ...inputSx, "& .MuiOutlinedInput-root": { ...inputSx["& .MuiOutlinedInput-root"], fontFamily: "monospace", fontSize: 13 } }}
+                />
+
                 <Box sx={{ display: "flex", gap: 1 }}>
                   <Button
                     variant="outlined"
@@ -376,7 +435,7 @@ export default function ManageTrialLinkPage() {
                   <Button
                     type="submit"
                     variant="contained"
-                    disabled={submitting || !claimEmail || !password || password.length < 8}
+                    disabled={submitting || !claimEmail || !password || password.length < 8 || !walletAddress.trim()}
                     sx={{
                       flex: 0.6,
                       bgcolor: "#22c55e",

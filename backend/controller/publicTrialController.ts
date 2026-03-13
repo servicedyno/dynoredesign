@@ -358,16 +358,19 @@ export const getTrialLinkByManagementToken = async (req: express.Request, res: e
  * POST /api/public/claim-funds
  * 
  * Claim funds from a paid trial link.
- * Creates a user account and company, then releases funds.
+ * Creates a user account, company, and wallet for the matching crypto type.
+ * The merchant must provide a wallet address matching the crypto used for payment
+ * so that funds can be settled directly to their own wallet.
+ * 
  * Supports both management_token (new seamless flow) and legacy claim_token.
  */
 export const claimFunds = async (req: express.Request, res: express.Response) => {
   try {
-    const { slug, claim_token, management_token, email, password, company_name } = req.body;
+    const { slug, claim_token, management_token, email, password, company_name, wallet_address } = req.body;
 
     // Validate required fields
     if (!email || !password) {
-      return errorResponseHelper(res, 400, "email and password are required");
+      return errorResponseHelper(res, 400, "Email and password are required");
     }
     if (!management_token && !slug) {
       return errorResponseHelper(res, 400, "management_token or slug is required");
@@ -433,8 +436,33 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 400, "Claim period has expired. Funds will be refunded.");
     }
 
+    // Validate wallet address — REQUIRED for paid links so funds can settle
+    const paidCurrency = linkData.paid_currency;
+    if (!wallet_address || typeof wallet_address !== "string" || !wallet_address.trim()) {
+      return errorResponseHelper(
+        res,
+        400,
+        `A ${paidCurrency || "crypto"} wallet address is required to receive your funds`
+      );
+    }
+
+    // Validate wallet address format using built-in validation
+    const { validateCryptoAddress } = require("../utils/addressValidation");
+    const addressValidation = validateCryptoAddress(wallet_address.trim(), paidCurrency);
+    if (!addressValidation.isValid) {
+      return errorResponseHelper(
+        res,
+        400,
+        addressValidation.error || `Invalid ${paidCurrency} wallet address format`
+      );
+    }
+
+    apiLogger.info(`[TrialLink] Wallet address validated for ${paidCurrency}: ${wallet_address.slice(0, 10)}...`);
+
     // Import models for account creation
     const { userModel, companyModel } = require("../models");
+    const userWalletModel = require("../models/userModels/userWalletModel").default;
+    const userWalletAddressModel = require("../models/userModels/userWalletAddressModel").default;
 
     // Check if email already exists
     const existingUser = await userModel.findOne({ where: { email: email.toLowerCase() } });
@@ -442,7 +470,9 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 409, "An account with this email already exists. Please log in to claim your funds.");
     }
 
-    // Create user account
+    // --- Transaction: Create user + company + wallet in sequence ---
+
+    // 1. Create user account
     const hashedPassword = hashPassword(password);
     const newUser = await userModel.create({
       name: company_name || email.split("@")[0],
@@ -451,19 +481,43 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       login_type: "EMAIL",
       status: "active",
     });
-
     const userId = (newUser as any).user_id;
+    apiLogger.info(`[TrialLink] Created user: ${userId}`);
 
-    // Create company
+    // 2. Create company
     const newCompany = await companyModel.create({
       user_id: userId,
       company_name: company_name || `${email.split("@")[0]}'s Business`,
       email: email.toLowerCase(),
     });
-
     const companyId = (newCompany as any).company_id;
+    apiLogger.info(`[TrialLink] Created company: ${companyId}`);
 
-    // Update trial link as claimed
+    // 3. Create wallet address record (tbl_user_addresses — used for settlements)
+    const walletLabel = `${paidCurrency} Wallet`;
+    await userWalletAddressModel.create({
+      user_id: userId,
+      company_id: companyId,
+      wallet_name: walletLabel,
+      label: walletLabel,
+      currency: paidCurrency,
+      wallet_address: wallet_address.trim(),
+    });
+    apiLogger.info(`[TrialLink] Created wallet address record: ${paidCurrency} for company ${companyId}`);
+
+    // 4. Create wallet entry (tbl_user_wallet — appears on dashboard)
+    await userWalletModel.create({
+      user_id: userId,
+      company_id: companyId,
+      wallet_name: walletLabel,
+      amount: 0,
+      wallet_type: paidCurrency,
+      wallet_address: wallet_address.trim(),
+      currency_type: "CRYPTO",
+    });
+    apiLogger.info(`[TrialLink] Created wallet dashboard entry: ${paidCurrency} for company ${companyId}`);
+
+    // 5. Update trial link as claimed — link company + user for settlement pipeline
     await trialPaymentLinkModel.update(
       {
         status: "claimed",
@@ -471,11 +525,12 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
         claimed_at: new Date(),
         user_id: userId,
         company_id: companyId,
+        settlement_wallet_address: wallet_address.trim(),
       },
       { where: { id: linkData.id } }
     );
 
-    apiLogger.info(`[TrialLink] Funds claimed for slug=${linkData.slug} by ${email}, user_id=${userId}, company_id=${companyId}`);
+    apiLogger.info(`[TrialLink] Funds claimed: slug=${linkData.slug}, email=${email}, user=${userId}, company=${companyId}, wallet=${paidCurrency}:${wallet_address.slice(0, 10)}...`);
 
     return successResponseHelper(res, 200, "Funds claimed successfully! Your account has been created.", {
       user_id: userId,
@@ -483,7 +538,9 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       email: email.toLowerCase(),
       amount: linkData.amount,
       currency: linkData.fiat_currency,
-      message: "Welcome to DynoPay! Your first $500 in transactions are fee-free.",
+      paid_currency: paidCurrency,
+      wallet_address: wallet_address.trim(),
+      message: `Welcome to DynoPay! Your ${paidCurrency} will be settled to your wallet. Your first $500 in transactions are fee-free.`,
     });
   } catch (error: any) {
     apiLogger.error(`[TrialLink] Error claiming funds: ${error.message}`);
