@@ -425,3 +425,6 @@ export default function ManageTrialLinkPage() {
     </Box>
   );
 }
+
+// Mark as public page — no auth required, no layout wrapper
+ManageTrialLinkPage.layout = "none" as const;
