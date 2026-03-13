@@ -38,6 +38,9 @@ import refereeCodeModel from "./referralModels/refereeCodeModel";
 import kbCategoryModel from "./knowledgeBaseModels/kbCategoryModel";
 import kbArticleModel from "./knowledgeBaseModels/kbArticleModel";
 
+// Trial Payment Links
+import trialPaymentLinkModel from "./trialPaymentLinkModel";
+
 // Stablecoin Conversion
 import stablecoinConversionModel from "./stablecoinConversionModel";
 
@@ -120,4 +123,6 @@ export {
   stablecoinConversionModel,
   // Push Subscriptions
   pushSubscriptionModel,
+  // Trial Payment Links
+  trialPaymentLinkModel,
 };

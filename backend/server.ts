@@ -1023,6 +1023,15 @@ const startServer = async () => {
     await companyModel.sync(syncOptions);
     log('Company model synced with auto-convert fields.', 'info');
     
+    // Sync trial payment link model
+    try {
+      const { default: trialPaymentLinkModel } = await import("./models/trialPaymentLinkModel");
+      await trialPaymentLinkModel.sync(syncOptions);
+      log('Trial payment link table synced.', 'info');
+    } catch (trialErr: any) {
+      log(`Trial payment link sync failed (non-critical): ${trialErr.message}`, 'warn');
+    }
+    
     // Validate Merchant Pool Configuration (CRITICAL STARTUP CHECK)
     // Can be disabled with SKIP_MERCHANT_POOL_VALIDATION=true for testing/development
     const skipValidation = process.env.SKIP_MERCHANT_POOL_VALIDATION === 'true';

@@ -133,7 +133,14 @@ const HeroSection = () => {
             variant="primary"
             label={tLanding("startAcceptingCrypto")}
           />
-          <HomeButton variant="outlined" label={tLanding("learnMore")} navigateTo="/blog" />
+          <HomeButton
+            variant="outlined"
+            label="Try It Free — No Signup"
+            onClick={() => {
+              const el = document.getElementById("try-it");
+              if (el) el.scrollIntoView({ behavior: "smooth" });
+            }}
+          />
         </ButtonsRow>
       </TopSection>
 

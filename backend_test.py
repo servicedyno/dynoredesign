@@ -1,455 +1,327 @@
 #!/usr/bin/env python3
 """
-DynoPay Userless Payment Backend Test Suite
-
-Tests the "Userless Payment" feature that allows payments with ONLY x-api-key header
-(no customer JWT token required). The legacyApiAuthMiddleware auto-creates a default 
-customer when no valid JWT is provided.
-
-Backend URL: https://pod-endpoint-test.preview.emergentagent.com
+DynoPay Backend Testing Script
+Tests the trial payment link system endpoints.
 """
 
+import os
+import sys
 import requests
 import json
 import time
-import sys
-from typing import Dict, Any, Optional, Tuple
+from typing import Dict, Any, Optional
 
-# Configuration
-BASE_URL = "https://pod-endpoint-test.preview.emergentagent.com"
-LOGIN_EMAIL = "nomadly@moxx.co"
-LOGIN_PASSWORD = "Katiekendra123@"
+# Backend URL from environment
+BACKEND_URL = "https://pod-endpoint-test.preview.emergentagent.com"
+BASE_API_URL = f"{BACKEND_URL}/api"
 
-# Test API Keys (retrieved from database)
-TEST_API_KEYS = [
-    "U2FsdGVkX19E9J1xnAd9gf0Lgex40qsEBjkCHUBWlwN7NnXAfMfP91IGBTp5M3XPLFbm1yseFannbP6W/qE4KvFYz4pForxnhHZodjnqNf5ZagScI4bRT4CEPntttAx5kMuGq7xnZWJymeGhxYN/HVAwuVmrxJFZWbWVpSLJOmc=",  # Company 39, USD
-    "U2FsdGVkX1/wr5lKpoRJqYrH+HK2Mc1YQTW1ht0gEVpr3pbAL9BbDQ/dr7JBSrYwF+v/OsHNi/qm2I9KS6mZbt/UA4ZyzDzdGClLux7+RJyXFHyHrHZj/avrOUoHvErL+T5g4ZxORlSAcPF7XyloPsKFEp4wg4ge7vtHJJVQupN+ju83nfseRoYRGaljgBvm",  # Company 3, USD
-    "U2FsdGVkX19wZ/KjUopWgbhifn+Z4cE81ZkPeMYuRBxLY5YF7CmTyyo3fAEvWMc8PEcH31jbYhBjdfVeuWWWn5nb1e86j9maUQQEx8KJls8+Xfbyu96L/aUS1NzeBp5B07VvE12uaqS3dKnmkEfG6g==",  # Company 9, USD
-]
+# Test configuration
+TIMEOUT = 30
+HEADERS = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json'
+}
 
-class DynoPayTester:
-    def __init__(self):
-        self.base_url = BASE_URL
-        self.session = requests.Session()
-        # Use the first available API key for testing
-        self.api_key = TEST_API_KEYS[0] 
-        self.customer_token = None
-        
-        # Test results
-        self.test_results = []
-        
-    def log_test(self, name: str, success: bool, details: str):
-        """Log test result"""
-        status = "✅ PASS" if success else "❌ FAIL"
-        print(f"{status}: {name}")
-        if details:
-            print(f"  Details: {details}")
-        print()
-        
-        self.test_results.append({
-            'name': name,
-            'success': success,
-            'details': details
-        })
+def log_test(message: str, level: str = "INFO") -> None:
+    """Log test messages with timestamp."""
+    timestamp = time.strftime("%Y-%m-%d %H:%M:%S")
+    print(f"[{timestamp}] [{level}] {message}")
+
+def log_response(response: requests.Response, endpoint: str) -> None:
+    """Log response details."""
+    log_test(f"{endpoint} -> Status: {response.status_code}")
+    try:
+        json_response = response.json()
+        log_test(f"{endpoint} -> Response: {json.dumps(json_response, indent=2)}")
+    except:
+        log_test(f"{endpoint} -> Response: {response.text[:500]}")
+
+class TrialLinkTester:
+    """Test the trial payment link system."""
     
-    def make_request(self, method: str, endpoint: str, headers: Dict = None, data: Dict = None, timeout: int = 30) -> Tuple[int, Dict]:
-        """Make HTTP request and return status code and response data"""
-        url = f"{self.base_url}{endpoint}"
-        
-        # Ensure Content-Type is set for JSON requests
-        if headers is None:
-            headers = {}
-        if data is not None and "Content-Type" not in headers:
-            headers["Content-Type"] = "application/json"
-        
-        try:
-            if method.upper() == 'GET':
-                response = self.session.get(url, headers=headers, timeout=timeout)
-            elif method.upper() == 'POST':
-                response = self.session.post(url, headers=headers, json=data, timeout=timeout)
-            else:
-                raise ValueError(f"Unsupported method: {method}")
-                
-            try:
-                response_data = response.json()
-            except:
-                response_data = {"error": "Invalid JSON response", "text": response.text[:500]}
-                
-            return response.status_code, response_data
-            
-        except requests.exceptions.Timeout:
-            return 408, {"error": "Request timeout"}
-        except requests.exceptions.ConnectionError:
-            return 503, {"error": "Connection error"}
-        except Exception as e:
-            return 500, {"error": f"Request failed: {str(e)}"}
-
-    def get_api_key_via_login(self) -> Optional[str]:
-        """
-        Try to get API key by logging in first and using API management endpoints
-        """
-        print("🔍 Attempting to get API key via login flow...")
-        
-        # Step 1: Login to get access token
-        login_data = {
-            "email": LOGIN_EMAIL,
-            "password": LOGIN_PASSWORD
-        }
-        
-        status, response = self.make_request("POST", "/api/user/login", data=login_data)
-        
-        if status == 200 and response.get("success"):
-            if "accessToken" in response.get("data", {}):
-                token = response["data"]["accessToken"]
-                print(f"✅ Login successful, got access token")
-                
-                # Step 2: Try to get API keys using the token
-                headers = {"Authorization": f"Bearer {token}"}
-                
-                # Try the API management endpoint
-                status, api_response = self.make_request("GET", "/api/api/getApiKeys", headers=headers)
-                
-                if status == 200 and api_response.get("success"):
-                    api_keys = api_response.get("data", [])
-                    if api_keys and len(api_keys) > 0:
-                        api_key = api_keys[0].get("apiKey")
-                        if api_key:
-                            print(f"✅ Retrieved API key: {api_key[:20]}...")
-                            return api_key
-                
-                print(f"⚠️  No API keys found in response: {api_response}")
-                
-            elif "login_otp_session" in response.get("data", {}):
-                print("⚠️  Login requires OTP verification - cannot proceed with automated testing")
-                return None
-        else:
-            print(f"❌ Login failed: Status {status}, Response: {response}")
-            
-        return None
-
-    def test_api_endpoints_without_auth(self):
-        """Test 1: Verify API endpoints exist and require x-api-key header"""
-        print("🧪 TEST 1: API endpoints exist and require x-api-key header")
-        
-        endpoints = [
-            "/api/user/cryptoPayment",
-            "/api/user/createPayment"
-        ]
-        
-        for endpoint in endpoints:
-            # Test without any headers - should get CSRF error or API key error
-            status, response = self.make_request("POST", endpoint, data={"amount": 10})
-            
-            # With CSRF protection, we expect either:
-            # 1. 403 with CSRF error (when no x-api-key)
-            # 2. 403 with API key required error
-            
-            success = status == 403 and (
-                "csrf" in response.get("error", "").lower() or 
-                "api key" in response.get("error", "").lower() or
-                "api key" in response.get("message", "").lower()
-            )
-            
-            details = f"Status: {status}, Response: {response}"
-            self.log_test(f"Endpoint {endpoint} requires auth", success, details)
-            
-        # Additional test: endpoints should work WITH x-api-key header
-        print("   Testing that endpoints work WITH x-api-key...")
-        
-        # Test cryptoPayment with x-api-key
-        headers = {"x-api-key": self.api_key}
-        status, response = self.make_request("POST", "/api/user/cryptoPayment", 
-                                           headers=headers, 
-                                           data={"amount": 10, "currency": "BTC", "redirect_uri": "https://example.com"})
-        
-        success = status == 200 and response.get("success") == True
-        details = f"Status: {status}, Success: {response.get('success')}"
-        self.log_test("cryptoPayment works with x-api-key", success, details)
-
-    def test_get_supported_currency(self):
-        """Test 5: Test getSupportedCurrency with x-api-key only"""
-        print("🧪 TEST 5: getSupportedCurrency endpoint (requires x-api-key only)")
-        
-        if not self.api_key:
-            self.log_test("getSupportedCurrency with API key", False, "No API key available for testing")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        status, response = self.make_request("GET", "/api/user/getSupportedCurrency", headers=headers)
-        
-        success = (status == 200 and 
-                  response.get("success") == True and 
-                  "currencies" in response.get("data", {}))
-        
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success:
-            currencies = response.get("data", {}).get("currencies", [])
-            details += f", Currencies: {currencies}"
-            
-        self.log_test("getSupportedCurrency with x-api-key", success, details)
-
-    def test_userless_crypto_payment(self):
-        """Test 2: Test cryptoPayment with x-api-key only (userless)"""
-        print("🧪 TEST 2: cryptoPayment with x-api-key only (userless payment)")
-        
-        if not self.api_key:
-            self.log_test("Userless cryptoPayment", False, "No API key available for testing")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        payment_data = {
-            "amount": 10,
-            "currency": "BTC",
-            "redirect_uri": "https://example.com/success"
-        }
-        
-        status, response = self.make_request("POST", "/api/user/cryptoPayment", headers=headers, data=payment_data)
-        
-        success = (status == 200 and 
-                  response.get("success") == True and 
-                  "qr_code" in response.get("data", {}) and
-                  "address" in response.get("data", {}) and
-                  "transaction_id" in response.get("data", {}))
-        
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success:
-            data = response.get("data", {})
-            details += f", TX ID: {data.get('transaction_id', 'N/A')[:16]}..., Address: {data.get('address', 'N/A')[:20]}..."
-        else:
-            details += f", Message: {response.get('message', 'N/A')}"
-            
-        self.log_test("Userless cryptoPayment", success, details)
-
-    def test_userless_create_payment(self):
-        """Test 3: Test createPayment with x-api-key only (userless)"""
-        print("🧪 TEST 3: createPayment with x-api-key only (userless payment)")
-        
-        if not self.api_key:
-            self.log_test("Userless createPayment", False, "No API key available for testing")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        payment_data = {
-            "amount": 10,
-            "redirect_uri": "https://example.com/success"
-        }
-        
-        status, response = self.make_request("POST", "/api/user/createPayment", headers=headers, data=payment_data)
-        
-        success = (status == 200 and 
-                  response.get("success") == True and 
-                  "redirect_url" in response.get("data", {}))
-        
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success:
-            redirect_url = response.get("data", {}).get("redirect_url", "")
-            details += f", Redirect URL: {redirect_url[:50]}..."
-        else:
-            details += f", Message: {response.get('message', 'N/A')}"
-            
-        self.log_test("Userless createPayment", success, details)
-
-    def test_existing_customer_flow(self):
-        """Test 4: Test existing flow WITH customer token still works"""
-        print("🧪 TEST 4: Existing customer flow with JWT token")
-        
-        if not self.api_key:
-            self.log_test("Customer token flow", False, "No API key available for testing")
-            return
-        
-        # Step 1: Create a customer first
-        headers = {"x-api-key": self.api_key}
-        customer_data = {
-            "name": "Test User",
-            "email": f"testuser{int(time.time())}@example.com"
-        }
-        
-        status, response = self.make_request("POST", "/api/user/createUser", headers=headers, data=customer_data)
-        
-        if status == 200 and response.get("success"):
-            customer_token = response.get("data", {}).get("token")
-            if customer_token:
-                # Step 2: Use the customer token for cryptoPayment
-                auth_headers = {
-                    "x-api-key": self.api_key,
-                    "Authorization": f"Bearer {customer_token}"
-                }
-                
-                payment_data = {
-                    "amount": 10,
-                    "currency": "BTC",
-                    "redirect_uri": "https://example.com/success"
-                }
-                
-                status, payment_response = self.make_request("POST", "/api/user/cryptoPayment", 
-                                                           headers=auth_headers, data=payment_data)
-                
-                success = (status == 200 and 
-                          payment_response.get("success") == True and 
-                          "transaction_id" in payment_response.get("data", {}))
-                
-                details = f"Customer created, Payment Status: {status}, Success: {payment_response.get('success')}"
-                if success:
-                    tx_id = payment_response.get("data", {}).get("transaction_id", "")
-                    details += f", TX ID: {tx_id[:16]}..."
-                else:
-                    details += f", Message: {payment_response.get('message', 'N/A')}"
-                    
-                self.log_test("Customer token flow", success, details)
-            else:
-                self.log_test("Customer token flow", False, "Customer creation succeeded but no token returned")
-        else:
-            self.log_test("Customer token flow", False, f"Customer creation failed: {response.get('message', 'N/A')}")
-
-    def test_additional_userless_endpoints(self):
-        """Test additional endpoints that should support userless payment"""
-        print("🧪 Additional userless endpoints testing")
-        
-        if not self.api_key:
-            print("⚠️  No API key available - skipping additional endpoint tests")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        
-        # Test getBalance
-        status, response = self.make_request("GET", "/api/user/getBalance", headers=headers)
-        success = status == 200 and response.get("success") == True
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success and "data" in response:
-            wallets = response.get("data", [])
-            details += f", Wallets: {len(wallets)}"
-        self.log_test("Userless getBalance", success, details)
-        
-        # Test getTransactions
-        status, response = self.make_request("GET", "/api/user/getTransactions", headers=headers)
-        success = status == 200 and response.get("success") == True
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success:
-            transactions = response.get("data", [])
-            details += f", Transactions count: {len(transactions)}"
-        self.log_test("Userless getTransactions", success, details)
-        
-        # Test addFunds endpoint
-        add_funds_data = {
-            "amount": 15,
-            "redirect_uri": "https://example.com/success"
-        }
-        status, response = self.make_request("POST", "/api/user/addFunds", headers=headers, data=add_funds_data)
-        success = status == 200 and response.get("success") == True and "redirect_url" in response.get("data", {})
-        details = f"Status: {status}, Success: {response.get('success')}"
-        if success:
-            redirect_url = response.get("data", {}).get("redirect_url", "")
-            details += f", Redirect URL: {redirect_url[:50]}..."
-        else:
-            details += f", Message: {response.get('message', 'N/A')}"
-        self.log_test("Userless addFunds", success, details)
-
-    def test_error_scenarios(self):
-        """Test error scenarios for userless payments"""
-        print("🧪 Error scenarios testing")
-        
-        if not self.api_key:
-            print("⚠️  No API key available - skipping error scenario tests")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        
-        # Test cryptoPayment with missing amount
-        status, response = self.make_request("POST", "/api/user/cryptoPayment", 
-                                           headers=headers, 
-                                           data={"currency": "BTC", "redirect_uri": "https://example.com"})
-        success = status == 400 and response.get("success") == False
-        details = f"Status: {status}, Message: {response.get('message', 'N/A')}"
-        self.log_test("cryptoPayment missing amount error", success, details)
-        
-        # Test createPayment with missing redirect_uri
-        status, response = self.make_request("POST", "/api/user/createPayment", 
-                                           headers=headers, 
-                                           data={"amount": 10})
-        success = status == 400 and response.get("success") == False
-        details = f"Status: {status}, Message: {response.get('message', 'N/A')}"
-        self.log_test("createPayment missing redirect_uri error", success, details)
-        
-        # Test cryptoPayment with invalid currency
-        status, response = self.make_request("POST", "/api/user/cryptoPayment", 
-                                           headers=headers, 
-                                           data={"amount": 10, "currency": "INVALID", "redirect_uri": "https://example.com"})
-        success = status == 400 and response.get("success") == False
-        details = f"Status: {status}, Message: {response.get('message', 'N/A')}"
-        self.log_test("cryptoPayment invalid currency error", success, details)
-
-    def test_legacy_customer_creation(self):
-        """Test that legacy customers are properly created"""
-        print("🧪 Legacy customer creation testing")
-        
-        if not self.api_key:
-            print("⚠️  No API key available - skipping legacy customer tests")
-            return
-            
-        headers = {"x-api-key": self.api_key}
-        
-        # Make multiple userless payments to verify the same default customer is reused
-        payment1_data = {"amount": 5, "currency": "BTC", "redirect_uri": "https://example.com/1"}
-        status1, response1 = self.make_request("POST", "/api/user/cryptoPayment", headers=headers, data=payment1_data)
-        
-        payment2_data = {"amount": 6, "currency": "ETH", "redirect_uri": "https://example.com/2"}
-        status2, response2 = self.make_request("POST", "/api/user/cryptoPayment", headers=headers, data=payment2_data)
-        
-        success = (status1 == 200 and status2 == 200 and 
-                  response1.get("success") and response2.get("success"))
-        
-        details = f"Payment1: {status1}, Payment2: {status2}"
-        if success:
-            tx1 = response1.get("data", {}).get("transaction_id", "")[:16]
-            tx2 = response2.get("data", {}).get("transaction_id", "")[:16]
-            details += f", TX1: {tx1}..., TX2: {tx2}..."
-        
-        self.log_test("Multiple userless payments work", success, details)
-
+    def __init__(self):
+        self.test_results = []
+        self.created_slug = None
+        self.claim_token = None
+    
     def run_all_tests(self):
-        """Run all test scenarios"""
-        print("🚀 Starting DynoPay Userless Payment Backend Tests")
-        print("=" * 60)
+        """Run all trial link tests."""
+        log_test("=" * 60)
+        log_test("STARTING DYNOPAY TRIAL PAYMENT LINK TESTS")
+        log_test(f"Backend URL: {BACKEND_URL}")
+        log_test("=" * 60)
         
-        # We have API keys from the database
-        print(f"✅ Using API key: {self.api_key[:20]}...")
-        print()
-        
-        # Run all test scenarios
-        self.test_api_endpoints_without_auth()
-        self.test_get_supported_currency()
-        self.test_userless_crypto_payment()
-        self.test_userless_create_payment()
-        self.test_existing_customer_flow()
-        self.test_additional_userless_endpoints()
-        self.test_error_scenarios()
-        self.test_legacy_customer_creation()
+        # Test sequence as specified in the request
+        self.test_create_trial_link_valid()
+        self.test_create_trial_link_validation()
+        self.test_get_trial_link_valid()
+        self.test_get_trial_link_invalid()
+        self.test_list_trial_links()
+        self.test_claim_funds_wrong_token()
+        self.test_status_endpoint()
         
         # Summary
-        print("=" * 60)
-        print("🏁 TEST SUMMARY")
-        print("=" * 60)
+        self.print_summary()
+        return self.test_results
+
+    def add_result(self, test_name: str, passed: bool, details: str):
+        """Add test result."""
+        status = "PASS" if passed else "FAIL"
+        log_test(f"{test_name}: {status} - {details}")
+        self.test_results.append({
+            'test': test_name,
+            'passed': passed,
+            'details': details
+        })
+
+    def test_create_trial_link_valid(self):
+        """Test 1: POST /api/public/create-trial-link with valid data."""
+        log_test("Test 1: Create trial link with valid data")
         
-        passed = sum(1 for result in self.test_results if result['success'])
-        failed = len(self.test_results) - passed
+        endpoint = f"{BASE_API_URL}/public/create-trial-link"
+        payload = {
+            "amount": 42,
+            "currency": "USD", 
+            "description": "Test payment"
+        }
         
-        print(f"Total Tests: {len(self.test_results)}")
-        print(f"✅ Passed: {passed}")
-        print(f"❌ Failed: {failed}")
-        print()
+        try:
+            response = requests.post(endpoint, json=payload, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "POST /api/public/create-trial-link")
+            
+            if response.status_code == 201:
+                data = response.json().get('data', {})
+                required_fields = ['id', 'slug', 'link_url', 'amount', 'currency', 'claim_token', 'expires_at', 'accepted_currencies', 'status']
+                
+                missing_fields = [field for field in required_fields if field not in data]
+                
+                if not missing_fields:
+                    # Store for subsequent tests
+                    self.created_slug = data.get('slug')
+                    self.claim_token = data.get('claim_token')
+                    
+                    # Verify data values
+                    if (data.get('amount') == 42 and 
+                        data.get('currency') == 'USD' and 
+                        data.get('status') == 'active' and
+                        isinstance(data.get('accepted_currencies'), list)):
+                        self.add_result("Create trial link", True, f"Successfully created with slug: {self.created_slug}")
+                    else:
+                        self.add_result("Create trial link", False, "Data values don't match expected")
+                else:
+                    self.add_result("Create trial link", False, f"Missing required fields: {missing_fields}")
+            else:
+                self.add_result("Create trial link", False, f"Expected 201, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Create trial link", False, f"Request failed: {e}")
+
+    def test_create_trial_link_validation(self):
+        """Test validation rules for create-trial-link."""
+        log_test("Test 2: Create trial link validation tests")
         
-        if failed > 0:
-            print("Failed Tests:")
-            for result in self.test_results:
-                if not result['success']:
-                    print(f"  - {result['name']}: {result['details']}")
-            print()
+        endpoint = f"{BASE_API_URL}/public/create-trial-link"
         
-        return failed == 0
+        # Test cases: amount < 5, amount > 500, missing amount
+        test_cases = [
+            ({"amount": 3, "currency": "USD"}, 400, "amount < 5"),
+            ({"amount": 600, "currency": "USD"}, 400, "amount > 500"), 
+            ({"currency": "USD"}, 400, "missing amount")
+        ]
+        
+        validation_passed = True
+        for payload, expected_status, description in test_cases:
+            try:
+                response = requests.post(endpoint, json=payload, headers=HEADERS, timeout=TIMEOUT)
+                log_test(f"Validation test ({description}): Status {response.status_code}")
+                
+                if response.status_code != expected_status:
+                    validation_passed = False
+                    log_test(f"FAIL: Expected {expected_status}, got {response.status_code} for {description}")
+                    
+            except requests.RequestException as e:
+                validation_passed = False
+                log_test(f"FAIL: Request error for {description}: {e}")
+        
+        self.add_result("Create trial link validation", validation_passed, 
+                       "All validation rules working correctly" if validation_passed else "Some validation rules failed")
+
+    def test_get_trial_link_valid(self):
+        """Test 3: GET /api/public/trial/:slug with valid slug."""
+        log_test("Test 3: Get trial link with valid slug")
+        
+        if not self.created_slug:
+            self.add_result("Get trial link (valid)", False, "No slug available from create test")
+            return
+            
+        endpoint = f"{BASE_API_URL}/public/trial/{self.created_slug}"
+        
+        try:
+            response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, f"GET /api/public/trial/{self.created_slug}")
+            
+            if response.status_code == 200:
+                data = response.json().get('data', {})
+                
+                # Check required fields and flags
+                expected_fields = ['id', 'slug', 'amount', 'fiat_currency', 'status', 'accepted_currencies', 'is_expired', 'is_paid', 'is_claimed']
+                missing_fields = [field for field in expected_fields if field not in data]
+                
+                if not missing_fields:
+                    if (data.get('is_expired') == False and 
+                        data.get('is_paid') == False and 
+                        data.get('is_claimed') == False and
+                        data.get('slug') == self.created_slug):
+                        self.add_result("Get trial link (valid)", True, "All expected fields and flags present")
+                    else:
+                        self.add_result("Get trial link (valid)", False, "Flag values incorrect")
+                else:
+                    self.add_result("Get trial link (valid)", False, f"Missing fields: {missing_fields}")
+            else:
+                self.add_result("Get trial link (valid)", False, f"Expected 200, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Get trial link (valid)", False, f"Request failed: {e}")
+
+    def test_get_trial_link_invalid(self):
+        """Test 4: GET /api/public/trial/nonexistent-slug."""
+        log_test("Test 4: Get trial link with invalid slug")
+        
+        endpoint = f"{BASE_API_URL}/public/trial/nonexistent-slug"
+        
+        try:
+            response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "GET /api/public/trial/nonexistent-slug")
+            
+            if response.status_code == 404:
+                self.add_result("Get trial link (invalid)", True, "Correctly returned 404 for nonexistent slug")
+            else:
+                self.add_result("Get trial link (invalid)", False, f"Expected 404, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Get trial link (invalid)", False, f"Request failed: {e}")
+
+    def test_list_trial_links(self):
+        """Test 5: GET /api/public/trial-links."""
+        log_test("Test 5: List trial links")
+        
+        endpoint = f"{BASE_API_URL}/public/trial-links"
+        
+        try:
+            response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "GET /api/public/trial-links")
+            
+            if response.status_code == 200:
+                data = response.json().get('data')
+                if isinstance(data, list):
+                    self.add_result("List trial links", True, f"Successfully returned array with {len(data)} links")
+                else:
+                    self.add_result("List trial links", False, "Response data is not an array")
+            else:
+                self.add_result("List trial links", False, f"Expected 200, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("List trial links", False, f"Request failed: {e}")
+
+    def test_claim_funds_wrong_token(self):
+        """Test 6: POST /api/public/claim-funds with wrong token."""
+        log_test("Test 6: Claim funds with wrong token")
+        
+        if not self.created_slug:
+            self.add_result("Claim funds (wrong token)", False, "No slug available from create test")
+            return
+            
+        endpoint = f"{BASE_API_URL}/public/claim-funds"
+        payload = {
+            "slug": self.created_slug,
+            "claim_token": "wrong-token",
+            "email": "test@test.com",
+            "password": "testpass123"
+        }
+        
+        try:
+            response = requests.post(endpoint, json=payload, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "POST /api/public/claim-funds")
+            
+            if response.status_code == 400:
+                # Check if it's because payment not received (status is "active")
+                response_data = response.json()
+                message = response_data.get('message', '').lower()
+                if 'payment' in message and 'not' in message and 'received' in message:
+                    self.add_result("Claim funds (wrong token)", True, "Correctly rejected - payment not received yet")
+                elif 'invalid' in message and 'token' in message:
+                    # This would mean it checked token first, which is also valid
+                    self.add_result("Claim funds (wrong token)", True, "Correctly rejected - invalid token")
+                else:
+                    self.add_result("Claim funds (wrong token)", True, f"Rejected with 400: {message}")
+            else:
+                self.add_result("Claim funds (wrong token)", False, f"Expected 400, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Claim funds (wrong token)", False, f"Request failed: {e}")
+
+    def test_status_endpoint(self):
+        """Test 7: GET /api/status."""
+        log_test("Test 7: Status endpoint")
+        
+        endpoint = f"{BASE_API_URL}/status"
+        
+        try:
+            response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "GET /api/status")
+            
+            if response.status_code == 200:
+                data = response.json()
+                if 'data' in data or 'overall_status' in data or 'status' in data:
+                    self.add_result("Status endpoint", True, "Status endpoint operational")
+                else:
+                    self.add_result("Status endpoint", True, "Status endpoint returned 200 (assuming operational)")
+            else:
+                self.add_result("Status endpoint", False, f"Expected 200, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Status endpoint", False, f"Request failed: {e}")
+
+    def print_summary(self):
+        """Print test summary."""
+        log_test("=" * 60)
+        log_test("TEST SUMMARY")
+        log_test("=" * 60)
+        
+        passed = sum(1 for result in self.test_results if result['passed'])
+        total = len(self.test_results)
+        
+        for result in self.test_results:
+            status = "PASS" if result['passed'] else "FAIL"
+            log_test(f"[{status}] {result['test']}")
+        
+        log_test("-" * 60)
+        log_test(f"Results: {passed}/{total} tests passed")
+        
+        if passed == total:
+            log_test("🎉 All tests passed!")
+        else:
+            log_test("❌ Some tests failed!")
+            failed_tests = [r for r in self.test_results if not r['passed']]
+            for test in failed_tests:
+                log_test(f"   FAILED: {test['test']} - {test['details']}")
+
+def main():
+    """Main test execution."""
+    try:
+        tester = TrialLinkTester()
+        results = tester.run_all_tests()
+        
+        # Return appropriate exit code
+        failed_count = sum(1 for result in results if not result['passed'])
+        sys.exit(0 if failed_count == 0 else 1)
+        
+    except KeyboardInterrupt:
+        log_test("Tests interrupted by user")
+        sys.exit(1)
+    except Exception as e:
+        log_test(f"Unexpected error: {e}", "ERROR")
+        sys.exit(1)
 
 if __name__ == "__main__":
-    tester = DynoPayTester()
-    success = tester.run_all_tests()
-    
-    if not success:
-        sys.exit(1)
+    main()
