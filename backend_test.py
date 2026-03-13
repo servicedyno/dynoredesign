@@ -12,7 +12,7 @@ import time
 from typing import Dict, Any, Optional
 
 # Backend URL from environment
-BACKEND_URL = "https://pod-endpoint-test.preview.emergentagent.com"
+BACKEND_URL = "https://initial-config-18.preview.emergentagent.com"
 BASE_API_URL = f"{BACKEND_URL}/api"
 
 # Test configuration
