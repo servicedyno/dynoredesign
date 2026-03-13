@@ -10,7 +10,7 @@ import json
 import time
 
 # Configuration
-BASE_URL = "https://quick-start-110.preview.emergentagent.com"
+BASE_URL = "https://pod-endpoint-test.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials

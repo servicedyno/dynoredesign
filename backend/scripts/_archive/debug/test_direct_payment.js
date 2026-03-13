@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://quick-start-110.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://pod-endpoint-test.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {
