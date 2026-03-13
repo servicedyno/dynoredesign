@@ -1711,7 +1711,8 @@ const retryConversion = async (req: express.Request, res: express.Response) => {
 
 const getFeeFreeStatus = async (req: express.Request, res: express.Response) => {
   try {
-    const userId = (req as any).user?.user_id || (req as any).userId;
+    const userData = jwt.decode(res.locals.token) as IUserType;
+    const userId = userData?.user_id;
     if (!userId) {
       return errorResponseHelper(res, 401, "Authentication required");
     }

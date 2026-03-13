@@ -75,12 +75,19 @@ axiosBaseApi.interceptors.response.use(
         return Promise.reject(error);
       }
 
-      // Don't retry if this was already a retry or a refresh-token call
-      if (originalRequest._retry || (originalRequest.url || "").includes("user/refresh-token")) {
+      // If this was a refresh-token call that got 401, the refresh token is invalid — clear session
+      if ((originalRequest.url || "").includes("user/refresh-token")) {
         localStorage.removeItem("token");
         localStorage.removeItem("refreshToken");
         delete axiosBaseApi.defaults.headers.common.Authorization;
         window.location.href = "/auth/login";
+        return Promise.reject(error);
+      }
+
+      // If this was already a retry after refresh, don't nuke the session —
+      // the refresh succeeded but this specific endpoint still rejected the token.
+      // Just reject the error and let the caller handle it gracefully.
+      if (originalRequest._retry) {
         return Promise.reject(error);
       }
 
