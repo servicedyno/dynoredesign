@@ -2,6 +2,7 @@ import express from "express";
 import {
   createTrialLink,
   getTrialLink,
+  getTrialLinkByManagementToken,
   claimFunds,
   listTrialLinks,
 } from "../controller/publicTrialController";
@@ -16,6 +17,9 @@ const publicTrialRouter = express.Router();
 
 // POST /api/public/create-trial-link — Create a new trial payment link
 publicTrialRouter.post("/create-trial-link", createTrialLink);
+
+// GET /api/public/trial/manage/:token — Get trial link via management token (email link)
+publicTrialRouter.get("/trial/manage/:token", getTrialLinkByManagementToken);
 
 // GET /api/public/trial/:slug — Get trial link details (for payment page)
 publicTrialRouter.get("/trial/:slug", getTrialLink);

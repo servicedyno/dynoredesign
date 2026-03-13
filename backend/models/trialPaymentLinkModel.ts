@@ -44,8 +44,18 @@ const trialPaymentLinkModel = sequelize.define(
     },
     claim_token: {
       type: DataTypes.STRING(128),
-      allowNull: false,
-      comment: "Hashed token for claiming funds (bcrypt hash of raw token)",
+      allowNull: true,
+      comment: "Hashed token for claiming funds (bcrypt hash of raw token) — legacy",
+    },
+    creator_email: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "Email of the link creator (provided at creation for management link)",
+    },
+    management_token_hash: {
+      type: DataTypes.STRING(128),
+      allowNull: true,
+      comment: "SHA-256 hash of the management token sent via email",
     },
     claim_email: {
       type: DataTypes.STRING(255),

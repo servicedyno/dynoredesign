@@ -25,8 +25,8 @@ const CURRENCIES = [
 
 interface TrialLinkResult {
   link_url: string;
+  manage_url: string;
   slug: string;
-  claim_token: string;
   amount: number;
   currency: string;
 }
@@ -38,6 +38,7 @@ const TrialLinkCreator: React.FC = () => {
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [description, setDescription] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TrialLinkResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -52,6 +53,11 @@ const TrialLinkCreator: React.FC = () => {
   const textMuted = isDark ? "#3a3a4a" : theme.palette.text.secondary;
 
   const handleCreate = async () => {
+    // Validate email
+    if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      setError("Please enter a valid email address");
+      return;
+    }
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 5) {
       setError("Please enter an amount of at least $5");
       return;
@@ -69,6 +75,7 @@ const TrialLinkCreator: React.FC = () => {
         amount: parseFloat(amount),
         currency,
         description: description || undefined,
+        email: email.trim(),
       });
       setResult(response.data.data);
     } catch (err: any) {
@@ -85,7 +92,19 @@ const TrialLinkCreator: React.FC = () => {
 
   const currencySymbol = CURRENCIES.find(c => c.code === currency)?.symbol || "$";
 
-  // Success state — show generated link
+  // Shared input styling
+  const inputSx = {
+    "& .MuiOutlinedInput-root": {
+      bgcolor: fieldBg,
+      color: textPrimary,
+      "& fieldset": { borderColor },
+      "&:hover fieldset": { borderColor: theme.palette.primary.main },
+      "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
+    },
+    "& .MuiInputLabel-root": { color: textSecondary },
+  };
+
+  // Success state — clean confirmation, no token to save
   if (result) {
     return (
       <Paper
@@ -99,52 +118,109 @@ const TrialLinkCreator: React.FC = () => {
           border: `1px solid ${borderColor}`,
         }}
       >
-        <Box sx={{ textAlign: "center", mb: 2 }}>
-          <Box sx={{ width: 48, height: 48, borderRadius: "50%", bgcolor: "rgba(71,180,100,0.15)", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 1.5 }}>
-            <Icon icon="mdi:check-circle" width={28} color="#47B464" />
+        <Box sx={{ textAlign: "center", mb: 2.5 }}>
+          <Box
+            sx={{
+              width: 52,
+              height: 52,
+              borderRadius: "50%",
+              bgcolor: "rgba(71,180,100,0.12)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              mx: "auto",
+              mb: 1.5,
+            }}
+          >
+            <Icon icon="mdi:check-circle" width={30} color="#47B464" />
           </Box>
-          <Typography sx={{ color: textPrimary, fontWeight: 700, fontSize: 18 }}>Payment Link Created!</Typography>
+          <Typography sx={{ color: textPrimary, fontWeight: 700, fontSize: 18 }}>
+            Payment Link Created!
+          </Typography>
           <Typography sx={{ color: textSecondary, fontSize: 13, mt: 0.5 }}>
             {currencySymbol}{result.amount.toFixed(2)} {result.currency}
           </Typography>
         </Box>
 
-        {/* Payment Link */}
+        {/* Payment Link — share with customer */}
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ color: textSecondary, fontSize: 12, mb: 0.5 }}>Payment Link</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: fieldBg, border: `1px solid ${borderColor}` }}>
-            <Typography sx={{ color: textSecondary, fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <Typography sx={{ color: textSecondary, fontSize: 12, mb: 0.5, fontWeight: 600 }}>
+            Payment Link
+          </Typography>
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1,
+              p: 1,
+              borderRadius: 1.5,
+              bgcolor: fieldBg,
+              border: `1px solid ${borderColor}`,
+            }}
+          >
+            <Typography
+              sx={{
+                color: textSecondary,
+                fontSize: 12,
+                flex: 1,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {result.link_url}
             </Typography>
-            <IconButton size="small" onClick={() => copyToClipboard(result.link_url, "Link")} sx={{ color: theme.palette.primary.main }}>
+            <IconButton
+              size="small"
+              onClick={() => copyToClipboard(result.link_url, "Payment link")}
+              sx={{ color: theme.palette.primary.main }}
+            >
               <Icon icon="mdi:content-copy" width={16} />
             </IconButton>
           </Box>
         </Box>
 
-        {/* Claim Token */}
-        <Box sx={{ mb: 2 }}>
-          <Typography sx={{ color: textSecondary, fontSize: 12, mb: 0.5 }}>Claim Token (save this!)</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: fieldBg, border: "1px solid rgba(245,166,35,0.3)" }}>
-            <Typography sx={{ color: "#F5A623", fontSize: 11, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
-              {result.claim_token}
+        {/* Email confirmation notice */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "flex-start",
+            gap: 1.5,
+            p: 1.5,
+            borderRadius: 2,
+            bgcolor: isDark ? "rgba(99,102,241,0.08)" : "rgba(99,102,241,0.06)",
+            border: `1px solid ${isDark ? "rgba(99,102,241,0.2)" : "rgba(99,102,241,0.12)"}`,
+            mb: 2,
+          }}
+        >
+          <Icon icon="mdi:email-check-outline" width={20} color={isDark ? "#818cf8" : "#6366f1"} style={{ marginTop: 2, flexShrink: 0 }} />
+          <Box>
+            <Typography sx={{ color: textPrimary, fontSize: 13, fontWeight: 600 }}>
+              Management link sent to your email
             </Typography>
-            <IconButton size="small" onClick={() => copyToClipboard(result.claim_token, "Token")} sx={{ color: "#F5A623" }}>
-              <Icon icon="mdi:content-copy" width={16} />
-            </IconButton>
+            <Typography sx={{ color: textSecondary, fontSize: 12, mt: 0.3 }}>
+              Check your inbox to track payment status and claim funds when paid. No tokens to save!
+            </Typography>
           </Box>
-          <Typography sx={{ color: "#E8484A", fontSize: 11, mt: 0.5, display: "flex", alignItems: "center", gap: 0.5 }}>
-            <Icon icon="mdi:alert-circle-outline" width={13} /> Save this token! You'll need it to claim your funds.
-          </Typography>
         </Box>
 
-        <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
+        <Box sx={{ display: "flex", gap: 1 }}>
           <Button
             variant="outlined"
             fullWidth
             size="small"
-            onClick={() => { setResult(null); setAmount(""); setDescription(""); }}
-            sx={{ borderColor: borderColor, color: textSecondary, fontSize: 13, "&:hover": { borderColor: theme.palette.primary.main } }}
+            onClick={() => {
+              setResult(null);
+              setAmount("");
+              setDescription("");
+              setEmail("");
+            }}
+            sx={{
+              borderColor,
+              color: textSecondary,
+              fontSize: 13,
+              "&:hover": { borderColor: theme.palette.primary.main },
+            }}
           >
             Create Another
           </Button>
@@ -152,15 +228,21 @@ const TrialLinkCreator: React.FC = () => {
             variant="contained"
             fullWidth
             size="small"
-            onClick={() => window.open(result.link_url, "_blank")}
-            sx={{ bgcolor: theme.palette.primary.main, fontSize: 13, "&:hover": { bgcolor: isDark ? "#5563e0" : "#0003cc" } }}
+            onClick={() => copyToClipboard(result.link_url, "Payment link")}
+            sx={{
+              bgcolor: theme.palette.primary.main,
+              fontSize: 13,
+              "&:hover": { bgcolor: isDark ? "#5563e0" : "#0003cc" },
+            }}
           >
-            Open Link
+            Copy Link
           </Button>
         </Box>
 
         <Snackbar open={!!copied} autoHideDuration={2000} onClose={() => setCopied(null)}>
-          <Alert severity="success" onClose={() => setCopied(null)}>{copied} copied!</Alert>
+          <Alert severity="success" onClose={() => setCopied(null)}>
+            {copied} copied!
+          </Alert>
         </Snackbar>
       </Paper>
     );
@@ -183,10 +265,33 @@ const TrialLinkCreator: React.FC = () => {
         Create a Payment Link
       </Typography>
       <Typography sx={{ color: textSecondary, fontSize: 13, mb: 2 }}>
-        No account needed. Generate a link in seconds.
+        No account needed. We'll email you a link to manage it.
       </Typography>
 
-      {error && <Alert severity="error" sx={{ mb: 2, fontSize: 13 }}>{error}</Alert>}
+      {error && (
+        <Alert severity="error" sx={{ mb: 2, fontSize: 13 }}>
+          {error}
+        </Alert>
+      )}
+
+      {/* Email */}
+      <TextField
+        label="Your Email"
+        type="email"
+        value={email}
+        onChange={(e) => setEmail(e.target.value)}
+        placeholder="you@company.com"
+        fullWidth
+        size="small"
+        sx={{ mb: 2, ...inputSx }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <Icon icon="mdi:email-outline" width={18} color={isDark ? "#676768" : "#9ca3af"} />
+            </InputAdornment>
+          ),
+        }}
+      />
 
       {/* Amount + Currency */}
       <Box sx={{ display: "flex", gap: 1, mb: 2 }}>
@@ -198,18 +303,13 @@ const TrialLinkCreator: React.FC = () => {
           fullWidth
           size="small"
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Typography sx={{ color: textSecondary }}>{currencySymbol}</Typography></InputAdornment>,
+            startAdornment: (
+              <InputAdornment position="start">
+                <Typography sx={{ color: textSecondary }}>{currencySymbol}</Typography>
+              </InputAdornment>
+            ),
           }}
-          sx={{
-            "& .MuiOutlinedInput-root": {
-              bgcolor: fieldBg,
-              color: textPrimary,
-              "& fieldset": { borderColor: borderColor },
-              "&:hover fieldset": { borderColor: theme.palette.primary.main },
-              "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
-            },
-            "& .MuiInputLabel-root": { color: textSecondary },
-          }}
+          sx={inputSx}
         />
         <Select
           value={currency}
@@ -219,14 +319,16 @@ const TrialLinkCreator: React.FC = () => {
             minWidth: 90,
             bgcolor: fieldBg,
             color: textPrimary,
-            "& .MuiOutlinedInput-notchedOutline": { borderColor: borderColor },
+            "& .MuiOutlinedInput-notchedOutline": { borderColor },
             "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.primary.main },
             "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.primary.main },
             "& .MuiSelect-icon": { color: textSecondary },
           }}
         >
-          {CURRENCIES.map(c => (
-            <MenuItem key={c.code} value={c.code}>{c.code}</MenuItem>
+          {CURRENCIES.map((c) => (
+            <MenuItem key={c.code} value={c.code}>
+              {c.code}
+            </MenuItem>
           ))}
         </Select>
       </Box>
@@ -239,24 +341,14 @@ const TrialLinkCreator: React.FC = () => {
         placeholder="e.g., Web design project"
         fullWidth
         size="small"
-        sx={{
-          mb: 2,
-          "& .MuiOutlinedInput-root": {
-            bgcolor: fieldBg,
-            color: textPrimary,
-            "& fieldset": { borderColor: borderColor },
-            "&:hover fieldset": { borderColor: theme.palette.primary.main },
-            "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
-          },
-          "& .MuiInputLabel-root": { color: textSecondary },
-        }}
+        sx={{ mb: 2, ...inputSx }}
       />
 
       <Button
         variant="contained"
         fullWidth
         onClick={handleCreate}
-        disabled={loading || !amount}
+        disabled={loading || !amount || !email}
         sx={{
           bgcolor: theme.palette.primary.main,
           py: 1.2,
@@ -264,7 +356,10 @@ const TrialLinkCreator: React.FC = () => {
           fontWeight: 600,
           borderRadius: 2,
           "&:hover": { bgcolor: isDark ? "#5563e0" : "#0003cc" },
-          "&.Mui-disabled": { bgcolor: isDark ? "#0004FF60" : `${theme.palette.primary.main}40`, color: isDark ? "#fff8" : `${textPrimary}80` },
+          "&.Mui-disabled": {
+            bgcolor: isDark ? "#0004FF60" : `${theme.palette.primary.main}40`,
+            color: isDark ? "#fff8" : `${textPrimary}80`,
+          },
         }}
       >
         {loading ? <CircularProgress size={22} sx={{ color: "#fff" }} /> : "Generate Payment Link"}
