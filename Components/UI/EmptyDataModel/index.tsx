@@ -10,6 +10,7 @@ import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { AddRounded } from "@mui/icons-material";
 import { useRouter } from "next/router";
+import { useTheme } from "@mui/material/styles";
 import AddWalletModal from "../AddWalletModal";
 import CreateApiModel from "../ApiKeysModel/CreateApiModel";
 
@@ -23,6 +24,7 @@ interface EmptyDataModelProps {
 const EmptyDataModel = ({ pageName, onAddWallet }: EmptyDataModelProps) => {
     const isMobile = useIsMobile("md");
     const router = useRouter();
+    const theme = useTheme();
     const { t } = useTranslation("common");
 
     const [openCreate, setOpenCreate] = useState(false);

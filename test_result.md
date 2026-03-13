@@ -1,24 +1,20 @@
-# DynoPay Backend Test Plan
+# DynoPay Bug Fixes
 
-## Original Problem Statement
-User attempted to login using a Gmail address and after it logged in, it auto logged out.
+## Issues Fixed
 
-## Root Cause Analysis
-1. **Backend Bug (Root Cause):** The `getFeeFreeStatus` controller in `companyController.ts` reads user from `(req as any).user?.user_id` instead of `res.locals.user` (which is where the authMiddleware stores user data). All other controllers correctly use `jwt.decode(res.locals.token)`.
-2. **Frontend Bug (Cascading Failure):** The axios response interceptor nukes the entire session (removes localStorage tokens + redirects to /auth/login) when a retried request fails after token refresh, even if the refresh was successful. This means a single broken endpoint can log out the user.
+### 1. Auto-logout after login (waajihamalik@gmail.com)
+- **Backend**: `getFeeFreeStatus` in `companyController.ts` used `req.user` instead of `res.locals.user`
+- **Frontend**: Axios interceptor nuked session when retried request failed after successful refresh
 
-## Fixes Applied
-1. **Backend:** Changed `getFeeFreeStatus` to use `jwt.decode(res.locals.token) as IUserType` consistent with all other controllers.
-2. **Frontend:** Updated axios interceptor to only clear session when the refresh-token call itself fails (401), NOT when a retried request after successful refresh still fails.
+### 2. Pages showing "An error occurred on client" (/transactions, /developer-keys, /wallet, /pay-links)
+- **Root Cause**: `EmptyDataModel` component referenced `theme.palette.background.paper` on line 91 without importing or calling `useTheme()` — caused `ReferenceError: theme is not defined`
+- **Fix**: Added `import { useTheme } from "@mui/material/styles"` and `const theme = useTheme()` to the component
+
+## Files Modified
+- `/app/backend/controller/companyController.ts` - Fixed getFeeFreeStatus auth
+- `/app/axiosConfig.ts` - Fixed interceptor session handling
+- `/app/Components/UI/EmptyDataModel/index.tsx` - Added useTheme hook
+- `/app/pages/transactions.tsx` - Reverted debug error boundary
 
 ## Testing Protocol
-- Backend tests should verify the `/api/company/fee-free-status` endpoint works with valid auth tokens
-- Frontend test should verify login flow stays on dashboard after login
-
-## Test Cases
-1. Backend: GET /api/company/fee-free-status should return 200 with valid token
-2. Backend: GET /api/company/fee-free-status should return 401 without token
-3. Frontend: Login flow should persist session after successful login
-
-## Incorporate User Feedback
-- N/A
+- All 4 affected pages verified working via Playwright: /transactions, /developer-keys, /wallet, /pay-links
