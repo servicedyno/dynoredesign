@@ -1707,6 +1707,28 @@ const retryConversion = async (req: express.Request, res: express.Response) => {
   }
 };
 
+// ── Fee-Free Status ─────────────────────────────────────────────────────────
+
+const getFeeFreeStatus = async (req: express.Request, res: express.Response) => {
+  try {
+    const companyId = parseInt(req.params.id);
+    if (!companyId) {
+      return errorResponseHelper(res, 400, "Company ID is required");
+    }
+
+    const { getFeeFreeStatus: fetchFeeFreeStatus } = require("../services/feeFreeService");
+    const status = await fetchFeeFreeStatus(companyId);
+
+    if (!status) {
+      return errorResponseHelper(res, 404, "Company not found");
+    }
+
+    return successResponseHelper(res, 200, "Fee-free status retrieved", status);
+  } catch (error: any) {
+    return errorResponseHelper(res, 500, "Failed to retrieve fee-free status");
+  }
+};
+
 export default {
   addCompany,
   getCompany,
@@ -1726,4 +1748,5 @@ export default {
   getConversionHistory,
   getConversionDetail,
   retryConversion,
+  getFeeFreeStatus,
 };

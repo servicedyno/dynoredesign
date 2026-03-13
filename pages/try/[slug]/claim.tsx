@@ -106,7 +106,7 @@ export default function ClaimFundsPage() {
             <Typography sx={{ color: "#9e9ea7", mb: 1 }}>Your account has been created and funds are being processed.</Typography>
             <Box sx={{ bgcolor: "rgba(0,4,255,0.08)", borderRadius: 2, p: 2, my: 3 }}>
               <Typography sx={{ color: "#0004FF", fontWeight: 600, fontSize: 14 }}>
-                \ud83c\udf89 Your first \u20ac1,000 in transactions are fee-free!
+                \ud83c\udf89 Your first $500 in transactions are fee-free!
               </Typography>
             </Box>
             <Button
@@ -253,7 +253,7 @@ export default function ClaimFundsPage() {
             <Box sx={{ mt: 2, p: 2, bgcolor: "rgba(0,4,255,0.05)", borderRadius: 2 }}>
               <Typography sx={{ color: "#9e9ea7", fontSize: 12, display: "flex", alignItems: "center", gap: 1 }}>
                 <Icon icon="mdi:gift-outline" width={16} color="#0004FF" />
-                Your first \u20ac1,000 in transactions will be fee-free!
+                Your first $500 in transactions will be fee-free!
               </Typography>
             </Box>
           </Box>

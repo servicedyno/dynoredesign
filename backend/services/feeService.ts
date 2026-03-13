@@ -163,7 +163,8 @@ const findMatchingTier = (tiers: FeeTier[], amount: number, context: string): Fe
 
 export const calculateTransactionFees = async (
   blockchain: string,
-  amount: number
+  amount: number,
+  companyId?: number
 ) => {
   const config = await getBlockchainConfig(blockchain);
   if (!config) {
@@ -176,15 +177,43 @@ export const calculateTransactionFees = async (
   const fixedFee = effectiveTier.fixed_fee;
   const transactionFee = (amount * config.transaction_fee_percent) / 100;
   const totalDeduction = fixedFee + transactionFee;
-  const userReceives = amount - totalDeduction;
+  let userReceives = amount - totalDeduction;
+
+  // Phase 2: Fee-free override for trial merchants
+  let feeFreeApplied = false;
+  let feeFreeDiscount = 0;
+  let feeFreeRemaining = 0;
+
+  if (companyId) {
+    try {
+      const { calculateFeeFreeDiscount } = require("./feeFreeService");
+      const discount = await calculateFeeFreeDiscount(companyId, amount);
+      
+      if (discount.fee_free_amount > 0) {
+        // Calculate the proportion of the transaction that's fee-free
+        const freeRatio = discount.fee_free_amount / amount;
+        feeFreeDiscount = totalDeduction * freeRatio;
+        feeFreeApplied = true;
+        feeFreeRemaining = discount.remaining_after;
+        userReceives = amount - (totalDeduction - feeFreeDiscount);
+        
+        log(`[FeeFree] Company ${companyId}: $${discount.fee_free_amount}/$${amount} fee-free, discount $${feeFreeDiscount.toFixed(2)}`, 'info');
+      }
+    } catch (e: any) {
+      log(`[FeeFree] Fee-free check failed (non-critical): ${e.message}`, 'warn');
+    }
+  }
 
   return {
-    fixedFee,
-    transactionFee,
-    totalDeduction,
+    fixedFee: feeFreeApplied ? fixedFee * (1 - (feeFreeDiscount / totalDeduction)) : fixedFee,
+    transactionFee: feeFreeApplied ? transactionFee * (1 - (feeFreeDiscount / totalDeduction)) : transactionFee,
+    totalDeduction: totalDeduction - feeFreeDiscount,
     userReceives,
     tierId: effectiveTier.id ?? 0,
     minForwarding: config.min_forwarding_amount,
+    feeFreeApplied,
+    feeFreeDiscount,
+    feeFreeRemaining,
   };
 };
 

@@ -327,7 +327,7 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       email: email.toLowerCase(),
       amount: linkData.amount,
       currency: linkData.fiat_currency,
-      message: "Welcome to DynoPay! Your first €1,000 in transactions are fee-free.",
+      message: "Welcome to DynoPay! Your first $500 in transactions are fee-free.",
     });
   } catch (error: any) {
     apiLogger.error(`[TrialLink] Error claiming funds: ${error.message}`);
