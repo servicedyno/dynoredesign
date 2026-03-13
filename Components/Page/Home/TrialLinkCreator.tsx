@@ -12,6 +12,7 @@ import {
   InputAdornment,
   Select,
   MenuItem,
+  useTheme,
 } from "@mui/material";
 import { Icon } from "@iconify/react";
 import axiosBaseApi from "@/axiosConfig";
@@ -31,6 +32,9 @@ interface TrialLinkResult {
 }
 
 const TrialLinkCreator: React.FC = () => {
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
+
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("USD");
   const [description, setDescription] = useState("");
@@ -38,6 +42,14 @@ const TrialLinkCreator: React.FC = () => {
   const [result, setResult] = useState<TrialLinkResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
+
+  // Theme-derived colors
+  const paperBg = theme.palette.background.paper;
+  const fieldBg = theme.palette.background.default;
+  const borderColor = isDark ? "#1e1f2e" : theme.palette.divider;
+  const textPrimary = theme.palette.text.primary;
+  const textSecondary = theme.palette.text.secondary;
+  const textMuted = isDark ? "#3a3a4a" : theme.palette.text.secondary;
 
   const handleCreate = async () => {
     if (!amount || isNaN(parseFloat(amount)) || parseFloat(amount) < 5) {
@@ -82,29 +94,29 @@ const TrialLinkCreator: React.FC = () => {
           p: 3,
           maxWidth: 440,
           width: "100%",
-          bgcolor: "#12131C",
+          bgcolor: paperBg,
           borderRadius: 3,
-          border: "1px solid #1e1f2e",
+          border: `1px solid ${borderColor}`,
         }}
       >
         <Box sx={{ textAlign: "center", mb: 2 }}>
           <Box sx={{ width: 48, height: 48, borderRadius: "50%", bgcolor: "rgba(71,180,100,0.15)", display: "flex", alignItems: "center", justifyContent: "center", mx: "auto", mb: 1.5 }}>
             <Icon icon="mdi:check-circle" width={28} color="#47B464" />
           </Box>
-          <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 18 }}>Payment Link Created!</Typography>
-          <Typography sx={{ color: "#9e9ea7", fontSize: 13, mt: 0.5 }}>
+          <Typography sx={{ color: textPrimary, fontWeight: 700, fontSize: 18 }}>Payment Link Created!</Typography>
+          <Typography sx={{ color: textSecondary, fontSize: 13, mt: 0.5 }}>
             {currencySymbol}{result.amount.toFixed(2)} {result.currency}
           </Typography>
         </Box>
 
         {/* Payment Link */}
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ color: "#676768", fontSize: 12, mb: 0.5 }}>Payment Link</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: "#0a0b14", border: "1px solid #1e1f2e" }}>
-            <Typography sx={{ color: "#9e9ea7", fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+          <Typography sx={{ color: textSecondary, fontSize: 12, mb: 0.5 }}>Payment Link</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: fieldBg, border: `1px solid ${borderColor}` }}>
+            <Typography sx={{ color: textSecondary, fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
               {result.link_url}
             </Typography>
-            <IconButton size="small" onClick={() => copyToClipboard(result.link_url, "Link")} sx={{ color: "#0004FF" }}>
+            <IconButton size="small" onClick={() => copyToClipboard(result.link_url, "Link")} sx={{ color: theme.palette.primary.main }}>
               <Icon icon="mdi:content-copy" width={16} />
             </IconButton>
           </Box>
@@ -112,8 +124,8 @@ const TrialLinkCreator: React.FC = () => {
 
         {/* Claim Token */}
         <Box sx={{ mb: 2 }}>
-          <Typography sx={{ color: "#676768", fontSize: 12, mb: 0.5 }}>Claim Token (save this!)</Typography>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: "#0a0b14", border: "1px solid rgba(245,166,35,0.3)" }}>
+          <Typography sx={{ color: textSecondary, fontSize: 12, mb: 0.5 }}>Claim Token (save this!)</Typography>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: fieldBg, border: "1px solid rgba(245,166,35,0.3)" }}>
             <Typography sx={{ color: "#F5A623", fontSize: 11, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
               {result.claim_token}
             </Typography>
@@ -132,7 +144,7 @@ const TrialLinkCreator: React.FC = () => {
             fullWidth
             size="small"
             onClick={() => { setResult(null); setAmount(""); setDescription(""); }}
-            sx={{ borderColor: "#1e1f2e", color: "#9e9ea7", fontSize: 13, "&:hover": { borderColor: "#0004FF" } }}
+            sx={{ borderColor: borderColor, color: textSecondary, fontSize: 13, "&:hover": { borderColor: theme.palette.primary.main } }}
           >
             Create Another
           </Button>
@@ -141,7 +153,7 @@ const TrialLinkCreator: React.FC = () => {
             fullWidth
             size="small"
             onClick={() => window.open(result.link_url, "_blank")}
-            sx={{ bgcolor: "#0004FF", fontSize: 13, "&:hover": { bgcolor: "#0003cc" } }}
+            sx={{ bgcolor: theme.palette.primary.main, fontSize: 13, "&:hover": { bgcolor: isDark ? "#5563e0" : "#0003cc" } }}
           >
             Open Link
           </Button>
@@ -162,15 +174,15 @@ const TrialLinkCreator: React.FC = () => {
         p: 3,
         maxWidth: 440,
         width: "100%",
-        bgcolor: "#12131C",
+        bgcolor: paperBg,
         borderRadius: 3,
-        border: "1px solid #1e1f2e",
+        border: `1px solid ${borderColor}`,
       }}
     >
-      <Typography sx={{ color: "#fff", fontWeight: 700, fontSize: 16, mb: 0.5 }}>
+      <Typography sx={{ color: textPrimary, fontWeight: 700, fontSize: 16, mb: 0.5 }}>
         Create a Payment Link
       </Typography>
-      <Typography sx={{ color: "#676768", fontSize: 13, mb: 2 }}>
+      <Typography sx={{ color: textSecondary, fontSize: 13, mb: 2 }}>
         No account needed. Generate a link in seconds.
       </Typography>
 
@@ -186,15 +198,32 @@ const TrialLinkCreator: React.FC = () => {
           fullWidth
           size="small"
           InputProps={{
-            startAdornment: <InputAdornment position="start"><Typography sx={{ color: "#676768" }}>{currencySymbol}</Typography></InputAdornment>,
+            startAdornment: <InputAdornment position="start"><Typography sx={{ color: textSecondary }}>{currencySymbol}</Typography></InputAdornment>,
           }}
-          sx={{ "& .MuiOutlinedInput-root": { bgcolor: "#0a0b14", color: "#fff", "& fieldset": { borderColor: "#1e1f2e" } }, "& .MuiInputLabel-root": { color: "#676768" } }}
+          sx={{
+            "& .MuiOutlinedInput-root": {
+              bgcolor: fieldBg,
+              color: textPrimary,
+              "& fieldset": { borderColor: borderColor },
+              "&:hover fieldset": { borderColor: theme.palette.primary.main },
+              "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
+            },
+            "& .MuiInputLabel-root": { color: textSecondary },
+          }}
         />
         <Select
           value={currency}
           onChange={(e) => setCurrency(e.target.value)}
           size="small"
-          sx={{ minWidth: 90, bgcolor: "#0a0b14", color: "#fff", "& .MuiOutlinedInput-notchedOutline": { borderColor: "#1e1f2e" }, "& .MuiSelect-icon": { color: "#676768" } }}
+          sx={{
+            minWidth: 90,
+            bgcolor: fieldBg,
+            color: textPrimary,
+            "& .MuiOutlinedInput-notchedOutline": { borderColor: borderColor },
+            "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.primary.main },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: theme.palette.primary.main },
+            "& .MuiSelect-icon": { color: textSecondary },
+          }}
         >
           {CURRENCIES.map(c => (
             <MenuItem key={c.code} value={c.code}>{c.code}</MenuItem>
@@ -210,7 +239,17 @@ const TrialLinkCreator: React.FC = () => {
         placeholder="e.g., Web design project"
         fullWidth
         size="small"
-        sx={{ mb: 2, "& .MuiOutlinedInput-root": { bgcolor: "#0a0b14", color: "#fff", "& fieldset": { borderColor: "#1e1f2e" } }, "& .MuiInputLabel-root": { color: "#676768" } }}
+        sx={{
+          mb: 2,
+          "& .MuiOutlinedInput-root": {
+            bgcolor: fieldBg,
+            color: textPrimary,
+            "& fieldset": { borderColor: borderColor },
+            "&:hover fieldset": { borderColor: theme.palette.primary.main },
+            "&.Mui-focused fieldset": { borderColor: theme.palette.primary.main },
+          },
+          "& .MuiInputLabel-root": { color: textSecondary },
+        }}
       />
 
       <Button
@@ -219,20 +258,20 @@ const TrialLinkCreator: React.FC = () => {
         onClick={handleCreate}
         disabled={loading || !amount}
         sx={{
-          bgcolor: "#0004FF",
+          bgcolor: theme.palette.primary.main,
           py: 1.2,
           fontSize: 15,
           fontWeight: 600,
           borderRadius: 2,
-          "&:hover": { bgcolor: "#0003cc" },
-          "&.Mui-disabled": { bgcolor: "#0004FF60", color: "#fff8" },
+          "&:hover": { bgcolor: isDark ? "#5563e0" : "#0003cc" },
+          "&.Mui-disabled": { bgcolor: isDark ? "#0004FF60" : `${theme.palette.primary.main}40`, color: isDark ? "#fff8" : `${textPrimary}80` },
         }}
       >
         {loading ? <CircularProgress size={22} sx={{ color: "#fff" }} /> : "Generate Payment Link"}
       </Button>
 
-      <Typography sx={{ color: "#3a3a4a", fontSize: 11, textAlign: "center", mt: 1.5 }}>
-        Min $5 \u2022 Max $500 \u2022 Expires in 24h
+      <Typography sx={{ color: textMuted, fontSize: 11, textAlign: "center", mt: 1.5 }}>
+        Min $5 {"\u2022"} Max $500 {"\u2022"} Expires in 24h
       </Typography>
     </Paper>
   );

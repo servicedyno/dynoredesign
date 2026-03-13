@@ -10,12 +10,14 @@ import UseCaseSection from "./UseCase";
 import WhyChooseDynopaySection from "./WhyChooseDynoPay";
 import TrialLinkCreator from "./TrialLinkCreator";
 import { HomeContainer, HomeFullWidthContainer, HomeWrapper } from "./styled";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 
 interface HomePageProps {}
 
 const HomePage: FC<HomePageProps> = () => {
   useIsMobile("md");
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
   return (
     <HomeWrapper>
@@ -33,12 +35,14 @@ const HomePage: FC<HomePageProps> = () => {
             alignItems: "center",
             py: { xs: 6, md: 8 },
             px: 2,
-            background: "linear-gradient(180deg, #0a0b14 0%, #12131C 50%, #0a0b14 100%)",
+            background: isDark
+              ? "linear-gradient(180deg, #0a0b14 0%, #12131C 50%, #0a0b14 100%)"
+              : `linear-gradient(180deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 50%, ${theme.palette.background.default} 100%)`,
           }}
         >
           <Typography
             sx={{
-              color: "#0004FF",
+              color: theme.palette.primary.main,
               fontSize: 13,
               fontWeight: 600,
               textTransform: "uppercase",
@@ -51,7 +55,7 @@ const HomePage: FC<HomePageProps> = () => {
           <Typography
             variant="h4"
             sx={{
-              color: "#fff",
+              color: theme.palette.text.primary,
               fontWeight: 800,
               textAlign: "center",
               mb: 1,
@@ -62,7 +66,7 @@ const HomePage: FC<HomePageProps> = () => {
           </Typography>
           <Typography
             sx={{
-              color: "#676768",
+              color: theme.palette.text.secondary,
               textAlign: "center",
               mb: 4,
               maxWidth: 500,
