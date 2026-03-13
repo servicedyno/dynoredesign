@@ -2906,7 +2906,8 @@ const settleCryptoTransaction = async ({
     }
 
     // ── RELIABILITY GUARD 2: Admin ≠ Merchant Wallet ─────────────────────────
-    // Prevent admin fees from being sent to the merchant wallet
+    // Check if admin and merchant wallets are the same (intentional single-wallet config)
+    let isSameWallet = false;
     if (userAddress) {
       const walletCheck = validateWalletSeparation(
         adminWalletAddress,
@@ -2917,8 +2918,6 @@ const settleCryptoTransaction = async ({
       if (!walletCheck.valid) {
         cronLogger.error(`[settleCryptoTransaction] ⛔ WALLET GUARD BLOCKED: ${walletCheck.reason}`);
         await markSettlementFailed(paymentId, walletCheck.reason || 'Wallet validation failed');
-        // Don't throw — journal and continue with admin-only settlement
-        // The merchant amount will stay in the temp address for manual recovery
         cronLogger.warn(`[settleCryptoTransaction] ⚠️ Falling back to admin-only settlement for ${paymentId}. Merchant amount retained in temp address for manual recovery.`);
         await journalStateTransition({
           paymentId,
@@ -2931,6 +2930,10 @@ const settleCryptoTransaction = async ({
           amount: Number(userAmount),
           metadata: { reason: walletCheck.reason, adminWallet: adminWalletAddress, merchantWallet: userAddress },
         });
+      }
+      if (walletCheck.sameAddress) {
+        isSameWallet = true;
+        cronLogger.info(`[settleCryptoTransaction] ℹ️ Same-wallet mode: admin and merchant wallets are identical for ${currency}. Will use combined single-output settlement.`);
       }
     }
 
@@ -3288,7 +3291,7 @@ const settleCryptoTransaction = async ({
       const canUseSingleUTXO = ["BTC", "LTC", "DOGE", "BCH"].includes(currency);
 
       if (canUseSingleUTXO) {
-        // UTXO chains: Create single transaction with two outputs (merchant + admin)
+        // UTXO chains: Create transaction to settle merchant + admin amounts
         // Use SATOSHI-LEVEL integer arithmetic to avoid floating-point precision issues
         // that cause Tatum API rejection ("decimal places not more than 8")
         fees = await tatumApi.feeEstimation(
@@ -3339,40 +3342,83 @@ const settleCryptoTransaction = async ({
         }
         const exactFeeResolved = finalFeeSats / 1e8;
 
-        // Retry merchant transfer for UTXO chains
-        merchantTransactionDetails = await withRetry(
-          () => tatumApi.assetToOtherAddress({
-            currency,
-            fromAddress: fromAddress,
-            toAddress: userAddress,  // Primary recipient is merchant
-            privateKey: privateKey,
-            amount: finalMerchantSendAmount,
-            fee: String(exactFeeResolved),
-            fromUTXO: [
-              {
-                txHash: transactionId,
-                index: resolvedUtxoIndex,
-                privateKey: privateKey,  // BCH requires privateKey in fromUTXO
-              },
-            ],
-            toUTXO: [
-              {
-                address: userAddress,
-                value: finalMerchantSendAmount,
-              },
-              {
-                address: adminWalletAddress,
-                value: adminAmount,
-              },
-            ],
-          }),
-          `UTXO merchant transfer (${currency})`
-        );
+        // ── SAME-WALLET MODE: When admin and merchant wallets are the same address,
+        // create a SINGLE output with the combined amount instead of two outputs.
+        // This avoids potential Tatum API issues with duplicate output addresses.
+        if (isSameWallet) {
+          const combinedSats = finalMerchantSats + actualAdminSats;
+          const combinedAmount = combinedSats / 1e8;
+          // Recalculate fee to ensure input = output + fee (zero change)
+          const sameWalletFeeSats = totalInputSats - combinedSats;
+          const sameWalletFee = sameWalletFeeSats / 1e8;
 
-        totalBlockchainFee = exactFeeResolved;
-        merchantSendAmount = finalMerchantSendAmount;
-        
-        cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${finalMerchantSendAmount} + admin ${adminAmount} (fee: ${exactFeeResolved}, utxoIndex: ${resolvedUtxoIndex})`);
+          cronLogger.info(`[settleCryptoTransaction] UTXO same-wallet mode: Single output ${combinedAmount} ${currency} → ${userAddress} (fee: ${sameWalletFee}, utxoIndex: ${resolvedUtxoIndex})`);
+
+          merchantTransactionDetails = await withRetry(
+            () => tatumApi.assetToOtherAddress({
+              currency,
+              fromAddress: fromAddress,
+              toAddress: userAddress,
+              privateKey: privateKey,
+              amount: combinedAmount,
+              fee: String(sameWalletFee),
+              fromUTXO: [
+                {
+                  txHash: transactionId,
+                  index: resolvedUtxoIndex,
+                  privateKey: privateKey,
+                },
+              ],
+              toUTXO: [
+                {
+                  address: userAddress,
+                  value: combinedAmount,
+                },
+              ],
+            }),
+            `UTXO same-wallet transfer (${currency})`
+          );
+
+          totalBlockchainFee = sameWalletFee;
+          merchantSendAmount = combinedAmount;
+
+          cronLogger.info(`[settleCryptoTransaction] ✅ UTXO same-wallet TX sent: ${combinedAmount} ${currency} → ${userAddress} (fee: ${sameWalletFee}, utxoIndex: ${resolvedUtxoIndex})`);
+        } else {
+          // Normal mode: Two outputs (merchant + admin) to different addresses
+          merchantTransactionDetails = await withRetry(
+            () => tatumApi.assetToOtherAddress({
+              currency,
+              fromAddress: fromAddress,
+              toAddress: userAddress,  // Primary recipient is merchant
+              privateKey: privateKey,
+              amount: finalMerchantSendAmount,
+              fee: String(exactFeeResolved),
+              fromUTXO: [
+                {
+                  txHash: transactionId,
+                  index: resolvedUtxoIndex,
+                  privateKey: privateKey,  // BCH requires privateKey in fromUTXO
+                },
+              ],
+              toUTXO: [
+                {
+                  address: userAddress,
+                  value: finalMerchantSendAmount,
+                },
+                {
+                  address: adminWalletAddress,
+                  value: adminAmount,
+                },
+              ],
+            }),
+            `UTXO merchant transfer (${currency})`
+          );
+
+          totalBlockchainFee = exactFeeResolved;
+          merchantSendAmount = finalMerchantSendAmount;
+          
+          cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Single TX with merchant ${finalMerchantSendAmount} + admin ${adminAmount} (fee: ${exactFeeResolved}, utxoIndex: ${resolvedUtxoIndex})`);
+        }
 
       } else {
         // Account-based chains (ETH, TRX, BSC, SOL, XRP, POLYGON): Single transfer to merchant only

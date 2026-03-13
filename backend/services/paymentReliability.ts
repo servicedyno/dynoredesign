@@ -186,7 +186,7 @@ export function validateWalletSeparation(
   merchantWalletAddress: string,
   currency: string,
   companyId: number | null
-): { valid: boolean; reason?: string } {
+): { valid: boolean; reason?: string; sameAddress?: boolean } {
   if (!adminWalletAddress) {
     return {
       valid: false,
@@ -195,16 +195,14 @@ export function validateWalletSeparation(
   }
 
   if (adminWalletAddress.toLowerCase() === merchantWalletAddress.toLowerCase()) {
-    const msg = `CRITICAL: Admin wallet for ${currency} (${adminWalletAddress.substring(0, 16)}...) ` +
+    // Admin and merchant wallets are the same — this is an intentional configuration.
+    // Allow settlement to proceed with a single-output transaction (no admin/merchant split needed).
+    cronLogger.info(
+      `[WalletGuard] ℹ️ Admin wallet for ${currency} (${adminWalletAddress.substring(0, 16)}...) ` +
       `is the SAME as merchant wallet for Company ${companyId}. ` +
-      `Admin fees would be sent to the merchant. Settlement blocked.`;
-    cronLogger.error(`[WalletGuard] ⛔ ${msg}`);
-    captureError(new Error(msg), "payment", {
-      severity: "critical",
-      requestContext: `Company ${companyId}, ${currency}`,
-      extraContext: `admin=${adminWalletAddress}, merchant=${merchantWalletAddress}`,
-    });
-    return { valid: false, reason: msg };
+      `Proceeding with combined single-output settlement.`
+    );
+    return { valid: true, sameAddress: true };
   }
 
   return { valid: true };
