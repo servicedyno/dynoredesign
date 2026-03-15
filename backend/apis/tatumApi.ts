@@ -2196,7 +2196,11 @@ const getAddressBalance = async (address: string, currency: string) => {
     res = { balance: Number(tempRes.balance) / 1000000 };
   } else if (currency === "TRX") {
     try {
-      res = await tatumSdk.blockchain.tron.tronGetAccount(address);
+      const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
+      // BUG FIX: tronGetAccount returns balance in SUN (1 TRX = 1,000,000 SUN).
+      // Must convert to TRX to match how all other chains return human-readable units.
+      // Without this, sweep code treats SUN value as TRX, attempting to send ~1M× more than available.
+      res = { balance: (Number(tempRes?.balance || 0) / 1000000).toString() };
     } catch (e: unknown) {
       const err = e as { message?: string };
       if ((err.message || '').includes('account.not.found') || (err.message || '').includes('not.found')) {

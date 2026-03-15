@@ -103,7 +103,7 @@ At deployment startup (Mar 13 21:12), Binance WebSocket connected successfully:
 [2026-03-13T21:12:42] [BinanceWS] ✅ Connected — tracking 10 assets
 ```
 
-But by Mar 15, the WebSocket got geo-blocked (likely due to Railway IP rotation):
+But by Mar 15, the WebSocket got geo-blocked (Railway IPs are static, so this is likely a Binance-side policy change):
 ```
 [2026-03-15T10:56:47] [BinanceWS] ❌ WebSocket error: Unexpected server response: 451
 [2026-03-15T10:56:47] [BinanceWS] 🌍 Binance WebSocket geo-blocked from this server region.
