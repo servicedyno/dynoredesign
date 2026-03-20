@@ -1,106 +1,36 @@
 backend:
-  - task: "Basic Health API"
-    implemented: true
-    working: true
-    file: "server.ts"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "GET /api/ returns JSON with status: operational. API is fully functional with proper response format including service info, version, and endpoint documentation."
-
-  - task: "Force-resolve Payment Endpoint"
-    implemented: true
-    working: true
-    file: "routes/diagnosticsRouter.ts"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "POST /api/diagnostics/force-resolve-payment correctly validates authentication with 403 CSRF token validation failed. Endpoint properly protects admin functionality."
-
-  - task: "Recover Stuck Payment Endpoint"
-    implemented: true
-    working: true
-    file: "routes/diagnosticsRouter.ts"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "POST /api/diagnostics/recover-stuck-payment correctly validates authentication with 403 CSRF token validation failed. Admin auth properly required."
-
-  - task: "Reliability Health Endpoint"
-    implemented: true
-    working: true
-    file: "routes/diagnosticsRouter.ts"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "GET /api/diagnostics/reliability/health correctly validates authentication with 403 Your Login has Expired. Admin authentication working as expected."
-
-  - task: "TypeScript Compilation"
-    implemented: true
-    working: true
-    file: "tsconfig.json"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "TypeScript compilation passes with no errors using npx tsc --noEmit. All type definitions are valid."
-
-  - task: "Express.js Backend Architecture"
-    implemented: true
-    working: true
-    file: "server.py, server.ts"
-    stuck_count: 0
-    priority: "high"
-    needs_retesting: false
-    status_history:
-      - working: true
-        agent: "testing"
-        comment: "Express.js backend running via Python proxy on port 8001. All API routes properly prefixed with /api. Python proxy handles requests correctly to Node.js backend on port 3300."
+  - target_url: https://onboarding-flow-85.preview.emergentagent.com/api
+  - test_endpoints:
+    - POST /api/public/create-trial-link: Create trial link with provisional account (body: {amount: "10", currency: "USD", email: "test-trial-xyz123@mailinator.com"})
+    - GET /api/public/trial/{slug}: Get trial link details (use slug from create response)
+    - POST /api/public/create-trial-link (reuse email): Test reusing provisional user with same email
+  - test_results:
+    - ✅ POST /api/public/create-trial-link: PASSED - Status 201, returned checkout_url with /pay?d=, slug, accepted_currencies=["BTC"], manage_url
+    - ✅ GET /api/public/trial/{slug}: PASSED - Status 200, returned checkout_url (non-null) and trial link details
+    - ✅ POST /api/public/create-trial-link (reuse email): PASSED - Status 201, successfully reused provisional user for same email
+  - expected_behaviors: ✅ ALL VERIFIED
+    - create-trial-link returns 201 with checkout_url, slug, and accepted_currencies=["BTC"] ✅
+    - The response includes checkout_url pointing to /pay?d={ref} ✅
+    - get trial link returns checkout_url in response data ✅
+    - Creating a trial link with same email reuses provisional user (no error) ✅
 
 frontend:
-  - task: "Frontend Testing"
-    implemented: false
-    working: "NA"
-    file: ""
-    stuck_count: 0
-    priority: "low"
-    needs_retesting: false
-    status_history:
-      - working: "NA"
-        agent: "testing"
-        comment: "Frontend testing not performed per instructions - only backend API testing requested."
+  - target_url: https://adf04806-7652-4edd-8f66-c97668aae3f5.preview.emergentagent.com
+  - not testing frontend at this time
 
-metadata:
-  created_by: "testing_agent"
-  version: "1.0"
-  test_sequence: 1
-  run_ui: false
+## Testing Protocol
+1. ALWAYS start by reading this file
+2. Run ONLY the tests specified above
+3. After testing, update this file with results
+4. Do NOT modify application code
+5. Do NOT restart services
+6. Report exact error messages and status codes
 
-test_plan:
-  current_focus:
-    - "Basic Health API"
-    - "Force-resolve Payment Endpoint"
-    - "Recover Stuck Payment Endpoint"
-    - "Reliability Health Endpoint"
-    - "TypeScript Compilation"
-  stuck_tasks: []
-  test_all: false
-  test_priority: "high_first"
+## Test Results Summary
+- **Backend API Tests**: 3/3 PASSED ✅
+- **All trial payment link endpoints working correctly**
+- **Provisional user creation and reuse working as expected**
+- **Response formats match specifications**
 
-agent_communication:
-  - agent: "testing"
-    message: "✅ All DynoPay backend API tests passed successfully! The backend is running correctly with proper authentication, validation, and error handling. Key findings: 1) Basic health endpoint returns proper operational status with comprehensive API documentation, 2) All diagnostics endpoints correctly require admin authentication with CSRF protection, 3) TypeScript compilation passes with no type errors, 4) Express.js backend architecture with Python proxy is working correctly. All requested validation scenarios tested and working as expected."
+## Incorporate User Feedback
+- None at this time

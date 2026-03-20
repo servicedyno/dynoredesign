@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend API Testing Script
-Tests the backend API health and diagnostics endpoints.
+Tests the trial payment link creation endpoints as requested.
 """
 
 import os
@@ -41,20 +41,19 @@ class DynoPayAPITester:
     
     def __init__(self):
         self.test_results = []
+        self.trial_slug = None  # Store slug from first test for reuse
     
     def run_all_tests(self):
         """Run all API tests as specified in the request."""
         log_test("=" * 70)
-        log_test("STARTING DYNOPAY BACKEND API TESTS")
+        log_test("STARTING DYNOPAY TRIAL PAYMENT LINK TESTS")
         log_test(f"Backend URL: {BACKEND_URL}")
         log_test("=" * 70)
         
         # Test sequence as specified in the review request
-        self.test_basic_health()
-        self.test_force_resolve_payment_validation()
-        self.test_recover_stuck_payment_validation()
-        self.test_reliability_health_validation()
-        self.test_typescript_compilation()
+        self.test_create_trial_link()
+        self.test_get_trial_link()
+        self.test_create_trial_link_reuse_email()
         
         # Summary
         self.print_summary()
@@ -70,163 +69,142 @@ class DynoPayAPITester:
             'details': details
         })
 
-    def test_basic_health(self):
-        """Test 1: GET /api/ should return JSON with status: operational."""
-        log_test("Test 1: Basic health endpoint")
+    def test_create_trial_link(self):
+        """Test 1: POST /api/public/create-trial-link with body: {"amount": "10", "currency": "USD", "email": "test-trial-xyz123@mailinator.com"}"""
+        log_test("Test 1: Create trial payment link")
         
-        endpoint = f"{BASE_API_URL}/"
+        endpoint = f"{BASE_API_URL}/public/create-trial-link"
+        payload = {
+            "amount": "10",
+            "currency": "USD", 
+            "email": "test-trial-xyz123@mailinator.com"
+        }
+        
+        try:
+            response = requests.post(endpoint, json=payload, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "POST /api/public/create-trial-link")
+            
+            if response.status_code == 201:
+                try:
+                    data = response.json()
+                    
+                    # Check required fields in response
+                    required_fields = ['checkout_url', 'slug', 'accepted_currencies', 'manage_url']
+                    missing_fields = [field for field in required_fields if field not in data.get('data', {})]
+                    
+                    if missing_fields:
+                        self.add_result("Create trial link", False, f"Missing required fields: {missing_fields}")
+                        return
+                    
+                    response_data = data.get('data', {})
+                    
+                    # Validate checkout_url contains /pay?d=
+                    checkout_url = response_data.get('checkout_url', '')
+                    if '/pay?d=' not in checkout_url:
+                        self.add_result("Create trial link", False, f"checkout_url doesn't contain /pay?d=: {checkout_url}")
+                        return
+                    
+                    # Validate accepted_currencies is ["BTC"]
+                    accepted_currencies = response_data.get('accepted_currencies', [])
+                    if accepted_currencies != ["BTC"]:
+                        self.add_result("Create trial link", False, f"Expected accepted_currencies=['BTC'], got {accepted_currencies}")
+                        return
+                    
+                    # Store slug for next test
+                    self.trial_slug = response_data.get('slug')
+                    if not self.trial_slug:
+                        self.add_result("Create trial link", False, "No slug returned in response")
+                        return
+                    
+                    # Validate manage_url exists
+                    manage_url = response_data.get('manage_url', '')
+                    if not manage_url:
+                        self.add_result("Create trial link", False, "No manage_url returned in response")
+                        return
+                    
+                    self.add_result("Create trial link", True, f"Successfully created trial link with slug: {self.trial_slug}")
+                    
+                except json.JSONDecodeError:
+                    self.add_result("Create trial link", False, "Response is not valid JSON")
+            else:
+                self.add_result("Create trial link", False, f"Expected 201, got {response.status_code}")
+                
+        except requests.RequestException as e:
+            self.add_result("Create trial link", False, f"Request failed: {e}")
+
+    def test_get_trial_link(self):
+        """Test 2: GET /api/public/trial/{slug} using slug from step 1"""
+        log_test("Test 2: Get trial link details")
+        
+        if not self.trial_slug:
+            self.add_result("Get trial link", False, "No slug available from previous test")
+            return
+        
+        endpoint = f"{BASE_API_URL}/public/trial/{self.trial_slug}"
         
         try:
             response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "GET /api/")
+            log_response(response, f"GET /api/public/trial/{self.trial_slug}")
             
             if response.status_code == 200:
                 try:
                     data = response.json()
-                    if isinstance(data, dict) and (
-                        data.get('status') == 'operational' or 
-                        data.get('status') == 'running' or
-                        'status' in data
-                    ):
-                        self.add_result("Basic health check", True, f"API is operational - status: {data.get('status', 'running')}")
-                    else:
-                        self.add_result("Basic health check", False, f"Unexpected response format: {data}")
+                    response_data = data.get('data', {})
+                    
+                    # Check that checkout_url is non-null
+                    checkout_url = response_data.get('checkout_url')
+                    if checkout_url is None:
+                        self.add_result("Get trial link", False, "checkout_url is null in response")
+                        return
+                    
+                    # Validate checkout_url contains /pay?d=
+                    if '/pay?d=' not in checkout_url:
+                        self.add_result("Get trial link", False, f"checkout_url doesn't contain /pay?d=: {checkout_url}")
+                        return
+                    
+                    self.add_result("Get trial link", True, f"Successfully retrieved trial link with checkout_url: {checkout_url}")
+                    
                 except json.JSONDecodeError:
-                    self.add_result("Basic health check", False, "Response is not valid JSON")
+                    self.add_result("Get trial link", False, "Response is not valid JSON")
             else:
-                self.add_result("Basic health check", False, f"Expected 200, got {response.status_code}")
+                self.add_result("Get trial link", False, f"Expected 200, got {response.status_code}")
                 
         except requests.RequestException as e:
-            self.add_result("Basic health check", False, f"Request failed: {e}")
+            self.add_result("Get trial link", False, f"Request failed: {e}")
 
-    def test_force_resolve_payment_validation(self):
-        """Test 2: POST /api/diagnostics/force-resolve-payment validation."""
-        log_test("Test 2: Force-resolve payment endpoint validation")
+    def test_create_trial_link_reuse_email(self):
+        """Test 3: POST /api/public/create-trial-link with same email to test reuse"""
+        log_test("Test 3: Create trial link with same email (test reuse)")
         
-        endpoint = f"{BASE_API_URL}/diagnostics/force-resolve-payment"
-        
-        # Test 2a: Without auth (should get 401/403)
-        try:
-            response = requests.post(endpoint, json={}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/force-resolve-payment (no auth)")
-            
-            if response.status_code in [401, 403]:
-                self.add_result("Force-resolve (no auth)", True, f"Correctly rejected with {response.status_code}")
-            else:
-                self.add_result("Force-resolve (no auth)", False, f"Expected 401/403, got {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Force-resolve (no auth)", False, f"Request failed: {e}")
-        
-        # Test 2b: Empty body validation
-        try:
-            # Since we don't have admin auth, we test that it rejects properly
-            response = requests.post(endpoint, json={}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/force-resolve-payment (empty body)")
-            
-            # Should get auth error before validation error
-            if response.status_code in [401, 403]:
-                self.add_result("Force-resolve (empty body)", True, "Auth properly required")
-            else:
-                self.add_result("Force-resolve (empty body)", False, f"Unexpected status: {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Force-resolve (empty body)", False, f"Request failed: {e}")
-        
-        # Test 2c: Missing payment_id
-        try:
-            response = requests.post(endpoint, json={"resolution": "completed"}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/force-resolve-payment (missing payment_id)")
-            
-            if response.status_code in [401, 403]:
-                self.add_result("Force-resolve (missing payment_id)", True, "Auth properly required")
-            else:
-                self.add_result("Force-resolve (missing payment_id)", False, f"Unexpected status: {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Force-resolve (missing payment_id)", False, f"Request failed: {e}")
-        
-        # Test 2d: Invalid resolution value
-        try:
-            response = requests.post(endpoint, json={"payment_id": "test", "resolution": "invalid"}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/force-resolve-payment (invalid resolution)")
-            
-            if response.status_code in [401, 403]:
-                self.add_result("Force-resolve (invalid resolution)", True, "Auth properly required")
-            else:
-                self.add_result("Force-resolve (invalid resolution)", False, f"Unexpected status: {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Force-resolve (invalid resolution)", False, f"Request failed: {e}")
-
-    def test_recover_stuck_payment_validation(self):
-        """Test 3: POST /api/diagnostics/recover-stuck-payment validation."""
-        log_test("Test 3: Recover stuck payment endpoint validation")
-        
-        endpoint = f"{BASE_API_URL}/diagnostics/recover-stuck-payment"
-        
-        # Test 3a: Without auth (should get 401/403)
-        try:
-            response = requests.post(endpoint, json={}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/recover-stuck-payment (no auth)")
-            
-            if response.status_code in [401, 403]:
-                self.add_result("Recover payment (no auth)", True, f"Correctly rejected with {response.status_code}")
-            else:
-                self.add_result("Recover payment (no auth)", False, f"Expected 401/403, got {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Recover payment (no auth)", False, f"Request failed: {e}")
-        
-        # Test 3b: Empty body validation
-        try:
-            response = requests.post(endpoint, json={}, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "POST /api/diagnostics/recover-stuck-payment (empty body)")
-            
-            # Should get auth error before validation
-            if response.status_code in [401, 403]:
-                self.add_result("Recover payment (empty body)", True, "Auth properly required (would check empty body after auth)")
-            else:
-                self.add_result("Recover payment (empty body)", False, f"Expected 401/403, got {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Recover payment (empty body)", False, f"Request failed: {e}")
-
-    def test_reliability_health_validation(self):
-        """Test 4: GET /api/diagnostics/reliability/health without auth."""
-        log_test("Test 4: Reliability health endpoint validation")
-        
-        endpoint = f"{BASE_API_URL}/diagnostics/reliability/health"
+        endpoint = f"{BASE_API_URL}/public/create-trial-link"
+        payload = {
+            "amount": "15",
+            "currency": "USD", 
+            "email": "test-trial-xyz123@mailinator.com"
+        }
         
         try:
-            response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
-            log_response(response, "GET /api/diagnostics/reliability/health (no auth)")
+            response = requests.post(endpoint, json=payload, headers=HEADERS, timeout=TIMEOUT)
+            log_response(response, "POST /api/public/create-trial-link (reuse email)")
             
-            if response.status_code in [401, 403]:
-                self.add_result("Reliability health (no auth)", True, f"Correctly rejected with {response.status_code}")
+            if response.status_code == 201:
+                try:
+                    data = response.json()
+                    response_data = data.get('data', {})
+                    
+                    # Should successfully reuse the provisional user
+                    if 'slug' in response_data and 'checkout_url' in response_data:
+                        self.add_result("Create trial link (reuse email)", True, "Successfully reused provisional user for same email")
+                    else:
+                        self.add_result("Create trial link (reuse email)", False, "Missing required fields in reuse response")
+                    
+                except json.JSONDecodeError:
+                    self.add_result("Create trial link (reuse email)", False, "Response is not valid JSON")
             else:
-                self.add_result("Reliability health (no auth)", False, f"Expected 401/403, got {response.status_code}")
-        except requests.RequestException as e:
-            self.add_result("Reliability health (no auth)", False, f"Request failed: {e}")
-
-    def test_typescript_compilation(self):
-        """Test 5: TypeScript compilation check."""
-        log_test("Test 5: TypeScript compilation check")
-        
-        try:
-            import subprocess
-            result = subprocess.run(
-                ["npx", "tsc", "--noEmit"],
-                cwd="/app/backend",
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
-            
-            if result.returncode == 0:
-                self.add_result("TypeScript compilation", True, "No type errors found")
-            else:
-                error_msg = result.stderr.strip() or result.stdout.strip()
-                self.add_result("TypeScript compilation", False, f"Compilation errors: {error_msg}")
+                self.add_result("Create trial link (reuse email)", False, f"Expected 201, got {response.status_code} - should reuse provisional user, not error")
                 
-        except subprocess.TimeoutExpired:
-            self.add_result("TypeScript compilation", False, "TypeScript compilation timed out")
-        except Exception as e:
-            self.add_result("TypeScript compilation", False, f"Compilation check failed: {e}")
+        except requests.RequestException as e:
+            self.add_result("Create trial link (reuse email)", False, f"Request failed: {e}")
 
     def print_summary(self):
         """Print test summary."""
@@ -246,7 +224,7 @@ class DynoPayAPITester:
         
         if passed == total:
             log_test("🎉 All tests passed!")
-            log_test("✅ DynoPay backend API is working correctly")
+            log_test("✅ DynoPay trial payment link API is working correctly")
         else:
             log_test("❌ Some tests failed!")
             failed_tests = [r for r in self.test_results if not r['passed']]

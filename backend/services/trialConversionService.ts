@@ -16,24 +16,25 @@ import { apiLogger } from "../utils/loggers";
 import trialPaymentLinkModel from "../models/trialPaymentLinkModel";
 
 /**
- * Mark a trial link as paid (called from webhook processing)
+ * Mark a trial link as paid (called from webhook processing / cryptoVerification)
+ * Accepts trial link ID directly (from the payment_link_id lookup)
  */
 export const markTrialLinkPaid = async (
-  slug: string,
-  paidAmountCrypto: number,
+  trialLinkId: number,
   paidCurrency: string,
+  paidAmountCrypto: number,
   txHash: string
 ): Promise<boolean> => {
   try {
-    const trialLink = await trialPaymentLinkModel.findOne({ where: { slug } });
+    const trialLink = await trialPaymentLinkModel.findByPk(trialLinkId);
     if (!trialLink) {
-      apiLogger.warn(`[TrialConversion] Trial link not found for slug: ${slug}`);
+      apiLogger.warn(`[TrialConversion] Trial link not found for id: ${trialLinkId}`);
       return false;
     }
 
     const data = trialLink.get({ plain: true }) as any;
     if (data.status !== "active") {
-      apiLogger.warn(`[TrialConversion] Trial link ${slug} is not active (status: ${data.status})`);
+      apiLogger.warn(`[TrialConversion] Trial link ${data.slug} is not active (status: ${data.status})`);
       return false;
     }
 
@@ -55,7 +56,7 @@ export const markTrialLinkPaid = async (
     );
 
     apiLogger.info(
-      `[TrialConversion] Trial link ${slug} marked as paid: ${paidAmountCrypto} ${paidCurrency} (tx: ${txHash})`
+      `[TrialConversion] Trial link ${data.slug} marked as paid: ${paidAmountCrypto} ${paidCurrency} (tx: ${txHash})`
     );
 
     return true;

@@ -30,6 +30,7 @@ interface TrialLinkData {
   paid_currency: string | null;
   paid_amount_crypto: string | null;
   qr_code_url: string | null;
+  checkout_url: string | null;
   is_expired: boolean;
   is_paid: boolean;
   is_claimed: boolean;
@@ -223,34 +224,65 @@ export default function TrialPaymentPage() {
 
           <Divider sx={{ borderColor: "#1e1f2e" }} />
 
-          {/* Accepted Cryptocurrencies */}
+          {/* Pay Now section */}
           <Box sx={{ p: 3 }}>
-            <Typography sx={{ color: "#9e9ea7", fontSize: 13, mb: 2, textTransform: "uppercase", letterSpacing: 1 }}>
-              Pay with
-            </Typography>
-            <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
-              {linkData.accepted_currencies.map((crypto) => {
-                const info = CRYPTO_ICONS[crypto] || { icon: "mdi:currency-btc", color: "#888", label: crypto };
-                return (
-                  <Box
-                    key={crypto}
-                    sx={{
-                      display: "flex", alignItems: "center", gap: 2, p: 1.5,
-                      borderRadius: 2, border: "1px solid #1e1f2e",
-                      transition: "all 0.2s", cursor: "default",
-                      "&:hover": { borderColor: "#0004FF", bgcolor: "rgba(0,4,255,0.05)" },
-                    }}
-                  >
-                    <Icon icon={info.icon} width={28} />
-                    <Box sx={{ flex: 1 }}>
-                      <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{info.label}</Typography>
-                      <Typography sx={{ color: "#676768", fontSize: 12 }}>{crypto}</Typography>
-                    </Box>
-                    <Icon icon="mdi:chevron-right" width={20} color="#676768" />
-                  </Box>
-                );
-              })}
-            </Box>
+            {linkData.checkout_url ? (
+              <>
+                <Typography sx={{ color: "#9e9ea7", fontSize: 13, mb: 2, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Pay with Bitcoin
+                </Typography>
+                <Button
+                  variant="contained"
+                  fullWidth
+                  size="large"
+                  onClick={() => window.location.href = linkData.checkout_url!}
+                  startIcon={<Icon icon="cryptocurrency-color:btc" width={24} />}
+                  sx={{
+                    bgcolor: "#F7931A",
+                    py: 1.8,
+                    fontSize: 16,
+                    fontWeight: 700,
+                    borderRadius: 2,
+                    textTransform: "none",
+                    "&:hover": { bgcolor: "#e8850f" },
+                  }}
+                >
+                  Pay {formattedAmount} with BTC
+                </Button>
+                <Typography sx={{ color: "#676768", fontSize: 12, mt: 2, textAlign: "center" }}>
+                  You will be redirected to the DynoPay secure checkout
+                </Typography>
+              </>
+            ) : (
+              <>
+                <Typography sx={{ color: "#9e9ea7", fontSize: 13, mb: 2, textTransform: "uppercase", letterSpacing: 1 }}>
+                  Pay with
+                </Typography>
+                <Box sx={{ display: "flex", flexDirection: "column", gap: 1 }}>
+                  {linkData.accepted_currencies.map((crypto) => {
+                    const info = CRYPTO_ICONS[crypto] || { icon: "mdi:currency-btc", color: "#888", label: crypto };
+                    return (
+                      <Box
+                        key={crypto}
+                        sx={{
+                          display: "flex", alignItems: "center", gap: 2, p: 1.5,
+                          borderRadius: 2, border: "1px solid #1e1f2e",
+                          transition: "all 0.2s", cursor: "default",
+                          "&:hover": { borderColor: "#0004FF", bgcolor: "rgba(0,4,255,0.05)" },
+                        }}
+                      >
+                        <Icon icon={info.icon} width={28} />
+                        <Box sx={{ flex: 1 }}>
+                          <Typography sx={{ color: "#fff", fontWeight: 600, fontSize: 14 }}>{info.label}</Typography>
+                          <Typography sx={{ color: "#676768", fontSize: 12 }}>{crypto}</Typography>
+                        </Box>
+                        <Icon icon="mdi:chevron-right" width={20} color="#676768" />
+                      </Box>
+                    );
+                  })}
+                </Box>
+              </>
+            )}
           </Box>
 
           <Divider sx={{ borderColor: "#1e1f2e" }} />

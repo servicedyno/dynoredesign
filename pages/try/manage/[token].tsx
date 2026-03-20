@@ -30,6 +30,7 @@ interface ManageLinkData {
   description: string | null;
   status: string;
   link_url: string;
+  checkout_url: string | null;
   creator_email: string;
   expires_at: string;
   paid_at: string | null;
@@ -288,9 +289,9 @@ export default function ManageTrialLinkPage() {
           </Typography>
           <Box sx={{ display: "flex", alignItems: "center", gap: 1, p: 1, borderRadius: 1.5, bgcolor: fieldBg, border: `1px solid ${borderColor}` }}>
             <Typography sx={{ color: textSecondary, fontSize: 12, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontFamily: "monospace" }}>
-              {linkData.link_url}
+              {linkData.checkout_url || linkData.link_url}
             </Typography>
-            <IconButton size="small" onClick={() => copyToClipboard(linkData.link_url, "Payment link")} sx={{ color: theme.palette.primary.main }}>
+            <IconButton size="small" onClick={() => copyToClipboard(linkData.checkout_url || linkData.link_url, "Payment link")} sx={{ color: theme.palette.primary.main }}>
               <Icon icon="mdi:content-copy" width={16} />
             </IconButton>
           </Box>

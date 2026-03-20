@@ -416,6 +416,16 @@ const login = async (req: express.Request, res: express.Response) => {
       
       return errorResponseHelper(res, 401, "Invalid email or password");
     } else {
+      // ── Trial Account Guard: Prevent trial users from logging in ──
+      const userStatus = userData.dataValues.status;
+      if (userStatus === "trial") {
+        return errorResponseHelper(
+          res,
+          403,
+          "Your account hasn't been activated yet. Please complete a trial payment and claim your funds to activate your account."
+        );
+      }
+
       // ── Successful Credentials — Send Login OTP ─────────────────────────
       // Clear lockout and failed attempts
       await clearFailedAttempts(email);

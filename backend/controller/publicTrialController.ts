@@ -7,6 +7,17 @@ import errorResponseHelper from "../helper/errorResponseHelper";
 import trialPaymentLinkModel from "../models/trialPaymentLinkModel";
 import { hashPassword } from "../helper/passwordHelper";
 import { sendEmail } from "../helper/sendEmail";
+import { encrypt } from "../helper/encryption";
+import {
+  userModel,
+  companyModel,
+  paymentLinkModel,
+} from "../models";
+import { apiModel } from "../models/apiModels";
+import { setRedisItem } from "../utils/redisInstance";
+import * as merchantPoolService from "../services/merchantPoolService";
+import { getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
+import { generateQRCodeWithLogo } from "../utils/qrCodeWithLogo";
 
 // Redis: use the low-level client for simple key-value rate limiting
 let redisRateClient: any = null;
@@ -63,31 +74,30 @@ function getClientIp(req: express.Request): string {
  * POST /api/public/create-trial-link
  * 
  * Creates a trial payment link without authentication.
- * Requires an email — sends a management link to the creator's inbox.
- * Rate-limited to TRIAL_LINK_RATE_LIMIT per IP per 24h.
+ * Now creates a PROVISIONAL user/company/API-key + real payment link
+ * so the payment flows through the standard DynoPay pipeline.
  */
 export const createTrialLink = async (req: express.Request, res: express.Response) => {
   try {
     const { amount, currency, description, email } = req.body;
 
-    // Validate email (required for seamless flow)
+    // ── Validate email ──
     if (!email || typeof email !== "string") {
       return errorResponseHelper(res, 400, "Email is required to receive your management link");
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email.trim())) {
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!emailRegex.test(normalizedEmail)) {
       return errorResponseHelper(res, 400, "Please enter a valid email address");
     }
 
-    // Validate required fields
+    // ── Validate amount ──
     if (!amount || isNaN(parseFloat(amount))) {
       return errorResponseHelper(res, 400, "Amount is required and must be a number");
     }
-
     const parsedAmount = parseFloat(amount);
     const fiatCurrency = (currency || "USD").toUpperCase();
 
-    // Validate amount range
     if (parsedAmount < TRIAL_MIN_AMOUNT) {
       return errorResponseHelper(res, 400, `Minimum amount is $${TRIAL_MIN_AMOUNT}`);
     }
@@ -95,12 +105,11 @@ export const createTrialLink = async (req: express.Request, res: express.Respons
       return errorResponseHelper(res, 400, `Maximum amount is $${TRIAL_MAX_AMOUNT} (KYC required for higher amounts)`);
     }
 
-    // Rate limiting by IP
+    // ── Rate limit by IP ──
     const clientIp = getClientIp(req);
     apiLogger.info(`[TrialLink] Step 1: validated input for IP ${clientIp}`);
 
     const rateLimitKey = `trial-ratelimit:${clientIp}`;
-    
     let count = 0;
     try {
       const redis = await getRedisRateClient();
@@ -114,9 +123,200 @@ export const createTrialLink = async (req: express.Request, res: express.Respons
       return errorResponseHelper(res, 429, `Rate limit exceeded. Maximum ${TRIAL_LINK_RATE_LIMIT} trial links per 24 hours.`);
     }
 
-    apiLogger.info(`[TrialLink] Step 2: rate limit OK (${count}/${TRIAL_LINK_RATE_LIMIT})`);
+    // ── Check if email belongs to a FULL (non-trial) account ──
+    const existingUser = await userModel.findOne({ where: { email: normalizedEmail } });
+    if (existingUser) {
+      const existingStatus = (existingUser as any).status || (existingUser as any).dataValues?.status;
+      if (existingStatus !== "trial") {
+        return errorResponseHelper(
+          res,
+          409,
+          "An account with this email already exists. Please log in to create payment links from your dashboard."
+        );
+      }
+    }
 
-    // Generate unique slug
+    apiLogger.info(`[TrialLink] Step 2: email check passed`);
+
+    // ── Reuse or create provisional user + company ──
+    let userId: number;
+    let companyId: number;
+
+    if (existingUser) {
+      // Reuse existing trial user
+      userId = (existingUser as any).user_id ?? (existingUser as any).dataValues?.user_id;
+      const existingCompany = await companyModel.findOne({ where: { user_id: userId } });
+      if (!existingCompany) {
+        const newCompany = await companyModel.create({
+          user_id: userId,
+          company_name: `${normalizedEmail.split("@")[0]}'s Business`,
+          email: normalizedEmail,
+        });
+        companyId = (newCompany as any).company_id ?? (newCompany as any).dataValues?.company_id;
+      } else {
+        companyId = (existingCompany as any).company_id ?? (existingCompany as any).dataValues?.company_id;
+      }
+      apiLogger.info(`[TrialLink] Reusing provisional user ${userId}, company ${companyId}`);
+    } else {
+      // Create new provisional user (status: "trial", random password)
+      const randomPwd = crypto.randomBytes(32).toString("hex");
+      const newUser = await userModel.create({
+        name: normalizedEmail.split("@")[0],
+        email: normalizedEmail,
+        password: hashPassword(randomPwd),
+        login_type: "EMAIL",
+        status: "trial",
+      });
+      userId = (newUser as any).user_id ?? (newUser as any).dataValues?.user_id;
+
+      const newCompany = await companyModel.create({
+        user_id: userId,
+        company_name: `${normalizedEmail.split("@")[0]}'s Business`,
+        email: normalizedEmail,
+      });
+      companyId = (newCompany as any).company_id ?? (newCompany as any).dataValues?.company_id;
+      apiLogger.info(`[TrialLink] Created provisional user ${userId}, company ${companyId}`);
+    }
+
+    // ── Ensure an API key exists for the company ──
+    let activeApi = await apiModel.findOne({
+      where: { company_id: companyId, status: "active" },
+    });
+
+    if (!activeApi) {
+      const keyData = { company_id: companyId, user_id: userId, ts: Date.now() };
+      const keyString = "dpk_live_DYNOPAY_USER_API-" + JSON.stringify(keyData);
+      const apiKey = encrypt(keyString, process.env.API_SECRET);
+
+      // Create admin token for the API key
+      const adminTokenSecret = process.env.SECRET_KEY || "dynopay-secret";
+      const adminTokenPayload = { user_id: userId, company_id: companyId, environment: "production" };
+      const jwt = require("jsonwebtoken");
+      const adminToken = jwt.sign(adminTokenPayload, adminTokenSecret, { expiresIn: "365d" });
+
+      // Generate a customer-facing token
+      const tokenPayload = { user_id: userId, company_id: companyId };
+      const customerToken = jwt.sign(tokenPayload, adminTokenSecret, { expiresIn: "365d" });
+
+      activeApi = await apiModel.create({
+        company_id: companyId,
+        base_currency: fiatCurrency,
+        apiKey,
+        user_id: userId,
+        adminToken: customerToken,
+        admin_token: adminToken,
+        api_name: `Trial API - ${normalizedEmail.split("@")[0]}`,
+        permissions: JSON.stringify(["createPaymentLink", "getPaymentLinks"]),
+        environment: "production",
+        status: "active",
+        request_count: 0,
+        rate_limit_per_minute: 60,
+        rate_limit_per_hour: 3600,
+        rate_limit_per_day: 100000,
+      });
+      apiLogger.info(`[TrialLink] Created API key for company ${companyId}`);
+    }
+
+    // ── Create internal payment link (BTC only, skip KYC/wallet checks) ──
+    const CHECKOUT_BASE = (process.env.CHECKOUT_URL || process.env.SERVER_URL || "").replace(/\/$/, "");
+    const uniqueRef = crypto.randomBytes(24).toString("hex");
+    const transactionId = crypto.randomUUID();
+    const checkoutUrl = `${CHECKOUT_BASE}/pay?d=${uniqueRef}`;
+    const trialAcceptedCurrencies = "BTC";
+
+    const linkPayload = {
+      transaction_id: transactionId,
+      email: null,
+      allowedModes: "crypto",
+      base_amount: parsedAmount,
+      base_currency: fiatCurrency,
+      user_id: userId,
+      adm_id: userId,
+      company_id: companyId,
+      payment_link: checkoutUrl,
+      description: description || "Trial payment — try DynoPay",
+      expires_at: new Date(Date.now() + TRIAL_LINK_EXPIRY_HOURS * 60 * 60 * 1000),
+      callback_url: null,
+      redirect_url: null,
+      webhook_url: null,
+      fee_payer: "company",
+      apply_tax: false,
+      accepted_currencies: trialAcceptedCurrencies,
+      customer_name: null,
+    };
+
+    const linkRecord = await paymentLinkModel.create(linkPayload);
+    const linkId = (linkRecord as any).dataValues?.link_id ?? (linkRecord as any).link_id;
+
+    // Store in Redis so checkout page can resolve this ref
+    const redisPayload = {
+      ...linkPayload,
+      pathType: "createLink",
+      link_id: linkId,
+      available_currencies: ["BTC"],
+      all_configured_currencies: ["BTC"],
+      createdAt: new Date().toISOString(),
+    };
+    await setRedisItem("customer-" + uniqueRef, redisPayload);
+
+    apiLogger.info(`[TrialLink] Created payment link ${linkId}, ref=${uniqueRef}`);
+
+    // ── Reserve merchant pool address for BTC Direct Pay ──
+    let directPayAddress: string | null = null;
+    let directPayQrCode: string | null = null;
+    let directPayTempId: number | null = null;
+
+    try {
+      const poolAddress = await merchantPoolService.reserveAddress(
+        "BTC",
+        transactionId,
+        userId,
+        companyId,
+        parsedAmount,
+      ) as any;
+
+      if (poolAddress) {
+        directPayAddress = poolAddress.dataValues?.wallet_address || poolAddress.wallet_address;
+        directPayTempId = poolAddress.dataValues?.temp_address_id || poolAddress.temp_address_id;
+
+        // Generate QR code
+        directPayQrCode = await generateQRCodeWithLogo(directPayAddress!, "BTC", 400);
+
+        // Update Redis so checkout can use the same address
+        const updatedRedisPayload = {
+          ...redisPayload,
+          direct_pay_temp_id: directPayTempId,
+          direct_pay_address: directPayAddress,
+        };
+        await setRedisItem("customer-" + uniqueRef, updatedRedisPayload);
+
+        // Set crypto-{address} Redis key for webhook processor
+        const directPayCryptoRedisKey = getCryptoRedisKey(directPayAddress!, undefined);
+        await setRedisItem(directPayCryptoRedisKey, {
+          mode: "crypto",
+          base_amount_usd: parsedAmount,
+          total_amount_usd: parsedAmount,
+          status: "pending",
+          ref: uniqueRef,
+          currency: "BTC",
+          payment_id: transactionId,
+          unique_tx_id: transactionId,
+          walletType: "customer",
+          temp_id: directPayTempId,
+          is_merchant_pool: "true",
+          fee_payer: "company",
+          company_id: companyId,
+          link_id: linkId,
+          direct_pay_origin: "createTrialLink",
+        });
+
+        apiLogger.info(`[TrialLink] Reserved BTC pool address: ${directPayAddress} (temp_id: ${directPayTempId})`);
+      }
+    } catch (poolErr: any) {
+      apiLogger.warn(`[TrialLink] Pool address reservation failed (non-blocking): ${poolErr.message}`);
+    }
+
+    // ── Generate slug + management token ──
     let slug = generateSlug();
     let attempts = 0;
     while (attempts < 5) {
@@ -126,41 +326,35 @@ export const createTrialLink = async (req: express.Request, res: express.Respons
       attempts++;
     }
 
-    apiLogger.info(`[TrialLink] Step 3: generated slug ${slug}`);
-
-    // Generate management token (sent via email — replaces claim_token UX)
     const rawManagementToken = generateManagementToken();
     const managementTokenHash = sha256(rawManagementToken);
-
-    // Also generate a claim_token for backward compatibility
     const rawClaimToken = crypto.randomBytes(32).toString("hex");
     const hashedClaimToken = hashPassword(rawClaimToken);
 
-    apiLogger.info(`[TrialLink] Step 4: generated management token`);
-
-    // Calculate expiry
     const expiresAt = new Date(Date.now() + TRIAL_LINK_EXPIRY_HOURS * 60 * 60 * 1000);
 
-    apiLogger.info(`[TrialLink] Step 5: creating DB record...`);
-
-    // Create trial link
+    // ── Create trial link (with provisional account + payment link refs) ──
     const trialLink = await trialPaymentLinkModel.create({
       slug,
       amount: parsedAmount,
       fiat_currency: fiatCurrency,
       description: description || null,
       claim_token: hashedClaimToken,
-      creator_email: email.trim().toLowerCase(),
+      creator_email: normalizedEmail,
       management_token_hash: managementTokenHash,
       status: "active",
       ip_address: clientIp,
       expires_at: expiresAt,
-      accepted_currencies: "BTC,ETH,USDT-TRC20,USDT-ERC20",
+      accepted_currencies: trialAcceptedCurrencies,
+      // New fields — link to real payment infra
+      checkout_ref: uniqueRef,
+      payment_link_id: linkId,
+      checkout_url: checkoutUrl,
+      provisional_user_id: userId,
+      provisional_company_id: companyId,
     });
 
-    apiLogger.info(`[TrialLink] Step 6: DB record created`);
-
-    // Increment rate limit counter
+    // ── Increment rate limit ──
     try {
       const redis = await getRedisRateClient();
       await redis.set(rateLimitKey, String(count + 1), { EX: 86400 });
@@ -168,11 +362,10 @@ export const createTrialLink = async (req: express.Request, res: express.Respons
       apiLogger.warn("[TrialLink] Redis unavailable for rate limit increment");
     }
 
-    // Build URLs
+    // ── Send management email ──
     const linkUrl = `${FRONTEND_BASE_URL}/try/${slug}`;
     const manageUrl = `${FRONTEND_BASE_URL}/try/manage/${rawManagementToken}`;
 
-    // Send management email
     try {
       const currencySymbol = fiatCurrency === "EUR" ? "\u20ac" : fiatCurrency === "GBP" ? "\u00a3" : "$";
       const emailMessage = `
@@ -184,41 +377,42 @@ export const createTrialLink = async (req: express.Request, res: express.Respons
         </div>
         <p><strong>Payment Link</strong> (share with your customer):</p>
         <p style="word-break: break-all; background: #eef2ff; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 13px;">
-          <a href="${linkUrl}" style="color: #0004FF;">${linkUrl}</a>
+          <a href="${checkoutUrl}" style="color: #0004FF;">${checkoutUrl}</a>
         </p>
         <p style="margin-top: 20px;">Use the button below to check your payment status and claim your funds once paid:</p>
       `;
 
       await sendEmail(
-        email.trim().toLowerCase(),
-        email.split("@")[0],
-        `Your DynoPay Payment Link — ${currencySymbol}${parsedAmount.toFixed(2)} ${fiatCurrency}`,
+        normalizedEmail,
+        normalizedEmail.split("@")[0],
+        `Your DynoPay Payment Link \u2014 ${currencySymbol}${parsedAmount.toFixed(2)} ${fiatCurrency}`,
         emailMessage,
         false
       );
-
-      apiLogger.info(`[TrialLink] Management email sent to ${email}`);
+      apiLogger.info(`[TrialLink] Management email sent to ${normalizedEmail}`);
     } catch (emailErr: any) {
       apiLogger.warn(`[TrialLink] Failed to send management email: ${emailErr.message}`);
-      // Don't fail the request if email fails — still return the management URL
     }
 
-    apiLogger.info(`[TrialLink] Created trial link: ${slug} for $${parsedAmount} ${fiatCurrency} from IP ${clientIp}`);
+    apiLogger.info(`[TrialLink] Created trial link: ${slug}, checkout=${checkoutUrl}, user=${userId}, company=${companyId}`);
 
     return successResponseHelper(res, 201, "Payment link created! Check your email for the management link.", {
       id: (trialLink as any).id,
       slug,
       link_url: linkUrl,
       manage_url: manageUrl,
+      checkout_url: checkoutUrl,
       amount: parsedAmount,
       currency: fiatCurrency,
       description: description || null,
       expires_at: expiresAt.toISOString(),
-      accepted_currencies: ["BTC", "ETH", "USDT-TRC20", "USDT-ERC20"],
+      accepted_currencies: ["BTC"],
       status: "active",
+      direct_pay_address: directPayAddress,
+      direct_pay_qr_code: directPayQrCode,
     });
   } catch (error: any) {
-    apiLogger.error(`[TrialLink] Error creating trial link: ${error.message}`);
+    apiLogger.error(`[TrialLink] Error creating trial link: ${error.message}`, error.stack);
     return errorResponseHelper(res, 500, "Failed to create trial link");
   }
 };
@@ -243,7 +437,7 @@ export const getTrialLink = async (req: express.Request, res: express.Response) 
         "id", "slug", "amount", "fiat_currency", "description",
         "status", "deposit_address", "accepted_currencies",
         "expires_at", "paid_at", "paid_currency", "paid_amount_crypto",
-        "qr_code_url", "createdAt",
+        "qr_code_url", "createdAt", "checkout_url",
       ],
     });
 
@@ -270,6 +464,7 @@ export const getTrialLink = async (req: express.Request, res: express.Response) 
     return successResponseHelper(res, 200, "Trial link retrieved", {
       ...data,
       accepted_currencies: acceptedCurrencies,
+      checkout_url: data.checkout_url || null,
       is_expired: data.status === "expired",
       is_paid: data.status === "paid" || data.status === "claimed",
       is_claimed: data.status === "claimed",
@@ -303,7 +498,7 @@ export const getTrialLinkByManagementToken = async (req: express.Request, res: e
         "status", "deposit_address", "accepted_currencies",
         "expires_at", "paid_at", "paid_currency", "paid_amount_crypto",
         "claimed_at", "creator_email", "claim_email",
-        "qr_code_url", "createdAt",
+        "qr_code_url", "createdAt", "checkout_url",
       ],
     });
 
@@ -336,6 +531,7 @@ export const getTrialLinkByManagementToken = async (req: express.Request, res: e
       description: data.description,
       status: data.status,
       link_url: linkUrl,
+      checkout_url: data.checkout_url || null,
       creator_email: data.creator_email,
       accepted_currencies: acceptedCurrencies,
       expires_at: data.expires_at,
@@ -358,11 +554,8 @@ export const getTrialLinkByManagementToken = async (req: express.Request, res: e
  * POST /api/public/claim-funds
  * 
  * Claim funds from a paid trial link.
- * Creates a user account, company, and wallet for the matching crypto type.
- * The merchant must provide a wallet address matching the crypto used for payment
- * so that funds can be settled directly to their own wallet.
- * 
- * Supports both management_token (new seamless flow) and legacy claim_token.
+ * ACTIVATES the provisional user/company created at link-creation time
+ * instead of creating a new account.  Sets the real password, creates wallet records.
  */
 export const claimFunds = async (req: express.Request, res: express.Response) => {
   try {
@@ -376,18 +569,15 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 400, "management_token or slug is required");
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return errorResponseHelper(res, 400, "Invalid email format");
     }
-
-    // Validate password strength
     if (password.length < 8) {
       return errorResponseHelper(res, 400, "Password must be at least 8 characters");
     }
 
-    // Find trial link — by management_token (new flow) or slug+claim_token (legacy)
+    // Find trial link
     let trialLink: any = null;
 
     if (management_token) {
@@ -399,13 +589,10 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
         return errorResponseHelper(res, 404, "Invalid management link");
       }
     } else if (slug && claim_token) {
-      trialLink = await trialPaymentLinkModel.findOne({
-        where: { slug },
-      });
+      trialLink = await trialPaymentLinkModel.findOne({ where: { slug } });
       if (!trialLink) {
         return errorResponseHelper(res, 404, "Trial link not found");
       }
-      // Verify legacy claim token
       const linkData = trialLink.get({ plain: true }) as any;
       if (linkData.claim_token) {
         const { verifyPassword } = require("../helper/passwordHelper");
@@ -420,7 +607,6 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
 
     const linkData = trialLink.get({ plain: true }) as any;
 
-    // Check status — must be "paid" to claim
     if (linkData.status === "claimed") {
       return errorResponseHelper(res, 400, "Funds have already been claimed");
     }
@@ -431,12 +617,11 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       return errorResponseHelper(res, 400, "This trial link has expired or been refunded");
     }
 
-    // Check claim expiry
     if (linkData.claim_expires_at && new Date(linkData.claim_expires_at) < new Date()) {
       return errorResponseHelper(res, 400, "Claim period has expired. Funds will be refunded.");
     }
 
-    // Validate wallet address — REQUIRED for paid links so funds can settle
+    // Validate wallet address
     const paidCurrency = linkData.paid_currency;
     if (!wallet_address || typeof wallet_address !== "string" || !wallet_address.trim()) {
       return errorResponseHelper(
@@ -446,54 +631,84 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       );
     }
 
-    // Validate wallet address format using built-in validation
     const { validateCryptoAddress } = require("../utils/addressValidation");
     const addressValidation = validateCryptoAddress(wallet_address.trim(), paidCurrency);
     if (!addressValidation.isValid) {
-      return errorResponseHelper(
-        res,
-        400,
-        addressValidation.error || `Invalid ${paidCurrency} wallet address format`
-      );
+      return errorResponseHelper(res, 400, addressValidation.error || `Invalid ${paidCurrency} wallet address format`);
     }
 
-    apiLogger.info(`[TrialLink] Wallet address validated for ${paidCurrency}: ${wallet_address.slice(0, 10)}...`);
+    apiLogger.info(`[TrialClaim] Wallet validated: ${paidCurrency} ${wallet_address.slice(0, 10)}...`);
 
-    // Import models for account creation
-    const { userModel, companyModel } = require("../models");
+    // ── Activate provisional account (or create new if none exists) ──
     const userWalletModel = require("../models/userModels/userWalletModel").default;
     const userWalletAddressModel = require("../models/userModels/userWalletAddressModel").default;
+    const normalizedEmail = email.toLowerCase();
 
-    // Check if email already exists
-    const existingUser = await userModel.findOne({ where: { email: email.toLowerCase() } });
-    if (existingUser) {
-      return errorResponseHelper(res, 409, "An account with this email already exists. Please log in to claim your funds.");
+    let userId: number;
+    let companyId: number;
+
+    if (linkData.provisional_user_id && linkData.provisional_company_id) {
+      // ── Activate the provisional account ──
+      userId = linkData.provisional_user_id;
+      companyId = linkData.provisional_company_id;
+
+      // Check if someone else already took this email (edge case)
+      const conflictUser = await userModel.findOne({
+        where: { email: normalizedEmail, user_id: { [Op.ne]: userId } },
+      });
+      if (conflictUser) {
+        return errorResponseHelper(res, 409, "An account with this email already exists. Please log in.");
+      }
+
+      // Activate user: set real password, status → active, update email/name
+      const hashedPassword = hashPassword(password);
+      await userModel.update(
+        {
+          password: hashedPassword,
+          status: "active",
+          email: normalizedEmail,
+          name: company_name || normalizedEmail.split("@")[0],
+        },
+        { where: { user_id: userId } }
+      );
+
+      // Update company name if provided
+      if (company_name) {
+        await companyModel.update(
+          { company_name, email: normalizedEmail },
+          { where: { company_id: companyId } }
+        );
+      }
+
+      apiLogger.info(`[TrialClaim] Activated provisional user ${userId}, company ${companyId}`);
+    } else {
+      // ── Legacy path: no provisional account, create new ──
+      const existingUser = await userModel.findOne({ where: { email: normalizedEmail } });
+      if (existingUser) {
+        return errorResponseHelper(res, 409, "An account with this email already exists. Please log in to claim your funds.");
+      }
+
+      const hashedPassword = hashPassword(password);
+      const newUser = await userModel.create({
+        name: company_name || normalizedEmail.split("@")[0],
+        email: normalizedEmail,
+        password: hashedPassword,
+        login_type: "EMAIL",
+        status: "active",
+      });
+      userId = (newUser as any).user_id;
+
+      const newCompany = await companyModel.create({
+        user_id: userId,
+        company_name: company_name || `${normalizedEmail.split("@")[0]}'s Business`,
+        email: normalizedEmail,
+      });
+      companyId = (newCompany as any).company_id;
+
+      apiLogger.info(`[TrialClaim] Created new user ${userId}, company ${companyId} (legacy path)`);
     }
 
-    // --- Transaction: Create user + company + wallet in sequence ---
-
-    // 1. Create user account
-    const hashedPassword = hashPassword(password);
-    const newUser = await userModel.create({
-      name: company_name || email.split("@")[0],
-      email: email.toLowerCase(),
-      password: hashedPassword,
-      login_type: "EMAIL",
-      status: "active",
-    });
-    const userId = (newUser as any).user_id;
-    apiLogger.info(`[TrialLink] Created user: ${userId}`);
-
-    // 2. Create company
-    const newCompany = await companyModel.create({
-      user_id: userId,
-      company_name: company_name || `${email.split("@")[0]}'s Business`,
-      email: email.toLowerCase(),
-    });
-    const companyId = (newCompany as any).company_id;
-    apiLogger.info(`[TrialLink] Created company: ${companyId}`);
-
-    // 3. Create wallet address record (tbl_user_addresses — used for settlements)
+    // ── Create wallet records ──
     const walletLabel = `${paidCurrency} Wallet`;
     await userWalletAddressModel.create({
       user_id: userId,
@@ -503,9 +718,7 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       currency: paidCurrency,
       wallet_address: wallet_address.trim(),
     });
-    apiLogger.info(`[TrialLink] Created wallet address record: ${paidCurrency} for company ${companyId}`);
 
-    // 4. Create wallet entry (tbl_user_wallet — appears on dashboard)
     await userWalletModel.create({
       user_id: userId,
       company_id: companyId,
@@ -515,13 +728,14 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       wallet_address: wallet_address.trim(),
       currency_type: "CRYPTO",
     });
-    apiLogger.info(`[TrialLink] Created wallet dashboard entry: ${paidCurrency} for company ${companyId}`);
 
-    // 5. Update trial link as claimed — link company + user for settlement pipeline
+    apiLogger.info(`[TrialClaim] Created wallet records: ${paidCurrency} for company ${companyId}`);
+
+    // ── Mark trial link as claimed ──
     await trialPaymentLinkModel.update(
       {
         status: "claimed",
-        claim_email: email.toLowerCase(),
+        claim_email: normalizedEmail,
         claimed_at: new Date(),
         user_id: userId,
         company_id: companyId,
@@ -530,12 +744,12 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       { where: { id: linkData.id } }
     );
 
-    apiLogger.info(`[TrialLink] Funds claimed: slug=${linkData.slug}, email=${email}, user=${userId}, company=${companyId}, wallet=${paidCurrency}:${wallet_address.slice(0, 10)}...`);
+    apiLogger.info(`[TrialClaim] Claimed: slug=${linkData.slug}, user=${userId}, company=${companyId}`);
 
     return successResponseHelper(res, 200, "Funds claimed successfully! Your account has been created.", {
       user_id: userId,
       company_id: companyId,
-      email: email.toLowerCase(),
+      email: normalizedEmail,
       amount: linkData.amount,
       currency: linkData.fiat_currency,
       paid_currency: paidCurrency,
@@ -543,7 +757,7 @@ export const claimFunds = async (req: express.Request, res: express.Response) =>
       message: `Welcome to DynoPay! Your ${paidCurrency} will be settled to your wallet. Your first $500 in transactions are fee-free.`,
     });
   } catch (error: any) {
-    apiLogger.error(`[TrialLink] Error claiming funds: ${error.message}`);
+    apiLogger.error(`[TrialClaim] Error claiming funds: ${error.message}`, error.stack);
     return errorResponseHelper(res, 500, "Failed to claim funds");
   }
 };

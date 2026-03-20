@@ -67,6 +67,32 @@ const trialPaymentLinkModel = sequelize.define(
       allowNull: true,
       comment: "Merchant's wallet address for settling funds (matching paid_currency)",
     },
+    // ── Provisional account fields (link trial → real payment infra) ──
+    checkout_ref: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "The uniqueRef for the internal payment link (key into Redis customer-{ref})",
+    },
+    payment_link_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "FK → tbl_payment_links.link_id created for this trial",
+    },
+    checkout_url: {
+      type: DataTypes.STRING(512),
+      allowNull: true,
+      comment: "Full checkout URL the payer should be redirected to",
+    },
+    provisional_user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "User row created with status=trial (activated on claim)",
+    },
+    provisional_company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      comment: "Company row created for the provisional user",
+    },
     status: {
       type: DataTypes.STRING(20),
       defaultValue: "active",
