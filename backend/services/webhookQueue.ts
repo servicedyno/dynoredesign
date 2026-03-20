@@ -73,7 +73,7 @@ export interface WebhookJobData {
     address_id?: number;
   };
   receivedAt: string;
-  source: "webhook" | "reconciliation" | "admin-replay";
+  source: "webhook" | "reconciliation" | "admin-replay" | "watchdog-recovery";
 }
 
 // ── Enqueue Webhook ───────────────────────────────────────────────────────────

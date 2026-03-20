@@ -1109,6 +1109,189 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
   }
 });
 
+/**
+ * POST /diagnostics/force-resolve-payment
+ * Force-resolves a stuck payment by marking it as 'failed' or 'payout_complete' in the journal.
+ * Use when auto-recovery has failed and manual intervention is needed.
+ * 
+ * Body: {
+ *   payment_id: string (required),
+ *   resolution: 'failed' | 'completed' (required),
+ *   reason: string (optional — why the payment is being force-resolved),
+ *   release_address: boolean (optional, default true — release the temp pool address)
+ * }
+ */
+router.post("/force-resolve-payment", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  const { payment_id, resolution, reason, release_address = true } = req.body;
+
+  if (!payment_id) {
+    return res.status(400).json({ error: "payment_id is required" });
+  }
+  if (!resolution || !['failed', 'completed'].includes(resolution)) {
+    return res.status(400).json({ error: "resolution must be 'failed' or 'completed'" });
+  }
+
+  const steps: { step: string; status: string; details?: unknown }[] = [];
+
+  try {
+    const PaymentJournal = require("../models/paymentJournalModel").default;
+    const { Op } = require("sequelize");
+    const { journalStateTransition } = require("../services/paymentReliability");
+    const { setRedisItem, setRedisTTL, getRedisItem } = require("../utils/redisInstance");
+
+    // Step 1: Verify the payment exists and is stuck
+    const latestJournalEntry = await PaymentJournal.findOne({
+      where: { payment_id },
+      order: [['created_at', 'DESC']],
+    });
+
+    if (!latestJournalEntry) {
+      return res.status(404).json({ error: "Payment not found in journal", payment_id });
+    }
+
+    const currentState = latestJournalEntry.to_state;
+    steps.push({
+      step: "verify_payment",
+      status: "ok",
+      details: {
+        payment_id,
+        current_state: currentState,
+        address: latestJournalEntry.address,
+        currency: latestJournalEntry.currency,
+        company_id: latestJournalEntry.company_id,
+      },
+    });
+
+    // Check if already in a terminal state
+    const terminalStates = ['payout_complete', 'failed', 'expired', 'refunded'];
+    const alreadyTerminal = await PaymentJournal.findOne({
+      where: {
+        payment_id,
+        to_state: { [Op.in]: terminalStates },
+      },
+    });
+
+    if (alreadyTerminal) {
+      return res.status(400).json({
+        error: `Payment already in terminal state: ${alreadyTerminal.to_state}`,
+        payment_id,
+        steps,
+      });
+    }
+
+    // Step 2: Determine the target state
+    const targetState = resolution === 'completed' ? 'payout_complete' : 'failed';
+
+    // Step 3: Journal the force-resolution
+    await journalStateTransition({
+      paymentId: payment_id,
+      txId: latestJournalEntry.tx_id,
+      address: latestJournalEntry.address,
+      currency: latestJournalEntry.currency,
+      event: 'force_resolved',
+      fromState: currentState,
+      toState: targetState,
+      amount: latestJournalEntry.amount,
+      companyId: latestJournalEntry.company_id,
+      metadata: {
+        reason: reason || `Admin force-resolved as '${resolution}'`,
+        resolved_by: 'admin',
+        resolved_at: new Date().toISOString(),
+      },
+    });
+
+    steps.push({ step: "journal_resolution", status: "ok", details: { targetState } });
+
+    // Step 4: Update the watchdog recovery tracker
+    const trackerKey = `watchdog-recovery:${payment_id}`;
+    const existingTracker = await getRedisItem(trackerKey);
+    await setRedisItem(trackerKey, {
+      ...(existingTracker || {}),
+      resolved: true,
+      resolvedAt: new Date().toISOString(),
+      resolvedAs: targetState,
+      resolvedReason: reason || 'admin-force-resolve',
+    });
+    await setRedisTTL(trackerKey, 30 * 86400); // Keep for 30 days
+
+    steps.push({ step: "update_tracker", status: "ok" });
+
+    // Step 5: Update Redis payment status
+    try {
+      const cryptoKey = `crypto-${latestJournalEntry.address}`;
+      const redisData = await getRedisItem(cryptoKey);
+      if (redisData && typeof redisData === 'object') {
+        const updatedData = { ...(redisData as Record<string, unknown>), status: resolution === 'completed' ? 'successful' : 'failed' };
+        await setRedisItem(cryptoKey, updatedData);
+        steps.push({ step: "update_redis_status", status: "ok" });
+      } else {
+        steps.push({ step: "update_redis_status", status: "skipped", details: "No Redis data found" });
+      }
+    } catch (redisErr) {
+      steps.push({ step: "update_redis_status", status: "error", details: (redisErr as Error).message });
+    }
+
+    // Step 6: Release the pool address if requested
+    if (release_address) {
+      try {
+        await merchantTempAddressModel.update(
+          { status: 'AVAILABLE', current_payment_id: null },
+          { where: { current_payment_id: payment_id } }
+        );
+        steps.push({ step: "release_address", status: "ok" });
+      } catch (addrErr) {
+        // Also try by address
+        try {
+          await merchantTempAddressModel.update(
+            { status: 'AVAILABLE', current_payment_id: null },
+            { where: { wallet_address: latestJournalEntry.address } }
+          );
+          steps.push({ step: "release_address", status: "ok", details: "by wallet_address" });
+        } catch (addrErr2) {
+          steps.push({ step: "release_address", status: "error", details: (addrErr2 as Error).message });
+        }
+      }
+    }
+
+    // Step 7: Update customer transaction if it exists
+    try {
+      const { customerTransactionModel } = require("../models");
+      const txStatus = resolution === 'completed' ? 'successful' : 'failed';
+      const [updatedCount] = await customerTransactionModel.update(
+        { status: txStatus },
+        { where: { unique_tx_id: payment_id } }
+      );
+      steps.push({
+        step: "update_customer_transaction",
+        status: updatedCount > 0 ? "ok" : "not_found",
+        details: { updated: updatedCount, new_status: txStatus },
+      });
+    } catch (txErr) {
+      steps.push({ step: "update_customer_transaction", status: "error", details: (txErr as Error).message });
+    }
+
+    cronLogger.info(
+      `[ForceResolve] Payment ${payment_id} force-resolved as '${targetState}'. ` +
+      `Reason: ${reason || 'admin action'}. Address: ${latestJournalEntry.address}`
+    );
+
+    return res.status(200).json({
+      status: "resolved",
+      message: `Payment ${payment_id} force-resolved as '${targetState}'.`,
+      payment_id,
+      resolution: targetState,
+      steps,
+    });
+  } catch (err) {
+    return res.status(500).json({
+      error: `Force-resolve failed: ${(err as Error).message}`,
+      payment_id,
+      steps,
+    });
+  }
+});
+
+
 // ═══════════════════════════════════════════════════════════════════════════════
 // RELIABILITY: Payment Journal & System Health Diagnostics
 // ═══════════════════════════════════════════════════════════════════════════════

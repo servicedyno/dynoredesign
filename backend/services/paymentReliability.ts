@@ -328,37 +328,207 @@ export async function initPaymentJournal(): Promise<void> {
 
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// 6. STUCK PAYMENT WATCHDOG — Real-time alerting
+// 6. STUCK PAYMENT WATCHDOG — Detection, Auto-Recovery & Escalation
 // ═══════════════════════════════════════════════════════════════════════════════
 
+// --- Configuration ---
+const WATCHDOG_CONFIG = {
+  /** Only attempt auto-recovery after this many minutes stuck */
+  RECOVERY_THRESHOLD_MINUTES: parseInt(process.env.WATCHDOG_RECOVERY_THRESHOLD_MIN || "60", 10),
+  /** Maximum auto-recovery attempts per payment */
+  MAX_RECOVERY_ATTEMPTS: parseInt(process.env.WATCHDOG_MAX_RECOVERY_ATTEMPTS || "3", 10),
+  /** Minimum minutes between recovery attempts for the same payment */
+  RECOVERY_COOLDOWN_MINUTES: parseInt(process.env.WATCHDOG_RECOVERY_COOLDOWN_MIN || "30", 10),
+  /** Don't re-escalate the same payment within this many hours */
+  ESCALATION_REPEAT_HOURS: parseInt(process.env.WATCHDOG_ESCALATION_REPEAT_HOURS || "6", 10),
+  /** Redis key prefix for recovery tracking */
+  REDIS_PREFIX: "watchdog-recovery:",
+};
+
+interface RecoveryTracker {
+  attempts: number;
+  lastAttemptAt: string;       // ISO-8601
+  escalatedAt: string | null;  // ISO-8601 or null
+  lastError: string | null;
+  resolved: boolean;
+}
+
 /**
- * Check for payments stuck in processing state beyond threshold.
+ * Get recovery tracker for a payment from Redis.
+ */
+async function getRecoveryTracker(paymentId: string): Promise<RecoveryTracker | null> {
+  const key = `${WATCHDOG_CONFIG.REDIS_PREFIX}${paymentId}`;
+  const data = await getRedisItem(key);
+  return data as RecoveryTracker | null;
+}
+
+/**
+ * Update recovery tracker in Redis.
+ */
+async function setRecoveryTracker(paymentId: string, tracker: RecoveryTracker): Promise<void> {
+  const key = `${WATCHDOG_CONFIG.REDIS_PREFIX}${paymentId}`;
+  await setRedisItem(key, tracker);
+  await setRedisTTL(key, 7 * 86400); // Keep for 7 days
+}
+
+/**
+ * Attempt auto-recovery for a single stuck payment.
+ * Re-enqueues the webhook so the full processing pipeline re-runs.
+ * 
+ * Returns: 'recovered' | 'no_data' | 'error'
+ */
+async function attemptAutoRecovery(journalEntry: {
+  payment_id: string;
+  address: string;
+  currency: string;
+  tx_id: string | null;
+  amount: number | null;
+  company_id: number | null;
+  metadata: Record<string, unknown> | null;
+}): Promise<{ status: 'enqueued' | 'no_data' | 'already_resolved' | 'error'; detail: string }> {
+  const { enqueueWebhook } = require("./webhookQueue");
+  const { payment_id, address, currency, tx_id, amount, company_id } = journalEntry;
+
+  try {
+    // Step 1: Check if the payment already reached a terminal state we missed
+    const { Op } = require("sequelize");
+    const terminalEntry = await PaymentJournal.findOne({
+      where: {
+        payment_id,
+        to_state: { [Op.in]: ['payout_complete', 'failed', 'expired', 'refunded'] },
+      },
+    });
+    if (terminalEntry) {
+      return { status: 'already_resolved', detail: `Payment already in terminal state: ${terminalEntry.to_state}` };
+    }
+
+    // Step 2: Check Redis for existing payment data
+    const redisData = await getRedisItem(`crypto-${address}`);
+    const txIdToUse = tx_id || (redisData as Record<string, unknown>)?.txId as string || null;
+
+    if (!txIdToUse) {
+      return {
+        status: 'no_data',
+        detail: `No txId found in journal or Redis for address ${address}. Manual intervention required.`,
+      };
+    }
+
+    // Step 3: Enqueue for re-processing
+    const jobId = await enqueueWebhook(
+      {
+        payload: {
+          address,
+          amount: String(amount || (redisData as Record<string, unknown>)?.receivedAmount || "0"),
+          txId: txIdToUse,
+          asset: currency,
+        },
+        queryParams: {
+          company_id: company_id || undefined,
+        },
+        receivedAt: new Date().toISOString(),
+        source: "watchdog-recovery" as const,
+      },
+      { priority: 1 } // High priority
+    );
+
+    // Step 4: Journal the recovery attempt
+    await journalStateTransition({
+      paymentId: payment_id,
+      txId: txIdToUse,
+      address,
+      currency,
+      event: 'watchdog_recovery_attempt',
+      fromState: 'processing',
+      toState: 'processing',
+      amount,
+      companyId: company_id,
+      metadata: { jobId, source: 'watchdog-auto-recovery' },
+    });
+
+    return { status: 'enqueued', detail: `Re-enqueued as job ${jobId}` };
+  } catch (err) {
+    return { status: 'error', detail: (err as Error).message };
+  }
+}
+
+/**
+ * Escalate a stuck payment to admin via error monitoring.
+ */
+function escalateStuckPayment(journalEntry: {
+  payment_id: string;
+  address: string;
+  currency: string;
+  company_id: number | null;
+}, stuckMinutes: number, attempts: number, lastError: string | null): void {
+  const msg =
+    `Payment ${journalEntry.payment_id} stuck in 'processing' for ${stuckMinutes} min ` +
+    `after ${attempts} auto-recovery attempts. ` +
+    `Address: ${journalEntry.address}, Currency: ${journalEntry.currency}, Company: ${journalEntry.company_id}. ` +
+    (lastError ? `Last error: ${lastError}. ` : '') +
+    `Manual intervention required via POST /api/diagnostics/recover-stuck-payment or /api/diagnostics/force-resolve-payment.`;
+
+  captureError(
+    new Error(msg),
+    "payment",
+    {
+      severity: "critical",
+      extraContext: JSON.stringify({
+        payment_id: journalEntry.payment_id,
+        address: journalEntry.address,
+        currency: journalEntry.currency,
+        company_id: journalEntry.company_id,
+        stuck_minutes: stuckMinutes,
+        recovery_attempts: attempts,
+      }),
+    }
+  );
+
+  cronLogger.error(`[Watchdog] 🚨 ESCALATED: ${msg}`);
+}
+
+/**
+ * Enhanced Watchdog — Detection, Auto-Recovery & Escalation.
  * Called by cron every 2 minutes.
+ * 
+ * Behaviour:
+ *   - Stuck < RECOVERY_THRESHOLD: Log summary (throttled — once per 10 min)
+ *   - Stuck >= RECOVERY_THRESHOLD & attempts < MAX: Attempt auto-recovery
+ *   - Stuck >= RECOVERY_THRESHOLD & attempts >= MAX: Escalate to admin (once)
+ *   - Already escalated: Silent (no repeated warnings)
  */
 export async function watchdogCheck(): Promise<{
   stuckCount: number;
   oldestStuckMinutes: number;
+  recoveryAttempts: number;
+  recoverySuccesses: number;
+  escalations: number;
 }> {
+  const result = { stuckCount: 0, oldestStuckMinutes: 0, recoveryAttempts: 0, recoverySuccesses: 0, escalations: 0 };
+
   try {
+    const { Op } = require("sequelize");
     const threshold = new Date(Date.now() - 10 * 60 * 1000); // 10 minutes
 
     const stuckPayments = await PaymentJournal.findAll({
       where: {
         to_state: 'processing',
-        created_at: { [require('sequelize').Op.lt]: threshold },
+        created_at: { [Op.lt]: threshold },
       },
       order: [['created_at', 'ASC']],
       limit: 50,
     });
 
-    // Filter to only those without a subsequent completion
+    // Filter to only those without a subsequent completion or resolution
     const genuinelyStuck: typeof stuckPayments = [];
     for (const entry of stuckPayments) {
       const laterEntry = await PaymentJournal.findOne({
         where: {
           payment_id: entry.payment_id,
-          event: { [require('sequelize').Op.in]: ['settlement_sent', 'payment_completed', 'payment_failed'] },
-          created_at: { [require('sequelize').Op.gt]: entry.created_at },
+          event: { [Op.in]: [
+            'settlement_sent', 'payment_completed', 'payment_failed',
+            'force_resolved', 'watchdog_resolved',
+          ]},
+          created_at: { [Op.gt]: entry.created_at },
         },
       });
       if (!laterEntry) {
@@ -366,20 +536,161 @@ export async function watchdogCheck(): Promise<{
       }
     }
 
-    const oldestStuckMinutes = genuinelyStuck.length > 0
-      ? Math.round((Date.now() - new Date(genuinelyStuck[0].created_at).getTime()) / 60000)
-      : 0;
+    result.stuckCount = genuinelyStuck.length;
+    if (genuinelyStuck.length === 0) {
+      return result;
+    }
 
-    if (genuinelyStuck.length > 0) {
-      cronLogger.warn(
-        `[Watchdog] ⚠️ ${genuinelyStuck.length} payment(s) stuck in 'processing' for >10 min. ` +
-        `Oldest: ${oldestStuckMinutes} min. IDs: ${genuinelyStuck.slice(0, 5).map(p => p.payment_id).join(', ')}`
+    result.oldestStuckMinutes = Math.round(
+      (Date.now() - new Date(genuinelyStuck[0].created_at).getTime()) / 60000
+    );
+
+    // Classify stuck payments into buckets
+    const earlyStuck: string[] = [];       // < recovery threshold
+    const recoverable: typeof stuckPayments = [];   // eligible for auto-recovery
+    const alreadyEscalated: string[] = [];  // already escalated, silent
+
+    for (const entry of genuinelyStuck) {
+      const stuckMinutes = Math.round(
+        (Date.now() - new Date(entry.created_at).getTime()) / 60000
+      );
+      const tracker = await getRecoveryTracker(entry.payment_id);
+
+      if (tracker?.resolved) {
+        // Skip resolved payments (force-resolved but journal hasn't caught up)
+        continue;
+      }
+
+      if (stuckMinutes < WATCHDOG_CONFIG.RECOVERY_THRESHOLD_MINUTES) {
+        earlyStuck.push(entry.payment_id);
+        continue;
+      }
+
+      if (tracker && tracker.attempts >= WATCHDOG_CONFIG.MAX_RECOVERY_ATTEMPTS) {
+        // Already exhausted recovery attempts
+        if (tracker.escalatedAt) {
+          const hoursSinceEscalation = (Date.now() - new Date(tracker.escalatedAt).getTime()) / 3600000;
+          if (hoursSinceEscalation < WATCHDOG_CONFIG.ESCALATION_REPEAT_HOURS) {
+            alreadyEscalated.push(entry.payment_id);
+            continue;
+          }
+        }
+        // Time to escalate (or re-escalate after cooldown)
+        escalateStuckPayment(
+          {
+            payment_id: entry.payment_id,
+            address: entry.address,
+            currency: entry.currency,
+            company_id: entry.company_id,
+          },
+          stuckMinutes,
+          tracker.attempts,
+          tracker.lastError
+        );
+        await setRecoveryTracker(entry.payment_id, {
+          ...tracker,
+          escalatedAt: new Date().toISOString(),
+        });
+        result.escalations++;
+        continue;
+      }
+
+      // Check cooldown
+      if (tracker?.lastAttemptAt) {
+        const minsSinceLastAttempt = (Date.now() - new Date(tracker.lastAttemptAt).getTime()) / 60000;
+        if (minsSinceLastAttempt < WATCHDOG_CONFIG.RECOVERY_COOLDOWN_MINUTES) {
+          continue; // Cooling down
+        }
+      }
+
+      recoverable.push(entry);
+    }
+
+    // --- Log summary (throttled: only if there are early-stuck payments, log every 10 min) ---
+    if (earlyStuck.length > 0) {
+      // Only log if the minute is a multiple of 10 (reduces noise from every-2-min to every-10-min)
+      const currentMinute = new Date().getMinutes();
+      if (currentMinute % 10 < 2) {
+        cronLogger.warn(
+          `[Watchdog] ⚠️ ${earlyStuck.length} payment(s) stuck in 'processing' for >10 min ` +
+          `(below recovery threshold of ${WATCHDOG_CONFIG.RECOVERY_THRESHOLD_MINUTES} min). ` +
+          `IDs: ${earlyStuck.slice(0, 3).join(', ')}${earlyStuck.length > 3 ? '...' : ''}`
+        );
+      }
+    }
+
+    if (alreadyEscalated.length > 0) {
+      // Silent — these are already escalated and admin has been notified
+    }
+
+    // --- Auto-Recovery ---
+    for (const entry of recoverable) {
+      const stuckMinutes = Math.round(
+        (Date.now() - new Date(entry.created_at).getTime()) / 60000
+      );
+      const tracker = await getRecoveryTracker(entry.payment_id) || {
+        attempts: 0,
+        lastAttemptAt: '',
+        escalatedAt: null,
+        lastError: null,
+        resolved: false,
+      };
+
+      cronLogger.info(
+        `[Watchdog] 🔄 Auto-recovery attempt ${tracker.attempts + 1}/${WATCHDOG_CONFIG.MAX_RECOVERY_ATTEMPTS} ` +
+        `for payment ${entry.payment_id} (stuck ${stuckMinutes} min, address: ${entry.address}, currency: ${entry.currency})`
+      );
+
+      const recoveryResult = await attemptAutoRecovery({
+        payment_id: entry.payment_id,
+        address: entry.address,
+        currency: entry.currency,
+        tx_id: entry.tx_id,
+        amount: entry.amount,
+        company_id: entry.company_id,
+        metadata: entry.metadata,
+      });
+
+      result.recoveryAttempts++;
+
+      if (recoveryResult.status === 'enqueued') {
+        result.recoverySuccesses++;
+        cronLogger.info(
+          `[Watchdog] ✅ Recovery enqueued for ${entry.payment_id}: ${recoveryResult.detail}`
+        );
+      } else if (recoveryResult.status === 'already_resolved') {
+        cronLogger.info(
+          `[Watchdog] ✅ Payment ${entry.payment_id} already resolved: ${recoveryResult.detail}`
+        );
+        tracker.resolved = true;
+      } else {
+        cronLogger.warn(
+          `[Watchdog] ❌ Recovery failed for ${entry.payment_id}: [${recoveryResult.status}] ${recoveryResult.detail}`
+        );
+      }
+
+      // Update tracker
+      await setRecoveryTracker(entry.payment_id, {
+        ...tracker,
+        attempts: tracker.attempts + 1,
+        lastAttemptAt: new Date().toISOString(),
+        lastError: recoveryResult.status !== 'enqueued' && recoveryResult.status !== 'already_resolved'
+          ? recoveryResult.detail : tracker.lastError,
+      });
+    }
+
+    // --- Summary log ---
+    if (result.recoveryAttempts > 0 || result.escalations > 0) {
+      cronLogger.info(
+        `[Watchdog] Summary: ${result.stuckCount} stuck, ` +
+        `${result.recoveryAttempts} recovery attempts (${result.recoverySuccesses} enqueued), ` +
+        `${result.escalations} escalations, ${alreadyEscalated.length} already escalated`
       );
     }
 
-    return { stuckCount: genuinelyStuck.length, oldestStuckMinutes };
+    return result;
   } catch (err) {
     cronLogger.warn(`[Watchdog] Check failed: ${(err as Error).message}`);
-    return { stuckCount: 0, oldestStuckMinutes: 0 };
+    return result;
   }
 }
