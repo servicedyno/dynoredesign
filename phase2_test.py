@@ -27,7 +27,7 @@ from datetime import datetime
 from typing import Dict, Any
 
 # Use the correct backend URL from frontend env
-BACKEND_URL = "https://setup-wizard-130.preview.emergentagent.com/api"
+BACKEND_URL = "https://onboarding-flow-85.preview.emergentagent.com/api"
 
 def log(message: str, level: str = "INFO"):
     """Log messages with timestamp"""

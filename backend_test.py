@@ -12,7 +12,7 @@ import time
 from typing import Dict, Any, Optional
 
 # Backend URL from environment
-BACKEND_URL = "https://setup-wizard-130.preview.emergentagent.com"
+BACKEND_URL = "https://onboarding-flow-85.preview.emergentagent.com"
 BASE_API_URL = f"{BACKEND_URL}/api"
 
 # Test configuration
