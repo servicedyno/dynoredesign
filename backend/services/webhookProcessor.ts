@@ -25,6 +25,7 @@ import tatumApi from "../apis/tatumApi";
 import { callMerchantWebhook } from "../webhooks";
 import { WebhookJobData } from "./webhookQueue";
 import { validateTransition, parseState, PaymentState } from "./paymentStateMachine";
+import { Op } from "sequelize";
 
 // ── Soft-enforcement helper ──────────────────────────────────────────────────
 // Calls validateTransition() before every status change. Logs warnings for
@@ -349,9 +350,20 @@ async function handleCrashRecovery(
   const paymentId = items.payment_id || items.ref || "unknown";
 
   try {
-    const recoveryResult = await paymentController.cryptoVerification(address, true, redisKey);
+    const recoveryResult = await paymentController.cryptoVerification(address, true, redisKey) as { duplicate?: boolean; status?: number; message?: string };
     if (recoveryResult && recoveryResult.status && recoveryResult.status >= 400) {
       throw new Error(`Recovery cryptoVerification returned error ${recoveryResult.status}: ${recoveryResult.message || "Settlement failed"}`);
+    }
+    // ── DUPLICATE GUARD: Stop crash recovery from replaying completed payments ──
+    if (recoveryResult && recoveryResult.duplicate) {
+      webhookLogs.warn(`[WebhookProcessor] ⛔ Recovery: cryptoVerification returned duplicate=true. Payment already settled, skipping.`);
+      await setRedisItem(`processed-tx-${payload.txId}`, {
+        address, payment_id: items.payment_id || items.ref,
+        amount: items.receivedAmount || incomingAmount,
+        processed_at: new Date().toISOString(), duplicate_blocked: true,
+      });
+      await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
+      return; // EXIT — no recovery webhooks
     }
     webhookLogs.info("[WebhookProcessor] Recovery: cryptoVerification completed successfully");
 
@@ -458,6 +470,36 @@ async function handleNewTransaction(
     webhookLogs.info(`[WebhookProcessor] COMPLETION payment: prev=${items.txId}, new=${payload.txId}`);
   } else {
     webhookLogs.info("[WebhookProcessor] First transaction detected, processing...");
+  }
+
+  // ── CRITICAL: DB-level duplicate check BEFORE any merchant webhooks ──────
+  // This prevents reconciliation replays from sending ghost webhooks to merchants
+  // for transactions that were already settled days ago. Redis-based dedup keys
+  // expire (TTL 48h), but DB records are permanent.
+  try {
+    const { customerTransactionModel } = await import("../models");
+    const existingCompletedTx = await customerTransactionModel.findOne({
+      where: {
+        transaction_reference: payload.txId,
+        status: { [Op.in]: ["successful", "completed"] }
+      }
+    });
+
+    if (existingCompletedTx) {
+      webhookLogs.warn(`[WebhookProcessor] ⛔ DUPLICATE BLOCKED: txId ${payload.txId} already completed in DB (record #${existingCompletedTx.dataValues?.id}). Skipping ALL merchant webhooks.`);
+      // Re-set the processed-tx key so future reconciliation runs also skip it
+      await setRedisItem(`processed-tx-${payload.txId}`, {
+        address, payment_id: items.payment_id || items.ref,
+        amount: incomingAmount, processed_at: new Date().toISOString(),
+        duplicate_blocked: true,
+      });
+      await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
+      return; // EXIT — do NOT send any webhooks
+    }
+  } catch (dbCheckErr) {
+    // Non-blocking: if DB check fails, continue with normal flow
+    // (better to risk a duplicate than block a legitimate payment)
+    webhookLogs.warn(`[WebhookProcessor] DB duplicate check failed (non-blocking): ${(dbCheckErr as Error).message}`);
   }
 
   // Get customer data
@@ -674,9 +716,23 @@ async function handleNewTransaction(
 
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
-        const verifyResult = await paymentController.cryptoVerification(address, true, redisKey);
+        const verifyResult = await paymentController.cryptoVerification(address, true, redisKey) as { duplicate?: boolean; status?: number; message?: string };
         if (verifyResult && verifyResult.status && verifyResult.status >= 400) {
           throw new Error(`cryptoVerification error ${verifyResult.status}: ${verifyResult.message || "Settlement failed"}`);
+        }
+        // ── DUPLICATE GUARD: If cryptoVerification detected a duplicate, stop here ──
+        // Do NOT proceed to the success path (which sends payment.confirmed webhook).
+        // The payment was already settled — no merchant notifications should be sent.
+        if (verifyResult && verifyResult.duplicate) {
+          webhookLogs.warn(`[WebhookProcessor] ⛔ cryptoVerification returned duplicate=true for tx ${payload.txId}. Skipping all post-verification webhooks.`);
+          // Re-set processed-tx key to prevent future replays
+          await setRedisItem(`processed-tx-${payload.txId}`, {
+            address, payment_id: items.payment_id || items.ref,
+            amount: finalReceivedAmount, processed_at: new Date().toISOString(),
+            duplicate_blocked: true, source: "cryptoVerification-duplicate",
+          });
+          await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
+          return; // EXIT — no payment.confirmed webhook
         }
         webhookLogs.info("[WebhookProcessor] cryptoVerification completed successfully");
         lastError = null;
