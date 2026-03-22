@@ -51,6 +51,7 @@ class DynoPayAPITester:
         log_test("=" * 70)
         
         # Test sequence as specified in the review request
+        self.test_health_check()
         self.test_create_trial_link()
         self.test_get_trial_link()
         self.test_create_trial_link_reuse_email()
@@ -68,6 +69,28 @@ class DynoPayAPITester:
             'passed': passed,
             'details': details
         })
+
+    def test_health_check(self):
+        """Test health check endpoint: GET /api/health or GET /api/"""
+        log_test("Test 0: Health check endpoint")
+        
+        # Try both possible health check endpoints
+        endpoints = [f"{BASE_API_URL}/health", f"{BASE_API_URL}/"]
+        
+        for endpoint in endpoints:
+            try:
+                response = requests.get(endpoint, headers=HEADERS, timeout=TIMEOUT)
+                log_response(response, f"GET {endpoint}")
+                
+                if response.status_code == 200:
+                    self.add_result("Health check", True, f"Health check passed at {endpoint}")
+                    return
+                    
+            except requests.RequestException as e:
+                log_test(f"Health check failed at {endpoint}: {e}")
+        
+        # If we get here, both endpoints failed
+        self.add_result("Health check", False, "Both /api/health and /api/ endpoints failed")
 
     def test_create_trial_link(self):
         """Test 1: POST /api/public/create-trial-link with body: {"amount": "10", "currency": "USD", "email": "test-trial-xyz123@mailinator.com"}"""

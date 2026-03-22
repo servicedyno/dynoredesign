@@ -578,6 +578,23 @@ const tatumCryptoWebHook = async (
       return res.status(200).end();
     }
 
+    // ── EARLY SPAM FILTER: Reject obviously unknown/scam token assets ─────
+    // This is a lightweight pre-queue check. Full validation happens in the worker.
+    // We only check if the asset is in our known list — if not, skip enqueuing entirely.
+    if (payload.asset) {
+      const { TATUM_ASSET_TO_CURRENCY } = require("../services/webhookProcessor");
+      const assetUpper = payload.asset.toUpperCase().trim();
+      if (!TATUM_ASSET_TO_CURRENCY[assetUpper]) {
+        webhookLogs.warn(`[tatumCryptoWebHook] ⛔ SPAM TOKEN REJECTED at receiver: unknown asset "${payload.asset}" — not enqueuing`, {
+          address: payload.address,
+          txId: payload.txId,
+          amount: payload.amount,
+          asset: payload.asset,
+        });
+        return res.status(200).end();
+      }
+    }
+
     // ── RELIABILITY: Queue backpressure check ─────────────────────────────
     // Reject new webhooks when the system is overwhelmed to prevent cascading failures
     try {

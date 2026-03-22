@@ -27,6 +27,109 @@ import { WebhookJobData } from "./webhookQueue";
 import { validateTransition, parseState, PaymentState } from "./paymentStateMachine";
 import { Op } from "sequelize";
 
+// ═══════════════════════════════════════════════════════════════════════════════
+// ASSET VALIDATION — Prevent spam/scam token webhooks from corrupting payments
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Maps Tatum webhook `asset` names → DynoPay internal currency codes.
+ * Tatum sends the native chain name for native tokens and specific asset
+ * names for ERC-20/TRC-20/TRC-10 tokens.
+ *
+ * NOTE: This ONLY includes assets DynoPay actually supports. Any asset NOT
+ * in this map is treated as unknown (potential spam/scam token).
+ */
+const TATUM_ASSET_TO_CURRENCY: Record<string, string[]> = {
+  // Native chains
+  BTC:        ["BTC"],
+  ETH:        ["ETH", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20"],   // ETH is gas token for ERC-20
+  TRON:       ["TRX", "USDT-TRC20"],                                  // TRON is gas token for TRC-20
+  LTC:        ["LTC"],
+  DOGE:       ["DOGE"],
+  BCH:        ["BCH"],
+  XRP:        ["XRP", "RLUSD"],
+  MATIC:      ["POLYGON", "USDT-POLYGON"],
+  BNB:        ["BSC"],
+  SOL:        ["SOL"],
+
+  // ERC-20 tokens (Tatum reports these as specific asset names)
+  USDT:       ["USDT-ERC20"],
+  USDC:       ["USDC-ERC20"],
+  RLUSD:      ["RLUSD", "RLUSD-ERC20"],
+
+  // TRC-20 tokens
+  USDT_TRON:  ["USDT-TRC20"],
+
+  // Polygon tokens
+  USDT_MATIC: ["USDT-POLYGON"],
+};
+
+/**
+ * Gas tokens for each chain — used to identify gas-funding webhooks that
+ * arrive on token addresses (e.g., TRON gas funding for USDT-TRC20 addresses).
+ * These are not spam; they are SmartGas system transactions and should be
+ * silently skipped (not processed as payments).
+ */
+const GAS_TOKEN_FOR_CURRENCY: Record<string, string> = {
+  "USDT-TRC20":   "TRON",
+  "USDT-ERC20":   "ETH",
+  "USDC-ERC20":   "ETH",
+  "RLUSD-ERC20":  "ETH",
+  "USDT-POLYGON": "MATIC",
+};
+
+/**
+ * Validate whether a Tatum webhook asset is compatible with the expected
+ * DynoPay currency for an address.
+ *
+ * Returns:
+ *   { valid: true, isGasFunding: false }  — Legitimate payment, process normally
+ *   { valid: true, isGasFunding: true }   — Gas funding TX, skip payment processing
+ *   { valid: false }                      — Unknown/spam token, reject
+ */
+function validateWebhookAsset(
+  webhookAsset: string,
+  expectedCurrency: string,
+): { valid: boolean; isGasFunding: boolean; reason?: string } {
+  if (!webhookAsset || !expectedCurrency) {
+    return { valid: true, isGasFunding: false }; // Can't validate, allow through
+  }
+
+  const assetUpper = webhookAsset.toUpperCase().trim();
+
+  // 1. Check if the asset is a known Tatum asset
+  const compatibleCurrencies = TATUM_ASSET_TO_CURRENCY[assetUpper];
+
+  if (compatibleCurrencies) {
+    // 1a. Direct match: asset maps to the expected currency
+    if (compatibleCurrencies.includes(expectedCurrency)) {
+      return { valid: true, isGasFunding: false };
+    }
+
+    // 1b. Gas funding: asset is the native gas token for the expected currency's chain
+    //     e.g., TRON arriving for USDT-TRC20 address = SmartGas funding
+    const expectedGasToken = GAS_TOKEN_FOR_CURRENCY[expectedCurrency];
+    if (expectedGasToken && assetUpper === expectedGasToken) {
+      return { valid: true, isGasFunding: true };
+    }
+
+    // 1c. Known asset but wrong chain (e.g., ETH arriving for USDT-TRC20)
+    return {
+      valid: false,
+      isGasFunding: false,
+      reason: `Asset "${webhookAsset}" is valid but incompatible with expected currency "${expectedCurrency}" (compatible: ${compatibleCurrencies.join(", ")})`,
+    };
+  }
+
+  // 2. Unknown asset — not in our supported list
+  //    This catches spam/scam tokens like "ha138com", random TRC10 airdrops, etc.
+  return {
+    valid: false,
+    isGasFunding: false,
+    reason: `Unknown/unsupported asset "${webhookAsset}" — not a recognized DynoPay currency (possible spam/scam token)`,
+  };
+}
+
 // ── Soft-enforcement helper ──────────────────────────────────────────────────
 // Calls validateTransition() before every status change. Logs warnings for
 // invalid transitions but NEVER throws — the payment flow always continues.
@@ -218,6 +321,58 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       company_id: items.company_id || queryCompanyId,
       hasTxId: !!items.txId,
     });
+
+    // ── ASSET VALIDATION: Reject spam/scam tokens ───────────────────────────
+    const webhookAsset = payload.asset || (payload as Record<string, any>).currency || '';
+    const expectedCurrency = items.currency;
+    if (webhookAsset && expectedCurrency) {
+      const assetValidation = validateWebhookAsset(webhookAsset, expectedCurrency);
+      
+      if (assetValidation.isGasFunding) {
+        webhookLogs.info(
+          `[WebhookProcessor] ⛽ Gas funding TX detected: asset="${webhookAsset}" for ${expectedCurrency} address — skipping payment processing`,
+          { address, txId: payload.txId, amount: payload.amount }
+        );
+        return;
+      }
+
+      if (!assetValidation.valid) {
+        webhookLogs.warn(
+          `[WebhookProcessor] ⛔ ASSET MISMATCH — rejecting webhook: ${assetValidation.reason}`,
+          {
+            address,
+            txId: payload.txId,
+            webhookAsset,
+            expectedCurrency,
+            amount: payload.amount,
+            payment_id: items.payment_id,
+          }
+        );
+        // Journal the rejection for audit trail (non-blocking)
+        try {
+          const { journalStateTransition } = require("./paymentReliability");
+          await journalStateTransition({
+            paymentId: items.payment_id || `addr-${address}`,
+            txId: payload.txId,
+            address,
+            currency: webhookAsset,
+            event: 'spam_token_rejected',
+            fromState: items.status || 'unknown',
+            toState: items.status || 'unknown',
+            amount: Number(payload.amount),
+            companyId: Number(items?.company_id || queryCompanyId) || null,
+            metadata: {
+              reason: assetValidation.reason,
+              expectedCurrency,
+              webhookAsset,
+            },
+          });
+        } catch (_journalErr) { /* non-blocking */ }
+        return;
+      }
+
+      webhookLogs.info(`[WebhookProcessor] ✅ Asset validated: "${webhookAsset}" → "${expectedCurrency}"`);
+    }
 
     // ── RELIABILITY: Journal payment detection to PostgreSQL ──
     try {
@@ -942,3 +1097,7 @@ async function handleNewTransaction(
     throw verifyError; // Let BullMQ retry the entire job
   }
 }
+
+
+// Export the validation function for testing and reuse
+export { validateWebhookAsset, TATUM_ASSET_TO_CURRENCY, GAS_TOKEN_FOR_CURRENCY };

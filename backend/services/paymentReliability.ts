@@ -519,30 +519,44 @@ export async function watchdogCheck(): Promise<{
     });
 
     // Filter to only those without a subsequent completion or resolution
+    // NOTE: We check for resolution events both BEFORE and AFTER the stuck entry.
+    // This handles cases where spam token retries create new "processing" journal entries
+    // after the legitimate payment was already settled (the resolution event has an
+    // earlier timestamp than the spam token retry entry).
     const genuinelyStuck: typeof stuckPayments = [];
     for (const entry of stuckPayments) {
-      const laterEntry = await PaymentJournal.findOne({
+      const anyResolution = await PaymentJournal.findOne({
         where: {
           payment_id: entry.payment_id,
           event: { [Op.in]: [
             'settlement_sent', 'payment_completed', 'payment_failed',
-            'force_resolved', 'watchdog_resolved',
+            'force_resolved', 'watchdog_resolved', 'spam_token_rejected',
           ]},
-          created_at: { [Op.gt]: entry.created_at },
         },
       });
-      if (!laterEntry) {
+      if (!anyResolution) {
         genuinelyStuck.push(entry);
       }
     }
 
-    result.stuckCount = genuinelyStuck.length;
-    if (genuinelyStuck.length === 0) {
+    // Deduplicate by payment_id — same payment appearing from multiple journal entries
+    // (e.g., spam token retries creating multiple "processing" entries for the same payment_id)
+    const seenPaymentIds = new Set<string>();
+    const deduplicatedStuck: typeof stuckPayments = [];
+    for (const entry of genuinelyStuck) {
+      if (!seenPaymentIds.has(entry.payment_id)) {
+        seenPaymentIds.add(entry.payment_id);
+        deduplicatedStuck.push(entry);
+      }
+    }
+
+    result.stuckCount = deduplicatedStuck.length;
+    if (deduplicatedStuck.length === 0) {
       return result;
     }
 
     result.oldestStuckMinutes = Math.round(
-      (Date.now() - new Date(genuinelyStuck[0].created_at).getTime()) / 60000
+      (Date.now() - new Date(deduplicatedStuck[0].created_at).getTime()) / 60000
     );
 
     // Classify stuck payments into buckets
@@ -550,7 +564,7 @@ export async function watchdogCheck(): Promise<{
     const recoverable: typeof stuckPayments = [];   // eligible for auto-recovery
     const alreadyEscalated: string[] = [];  // already escalated, silent
 
-    for (const entry of genuinelyStuck) {
+    for (const entry of deduplicatedStuck) {
       const stuckMinutes = Math.round(
         (Date.now() - new Date(entry.created_at).getTime()) / 60000
       );
