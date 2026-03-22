@@ -8,7 +8,7 @@ import requests
 import json
 import sys
 
-BACKEND_URL = "https://onboarding-flow-85.preview.emergentagent.com"
+BACKEND_URL = "https://initial-config-19.preview.emergentagent.com"
 
 def final_validation_tests():
     """Final validation of all review request requirements"""

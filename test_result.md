@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://onboarding-flow-85.preview.emergentagent.com/api
+  - target_url: https://initial-config-19.preview.emergentagent.com/api
   - test_endpoints:
     - POST /api/public/create-trial-link: Create trial link with provisional account (body: {amount: "10", currency: "USD", email: "test-trial-xyz123@mailinator.com"})
     - GET /api/public/trial/{slug}: Get trial link details (use slug from create response)
@@ -15,7 +15,7 @@ backend:
     - Creating a trial link with same email reuses provisional user (no error) ✅
 
 frontend:
-  - target_url: https://adf04806-7652-4edd-8f66-c97668aae3f5.preview.emergentagent.com
+  - target_url: https://initial-config-19.preview.emergentagent.com
   - not testing frontend at this time
 
 ## Testing Protocol
