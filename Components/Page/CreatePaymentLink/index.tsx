@@ -206,6 +206,7 @@ const CreatePaymentLinkPage = ({
 
   // Optional customer email for referral code delivery
   const [customerEmail, setCustomerEmail] = useState("");
+  const [customerEmailError, setCustomerEmailError] = useState("");
 
   // Touched fields for Payment Settings tab
   const [paymentSettingsTouched, setPaymentSettingsTouched] = useState({
@@ -391,6 +392,16 @@ const CreatePaymentLinkPage = ({
         setActiveTab(0);
       }
       return;
+    }
+
+    // Validate customer email format if provided
+    if (customerEmail.trim()) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(customerEmail.trim())) {
+        setCustomerEmailError("Please enter a valid email address");
+        return;
+      }
+      setCustomerEmailError("");
     }
 
     // Enforce at least 1 cryptocurrency selected
@@ -867,26 +878,38 @@ const CreatePaymentLinkPage = ({
                   component="input"
                   type="email"
                   value={customerEmail}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCustomerEmail(e.target.value)}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => { setCustomerEmail(e.target.value); setCustomerEmailError(""); }}
                   placeholder={tPaymentLink("customerEmailPlaceholder") || "customer@example.com"}
                   sx={{
                     width: "100%",
                     p: "10px 14px",
                     borderRadius: "10px",
-                    border: `1px solid ${theme.palette.border.main}`,
+                    border: `1px solid ${customerEmailError ? theme.palette.error.main : theme.palette.border.main}`,
                     bgcolor: theme.palette.background.paper,
                     color: theme.palette.text.primary,
                     fontFamily: "UrbanistRegular",
                     fontSize: "14px",
                     outline: "none",
                     "&:focus": {
-                      borderColor: theme.palette.primary.main,
+                      borderColor: customerEmailError ? theme.palette.error.main : theme.palette.primary.main,
                     },
                     "&::placeholder": {
                       color: theme.palette.text.disabled,
                     },
                   }}
                 />
+                {customerEmailError && (
+                  <Typography
+                    sx={{
+                      fontSize: "12px",
+                      fontFamily: "UrbanistMedium",
+                      color: theme.palette.error.main,
+                      mt: "4px",
+                    }}
+                  >
+                    {customerEmailError}
+                  </Typography>
+                )}
               </Box>
 
               <Box

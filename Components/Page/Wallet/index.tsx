@@ -49,6 +49,9 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
   const router = useRouter();
   const [openEditModal, setOpenEditModal] = useState(false);
   const [editWalletCrypto, setEditWalletCrypto] = useState("");
+  const [editWalletId, setEditWalletId] = useState<number | undefined>(undefined);
+  const [editWalletName, setEditWalletName] = useState("");
+  const [editWalletAddress, setEditWalletAddress] = useState("");
   const [openDeleteModal, setOpenDeleteModal] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: number; type: string; address: string } | null>(null);
 
@@ -71,6 +74,9 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
 
   const handleEdit = (wallet: WalletDataType) => {
     setEditWalletCrypto(wallet.walletTitle);
+    setEditWalletId(wallet.id);
+    setEditWalletName(wallet.name);
+    setEditWalletAddress(wallet.walletAddress);
     setOpenEditModal(true);
   };
 
@@ -398,9 +404,16 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
       <AddWalletModal
         open={openEditModal}
         currentCryptocurrency={editWalletCrypto}
+        editMode={true}
+        editWalletId={editWalletId}
+        editWalletName={editWalletName}
+        editWalletAddress={editWalletAddress}
         onClose={() => {
           setOpenEditModal(false);
           setEditWalletCrypto("");
+          setEditWalletId(undefined);
+          setEditWalletName("");
+          setEditWalletAddress("");
         }}
       />
 

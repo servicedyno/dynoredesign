@@ -16,6 +16,10 @@ export interface AddWalletModalProps {
   onWalletAdded?: () => void;
   headerExtra?: React.ReactNode;
   companyId?: number | string;
+  editMode?: boolean;
+  editWalletId?: number;
+  editWalletName?: string;
+  editWalletAddress?: string;
 }
 
 export type Address = {

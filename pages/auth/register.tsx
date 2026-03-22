@@ -105,6 +105,7 @@ const Register = () => {
 
   // Referral code state
   const [referralCode, setReferralCode] = useState("");
+  const [referralCodeError, setReferralCodeError] = useState("");
   const [showReferralField, setShowReferralField] = useState(false);
 
   // Auto-populate referral code from URL query param
@@ -169,10 +170,20 @@ const Register = () => {
 
   const handlePhoneRegisterStep1 = async () => {
     if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
+    if (!/^[a-zA-Z\s]+$/.test(phoneName.trim())) { setPhoneNameError("Name must contain only letters"); return; }
     // Strip all non-digit characters for validation and API call
     const cleanMobile = phone.trim().replace(/[^\d]/g, '');
     if (!cleanMobile || cleanMobile.length < 10) { setPhoneError("Valid mobile number is required (select country code and enter number)"); return; }
     if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError(t("passwordValidationError")); return; }
+    // Validate referral code format if provided
+    if (referralCode.trim()) {
+      const referralPattern = /^DYNO-[A-F0-9]{6}$/i;
+      if (!referralPattern.test(referralCode.trim())) {
+        setReferralCodeError("Invalid referral code format (e.g. DYNO-A1B2C3)");
+        return;
+      }
+      setReferralCodeError("");
+    }
     setPhoneNameError("");
     setPhoneError("");
     setPhonePasswordError("");
@@ -243,8 +254,8 @@ const Register = () => {
   };
 
   const registerSchema = yup.object().shape({
-    firstName: yup.string().required("firstNameRequired"),
-    lastName: yup.string().required("lastNameRequired"),
+    firstName: yup.string().required("firstNameRequired").matches(/^[a-zA-Z\s]+$/, "nameOnlyLetters"),
+    lastName: yup.string().required("lastNameRequired").matches(/^[a-zA-Z\s]+$/, "nameOnlyLetters"),
     email: yup.string().email("emailInvalid").required("emailRequired"),
     password: yup
       .string()
@@ -424,6 +435,16 @@ const Register = () => {
       setPasswordError("");
       setConfirmPasswordError("");
 
+      // Validate referral code format if provided
+      if (referralCode.trim()) {
+        const referralPattern = /^DYNO-[A-F0-9]{6}$/i;
+        if (!referralPattern.test(referralCode.trim())) {
+          setReferralCodeError("Invalid referral code format (e.g. DYNO-A1B2C3)");
+          return;
+        }
+        setReferralCodeError("");
+      }
+
       const payload: any = {
         name: `${firstName} ${lastName}`.trim(),
         email,
@@ -564,7 +585,7 @@ const Register = () => {
               type="text"
               placeholder={t("fullNamePlaceholder")}
               value={phoneName}
-              onChange={(e) => { setPhoneName(e.target.value); setPhoneNameError(""); }}
+              onChange={(e) => { const filtered = e.target.value.replace(/[^a-zA-Z\s]/g, ""); setPhoneName(filtered); setPhoneNameError(""); }}
               onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
               error={!!phoneNameError}
               helperText={phoneNameError}
@@ -641,7 +662,9 @@ const Register = () => {
                   type="text"
                   placeholder={t("referralCodePlaceholder")}
                   value={referralCode}
-                  onChange={(e) => setReferralCode(e.target.value)}
+                  onChange={(e) => { setReferralCode(e.target.value.toUpperCase()); setReferralCodeError(""); }}
+                  error={!!referralCodeError}
+                  helperText={referralCodeError}
                 />
               )}
             </Box>
@@ -652,7 +675,7 @@ const Register = () => {
                 variant="primary"
                 size={isMobile ? "small" : "medium"}
                 fullWidth
-                disabled={phoneLoading}
+                disabled={phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword || !passwordRegex.test(phonePassword)}
                 onClick={handlePhoneRegisterStep1}
                 hideLabelWhenLoading={true}
                 endIcon={phoneLoading ? <LoadingIcon size={20} /> : undefined}
@@ -701,7 +724,7 @@ const Register = () => {
               placeholder={t("firstNamePlaceholder")}
               value={firstName}
               onChange={(e) => {
-                const rawValue = e.target.value.replace(/\s/g, "");
+                const rawValue = e.target.value.replace(/[^a-zA-Z]/g, "");
                 const capitalized =
                   rawValue.length > 0
                     ? rawValue.charAt(0).toUpperCase() + rawValue.slice(1)
@@ -727,7 +750,7 @@ const Register = () => {
               placeholder={t("lastNamePlaceholder")}
               value={lastName}
               onChange={(e) => {
-                const rawValue = e.target.value.replace(/\s/g, "");
+                const rawValue = e.target.value.replace(/[^a-zA-Z]/g, "");
                 const capitalized =
                   rawValue.length > 0
                     ? rawValue.charAt(0).toUpperCase() + rawValue.slice(1)
@@ -944,7 +967,9 @@ const Register = () => {
                 type="text"
                 placeholder={t("referralCodePlaceholder")}
                 value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value)}
+                onChange={(e) => { setReferralCode(e.target.value.toUpperCase()); setReferralCodeError(""); }}
+                error={!!referralCodeError}
+                helperText={referralCodeError}
               />
             )}
           </Box>

@@ -58,22 +58,22 @@ export const CurrencyFlag = styled(Image)({
   },
 });
 
-export const CurrencyText = styled.span<{ isMobile?: boolean }>(
-  ({ isMobile }) => ({
-    fontSize: isMobile ? "10px" : "13px",
-    fontWeight: 500,
-    fontFamily: "UrbanistMedium",
-    color: theme.palette.text.primary,
-    lineHeight: 1.2,
-  })
-);
+export const CurrencyText = muiStyled('span', {
+  shouldForwardProp: (prop) => prop !== 'isMobile',
+})<{ isMobile?: boolean }>(({ theme, isMobile }: any) => ({
+  fontSize: isMobile ? "10px" : "13px",
+  fontWeight: 500,
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.primary,
+  lineHeight: 1.2,
+}));
 
-export const CurrencyDropdown = styled(Box)({
+export const CurrencyDropdown = muiStyled(Box)(({ theme }) => ({
   padding: "8px",
-  background: theme.palette.common.white,
+  background: theme.palette.background.paper,
   overflow: "auto",
   maxHeight: "200px",
   display: "flex",
   flexDirection: "column",
   gap: "4px",
-});
+}));

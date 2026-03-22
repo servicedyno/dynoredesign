@@ -141,7 +141,7 @@ const CurrencySelector: React.FC<CurrencySelectorProps> = ({
             fontFamily: "UrbanistMedium",
             fontSize: isMobile ? "13px" : "15px",
             textAlign: "start",
-            color: "#242428",
+            color: theme.palette.text.primary,
             lineHeight: "1.2",
           }}
         >

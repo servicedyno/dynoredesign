@@ -32,6 +32,10 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
   onWalletAdded,
   headerExtra,
   companyId: propCompanyId,
+  editMode = false,
+  editWalletId,
+  editWalletName: editWalletNameProp = "",
+  editWalletAddress: editWalletAddressProp = "",
 }) => {
   const dispatch = useDispatch();
   const muiTheme = useTheme();
@@ -76,6 +80,14 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
     }
   }, [currentCryptocurrency]);
 
+  // Populate form fields in edit mode
+  useEffect(() => {
+    if (editMode && open) {
+      if (editWalletNameProp) setWalletName(editWalletNameProp);
+      if (editWalletAddressProp) setWalletAddress(editWalletAddressProp);
+    }
+  }, [editMode, open, editWalletNameProp, editWalletAddressProp]);
+
   const validate = () => {
     const newErrors: typeof errors = {};
 
@@ -110,6 +122,69 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
       setIsSubmitting(true);
       setPopupLoading(true);
 
+      if (editMode && editWalletId) {
+        // Edit mode: Update wallet name directly (no OTP needed for name-only changes)
+        const isAddressChanged = walletAddress.trim() !== editWalletAddressProp;
+        
+        if (isAddressChanged) {
+          // Address changed — need OTP flow via validateWalletAddress first
+          const values: any = {
+            wallet_address: walletAddress.trim(),
+            currency: cryptocurrency,
+            company_id: companyId,
+            wallet_name: walletName.trim(),
+          };
+          const response: any = await axiosBaseApi.post(
+            "/wallet/validateWalletAddress",
+            values,
+          );
+          if (response.status !== 200 || response.error) {
+            dispatch({
+              type: TOAST_SHOW,
+              payload: {
+                message: response?.data?.message ?? "Failed to validate wallet address",
+                severity: "error",
+              },
+            });
+            setPopupLoading(false);
+            setIsSubmitting(false);
+            return;
+          }
+          setAddress({ ...values, wallet_name: walletName.trim() });
+          setPopupLoading(false);
+          setIsSubmitting(false);
+          setOtpModalOpen(true);
+        } else {
+          // Name-only change — call edit endpoint directly (no OTP required)
+          const response: any = await axiosBaseApi.put(
+            `/wallet/updateWallet/${editWalletId}`,
+            { wallet_name: walletName.trim() },
+          );
+          if (response.status === 200 && !response.error) {
+            dispatch({
+              type: TOAST_SHOW,
+              payload: {
+                message: "Wallet updated successfully",
+                severity: "success",
+              },
+            });
+            handleClose();
+          } else {
+            dispatch({
+              type: TOAST_SHOW,
+              payload: {
+                message: response?.data?.message ?? "Failed to update wallet",
+                severity: "error",
+              },
+            });
+          }
+          setPopupLoading(false);
+          setIsSubmitting(false);
+        }
+        return;
+      }
+
+      // Add mode (original flow)
       const values: any = {
         wallet_address: walletAddress.trim(),
         currency: cryptocurrency,
@@ -389,7 +464,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
         </Box>
       ) : (
       <PanelCard
-        title={tWallet("addWalletTitle")}
+        title={editMode ? tWallet("editWalletTitle") || "Edit Wallet" : tWallet("addWalletTitle")}
         showHeaderBorder={false}
         headerIcon={
           <Image
@@ -535,10 +610,10 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             }}
           />
           <CustomButton
-            label={tWallet("continue")}
+            label={editMode ? (tWallet("saveChanges") || "Save Changes") : tWallet("continue")}
             variant="primary"
             onClick={handleSubmit}
-            disabled={popupLoading || isSubmitting}
+            disabled={popupLoading || isSubmitting || !walletName.trim() || !cryptocurrency || !walletAddress.trim()}
             sx={{
               flex: 1,
               [muiTheme.breakpoints.down("sm")]: {
