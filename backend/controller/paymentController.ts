@@ -4937,32 +4937,6 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             }
           );
 
-          // ── TRIAL LINK HOOK: If this payment link belongs to a trial, mark it paid ──
-          try {
-            const trialPaymentLinkModel = (await import("../models/trialPaymentLinkModel")).default;
-            const linkRecord = await paymentLinkModel.findOne({
-              where: { transaction_id: linkTransactionId },
-              attributes: ["link_id"],
-            });
-            if (linkRecord) {
-              const actualLinkId = (linkRecord as any).dataValues?.link_id ?? (linkRecord as any).link_id;
-              const trialLink = await trialPaymentLinkModel.findOne({
-                where: { payment_link_id: actualLinkId, status: "active" },
-              });
-              if (trialLink) {
-                const { markTrialLinkPaid } = await import("../services/trialConversionService");
-                await markTrialLinkPaid(
-                  (trialLink as any).dataValues?.id ?? (trialLink as any).id,
-                  tempCurrency,
-                  totalAmountReceived,
-                  transactionId,
-                );
-                cronLogger.info(`[cryptoVerification] ✅ Trial link marked as paid (link_id=${actualLinkId})`);
-              }
-            }
-          } catch (trialErr) {
-            cronLogger.warn(`[cryptoVerification] Trial link hook error (non-blocking): ${(trialErr as Error).message}`);
-          }
         }
 
         // FIX: Also update customer transaction status to match payment link status

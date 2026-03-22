@@ -17,7 +17,6 @@ import testRouter from "./testRouter";
 import referralRouter from "./referralRouter";
 import knowledgeBaseRouter from "./knowledgeBaseRouter";
 import merchantApiRouter from "./merchantApiRouter";
-import publicTrialRouter from "./publicTrialRouter";
 
 import {
   authMiddleware,
@@ -202,7 +201,6 @@ router.use("/dashboard", authMiddleware, emailVerifiedMiddleware, dashboardRoute
 router.use("/notifications", notificationRouter);
 router.use("/kyc", kycRouter);
 router.use("/status", statusRouter); // Public status page endpoints
-router.use("/public", publicTrialRouter); // Public trial link endpoints (no auth)
 router.use("/subscriptions", subscriptionRouter); // Subscription management
 router.use("/test", testRouter); // Test endpoints for development
 router.use("/referral", referralRouter); // Referral system endpoints

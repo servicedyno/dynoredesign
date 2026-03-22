@@ -63,11 +63,6 @@ const EXEMPT_PATHS = [
   "/api/pay/calculate-payment",
   "/api/pay/network-fees",
   "/api/pay/encrypt-payload",
-  // Public trial link endpoints — no auth required
-  "/api/public/create-trial-link",
-  "/api/public/claim-funds",
-  "/api/public/trial",
-  "/api/public/trial-links",
 ];
 
 /**
