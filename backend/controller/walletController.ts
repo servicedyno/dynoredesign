@@ -16,6 +16,7 @@ import {
   sendEmail,
   successResponseHelper,
   generateWalletName,
+  generateApiKeyName,
 } from "../helper";
 import {
   sendWithdrawalOTPEmail,
@@ -91,6 +92,7 @@ import axios from "axios";
 import QR_Code from "qrcode";
 import { generateQRCodeWithLogo } from "../utils/qrCodeWithLogo";
 import { adminWalletModel, userWalletModel, companyModel } from "../models";
+import { apiModel, customerModel, customerWalletModel } from "../models";
 import { validateCompanyOwnership } from "../utils/validateCompanyOwnership";
 import { walletLogger } from "../utils/loggers";
 import {
@@ -3060,10 +3062,98 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
     // Invalidate wallet cache so getWallet returns fresh data
     await invalidateWalletCache(user_id);
 
+    // AUTO-CREATE API KEY: If company doesn't have an active API key, create one in USD
+    let autoApiKeyCreated = false;
+    try {
+      const existingApiKey = await apiModel.findOne({
+        where: {
+          company_id,
+          status: 'active',
+        },
+      });
+
+      if (!existingApiKey) {
+        const defaultCurrency = 'USD';
+        const keyData = {
+          base_currency: defaultCurrency,
+          company_id,
+          adm_id: user_id,
+          env: 'production',
+        };
+        const keyPrefix = 'dpk_live_';
+        const keyString = keyPrefix + "DYNOPAY_USER_API-" + JSON.stringify(keyData);
+        const apiKey = encrypt(keyString, process.env.API_SECRET);
+
+        // Create customer for API key
+        const companyName = companyData?.dataValues.company_name || 'Company';
+        const companyEmail = companyData?.dataValues.email || userData.email;
+
+        const createdCustomer = await customerModel.create({
+          id: crypto.randomUUID(),
+          customer_name: companyName + " admin",
+          email: companyEmail,
+          mobile: companyEmail,
+          company_id: company_id,
+        });
+
+        await customerWalletModel.create({
+          id: crypto.randomUUID(),
+          customer_id: createdCustomer.dataValues.customer_id,
+          wallet_type: defaultCurrency,
+        });
+
+        // Generate access token for the customer
+        const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET;
+        const customerAccessToken = jwt.sign(
+          { customer_id: createdCustomer.dataValues.customer_id },
+          accessTokenSecret,
+          { expiresIn: '365d' }
+        );
+
+        // Generate admin token
+        const adminTokenPayload = {
+          api_id: null,
+          company_id,
+          user_id,
+          type: 'admin_token',
+          environment: 'production',
+        };
+        const adminToken = jwt.sign(adminTokenPayload, accessTokenSecret, { expiresIn: '365d' });
+
+        const defaultPermissions = ["payments", "transactions", "webhooks", "wallets"];
+
+        await apiModel.create({
+          company_id,
+          base_currency: defaultCurrency,
+          apiKey,
+          user_id,
+          adminToken: customerAccessToken,
+          admin_token: adminToken,
+          withdrawal_whitelist: null,
+          api_name: generateApiKeyName(),
+          permissions: JSON.stringify(defaultPermissions),
+          environment: 'production',
+          status: 'active',
+          test_mode_restrictions: null,
+          request_count: 0,
+          rate_limit_per_minute: 60,
+          rate_limit_per_hour: 3600,
+          rate_limit_per_day: 100000,
+        });
+
+        autoApiKeyCreated = true;
+        walletLogger.info(`[verifyOtp] ✅ Auto-created USD API key for company ${company_id} after first wallet setup`);
+      }
+    } catch (apiKeyError) {
+      // Log but don't fail wallet verification
+      walletLogger.warn(`[verifyOtp] ⚠️ Auto API key creation skipped: ${getErrorMessage(apiKeyError)}`);
+    }
+
     successResponseHelper(res, 200, "OTP verified successfully!", {
       verified: true,
       wallet_name,
       company_id,
+      auto_api_key_created: autoApiKeyCreated,
     });
   } catch (e) {
 

@@ -126,6 +126,29 @@ const Register = () => {
     return () => clearInterval(timer);
   }, [phoneOtpCountdown]);
 
+  // Session idle timeout (30 minutes)
+  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
+  useEffect(() => {
+    let idleTimer: NodeJS.Timeout;
+    const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+
+    const resetTimer = () => {
+      clearTimeout(idleTimer);
+      idleTimer = setTimeout(() => {
+        setShowSessionTimeout(true);
+      }, IDLE_TIMEOUT);
+    };
+
+    const events = ["mousedown", "keydown", "scroll", "touchstart"];
+    events.forEach((event) => window.addEventListener(event, resetTimer));
+    resetTimer();
+
+    return () => {
+      clearTimeout(idleTimer);
+      events.forEach((event) => window.removeEventListener(event, resetTimer));
+    };
+  }, []);
+
   // Handle Google social login
   const handleGoogleLogin = async () => {
     const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
@@ -1131,6 +1154,59 @@ const Register = () => {
         loading={userState.loading && otpSubmitted}
         error={otpError}
       />
+
+      {/* Session Timeout Dialog */}
+      {showSessionTimeout && (
+        <Box
+          sx={{
+            position: "fixed",
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            bgcolor: "rgba(0,0,0,0.6)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            zIndex: 9999,
+          }}
+        >
+          <Box
+            sx={{
+              bgcolor: "background.paper",
+              borderRadius: "16px",
+              p: 4,
+              maxWidth: 400,
+              width: "90%",
+              textAlign: "center",
+            }}
+          >
+            <Typography sx={{ fontSize: "18px", fontWeight: 600, fontFamily: "UrbanistBold", mb: 1, color: "text.primary" }}>
+              {t("sessionExpiredTitle") || "Session Expired"}
+            </Typography>
+            <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistRegular", mb: 3, color: "text.secondary" }}>
+              {t("sessionExpiredMessage") || "Your session has expired due to inactivity. Please refresh the page to continue."}
+            </Typography>
+            <Box
+              component="button"
+              onClick={() => { setShowSessionTimeout(false); window.location.reload(); }}
+              sx={{
+                bgcolor: "primary.main",
+                color: "#fff",
+                border: "none",
+                borderRadius: "10px",
+                p: "10px 32px",
+                fontSize: "14px",
+                fontFamily: "UrbanistMedium",
+                cursor: "pointer",
+                "&:hover": { opacity: 0.9 },
+              }}
+            >
+              {t("refreshPage") || "Refresh Page"}
+            </Box>
+          </Box>
+        </Box>
+      )}
     </AuthContainer>
     </Box>
   );

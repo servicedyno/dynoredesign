@@ -4,6 +4,8 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next";
 import { useDispatch, useSelector } from "react-redux";
 import { PaymentLinkAction } from "@/Redux/Actions";
+import { ApiAction } from "@/Redux/Actions";
+import { API_FETCH } from "@/Redux/Actions/ApiAction";
 import { PAYLINK_CREATE, PAYLINK_UPDATE, PAYLINK_FEE_PREVIEW } from "@/Redux/Actions/PaymentLinkAction";
 import PaymentLinkSuccessModal from "./PaymentLinkSuccessModal";
 import { TabContentContainer } from "./styled";
@@ -62,6 +64,16 @@ const CreatePaymentLinkPage = ({
   const selectedCompanyId = useSelector(
     (state: any) => state?.companyReducer?.selectedCompanyId
   );
+  const apiState = useSelector((state: any) => state?.apiReducer);
+  const hasActiveApiKey = useMemo(() => {
+    const apiList = apiState?.apiList || [];
+    return apiList.some((api: any) => api.status === 'active');
+  }, [apiState?.apiList]);
+
+  // Fetch API keys on mount
+  useEffect(() => {
+    dispatch(ApiAction(API_FETCH));
+  }, [dispatch, selectedCompanyId]);
   const tPaymentLink = useCallback(
     (key: string): string => {
       const result = t(key, { ns: "createPaymentLinkScreen" });
@@ -379,6 +391,9 @@ const CreatePaymentLinkPage = ({
   }, [paymentSettings.value, paymentSettings.currency, dispatch]);
 
   const handleCreatePaymentLink = () => {
+    // Prevent multiple rapid clicks
+    if (isCreating || paymentLinkState?.loading) return;
+
     // Always validate payment settings from Tab 0 regardless of active tab
     setPaymentSettingsTouched({
       value: true,
@@ -742,6 +757,32 @@ const CreatePaymentLinkPage = ({
           borderRadius: { xs: "8px", md: "14px" },
         }}
       >
+        {!hasActiveApiKey && !apiState?.loading && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 1.5,
+              p: "12px 16px",
+              mb: 2,
+              borderRadius: "10px",
+              bgcolor: theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.12)" : "rgba(255, 152, 0, 0.08)",
+              border: `1px solid ${theme.palette.mode === "dark" ? "rgba(255, 152, 0, 0.3)" : "rgba(255, 152, 0, 0.4)"}`,
+            }}
+          >
+            <Typography sx={{ fontSize: "18px" }}>⚠️</Typography>
+            <Typography
+              sx={{
+                fontSize: "13px",
+                fontFamily: "UrbanistMedium",
+                color: theme.palette.mode === "dark" ? "#FFB74D" : "#E65100",
+                lineHeight: 1.4,
+              }}
+            >
+              {tPaymentLink("noApiKeyWarning") || "No active API key found. Please create an API key in Developer Settings before creating payment links. An API key is automatically created when you complete onboarding."}
+            </Typography>
+          </Box>
+        )}
         <TabNavigation
           activeTab={activeTab}
           onChange={handleTabChange}
