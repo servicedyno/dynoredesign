@@ -7116,8 +7116,9 @@ const checkFeeBalance = async () => {
 
       // Skip currency conversion if amount is null, undefined, 0, or NaN
       if (amount === null || amount === undefined || amount === 0 || isNaN(Number(amount))) {
-        // Quiet mode: skip logging for zero-balance wallets
-        textData += `\n Your ${wallet_type} fee wallet has no balance or amount unavailable.`;
+        // Don't alert for zero-balance wallets — they're likely unused/not yet funded
+        // Only alert for wallets that HAD balance but dropped below the limit
+        cronLogger.debug(`[checkFeeBalance] ${wallet_type}: zero/null balance — skipping (not actively depleted)`);
         continue;
       }
 
@@ -7129,7 +7130,7 @@ const checkFeeBalance = async () => {
       });
       const amount_in_usd = tempData[0].amount;
       if (amount_in_usd < feeLimit) {
-        textData += `\n Your ${wallet_type} fee wallet has low fee amount ($${amount_in_usd}) then limit of ($${feeLimit}).`;
+        textData += `\n⚠️ ${wallet_type} fee wallet: $${amount_in_usd} (threshold: $${feeLimit}) — balance: ${amount} ${wallet_type}`;
       }
     }
 
@@ -7172,11 +7173,11 @@ const checkFeeBalance = async () => {
         await sendEmail(
           adminEmail,
           "Dynopay Admin",
-          "Low amount in Fee wallet",
-          textData
+          "⚠️ Low Fee Wallet Balance Alert",
+          `The following fee wallets are below their configured thresholds:\n${textData}\n\nPlease recharge the specific wallet(s) listed above.`
         );
         
-        const alert_duration = adminFeesWallets[0]?.dataValues?.alert_duration || 24; // Default 24 hours
+        const alert_duration = adminFeesWallets[0]?.dataValues?.alert_duration || 48; // Default 48 hours to reduce alert fatigue
         await setRedisItem("admin_fee_alert", {
           status: "sent",
           expiresAt:
