@@ -854,6 +854,41 @@ async function handleNewTransaction(
   const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);
   const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;
 
+  // ── Send payment.received webhook — crypto IS on-chain, BEFORE settlement ──
+  // This is distinct from payment.confirmed (which means settled to merchant wallet)
+  if (customerData && (customerData.webhook_url || customerData.callback_url)) {
+    try {
+      const receivedLinkId = customerData?.link_id || items?.link_id || null;
+      const receivedPaymentType = receivedLinkId ? "payment_link" : "direct_api";
+      await callMerchantWebhook(customerData, {
+        event: "payment.received",
+        payment_type: receivedPaymentType,
+        address,
+        txId: payload.txId,
+        transaction_reference: payload.txId,
+        amount: finalReceivedAmount,
+        currency: items?.currency || payload.asset,
+        payment_id: items?.payment_id || items?.unique_tx_id,
+        status: "received",
+        payment_status: "received",
+        base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+        base_currency: customerData?.base_currency || "USD",
+        customer_name: customerData?.customer_name || null,
+        customer_email: customerData?.email || null,
+        description: customerData?.description || null,
+        link_id: receivedLinkId,
+        fee_payer: customerData?.fee_payer || items?.fee_payer || "company",
+        meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
+        created_at: new Date().toISOString(),
+        received_at: new Date().toISOString(),
+        note: "Payment received on-chain. Settlement to merchant wallet in progress.",
+      });
+      webhookLogs.info(`[WebhookProcessor] ✅ payment.received webhook sent for payment ${paymentId} — crypto confirmed on-chain before settlement`);
+    } catch (receivedWebhookErr) {
+      webhookLogs.error("[WebhookProcessor] Error sending payment.received webhook:", receivedWebhookErr);
+    }
+  }
+
   try {
     // Soft-enforce: varies → processing (pre-cryptoVerification)
     softValidate(items.status, "processing", paymentId, "pre-crypto-verification");
@@ -1078,7 +1113,7 @@ async function handleNewTransaction(
         const failedPaymentType = failedLinkId ? "payment_link" : "direct_api";
 
         await callMerchantWebhook(failedCustomerData, {
-          event: "payment.failed",
+          event: "payment.settlement_failed",
           payment_type: failedPaymentType,
           address,
           txId: payload.txId,
@@ -1086,17 +1121,19 @@ async function handleNewTransaction(
           amount: incomingAmount,
           currency: items?.currency || payload.asset,
           payment_id: items?.payment_id || items?.unique_tx_id,
-          status: "failed",
-          payment_status: "failed",
+          status: "settlement_failed",
+          payment_status: "settlement_failed",
+          payment_received: true,
           error: err.message || "Settlement failed",
           base_amount: failedCustomerData?.base_amount || items?.base_amount_usd || null,
           base_currency: failedCustomerData?.base_currency || "USD",
           link_id: failedLinkId,
           fee_payer: failedCustomerData?.fee_payer || items?.fee_payer || "company",
+          note: "Payment was received on-chain but settlement to merchant wallet failed. Recovery in progress.",
           created_at: new Date().toISOString(),
           timestamp: new Date().toISOString(),
         });
-        webhookLogs.info(`[WebhookProcessor] ✅ payment.failed webhook sent for payment ${paymentId}`);
+        webhookLogs.info(`[WebhookProcessor] ✅ payment.settlement_failed webhook sent for payment ${paymentId}`);
       }
     } catch (webhookErr) {
       webhookLogs.error("[WebhookProcessor] Error sending payment.failed webhook:", webhookErr);
