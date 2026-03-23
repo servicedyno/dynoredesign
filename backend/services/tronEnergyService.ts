@@ -320,14 +320,15 @@ export const isRecipientActivatedForToken = async (
       // Both APIs failed
     }
 
-    // Default to existing recipient (cheaper estimate, safer)
-    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress} after retries, assuming existing`);
-    return true;
+    // Default to NEW recipient (130k energy) for safety — costs more gas but won't fail with OUT_OF_ENERGY
+    // Previously defaulted to existing (65k), which caused repeated OUT_OF_ENERGY failures
+    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress} after retries, assuming NEW recipient (safe default, 130k energy)`);
+    return false;
 
   } catch (_error: unknown) {
-    // Default to existing recipient (cheaper estimate, safer)
-    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress}, assuming existing`);
-    return true;
+    // Default to NEW recipient (130k energy) for safety
+    cronLogger.warn(`[TronEnergy] ⚠️ Could not check token activation for ${recipientAddress}, assuming NEW recipient (safe default)`);
+    return false;
   }
 };
 
@@ -373,10 +374,10 @@ export const calculateOptimalFeeLimit = async (
   const totalCostSun = energyCostSun + bandwidthCostSun;
   const estimatedCostTRX = totalCostSun / 1_000_000;
 
-  // feeLimit with 20% safety buffer, minimum 5 TRX
+  // feeLimit with 50% safety buffer (increased from 20% to prevent OUT_OF_ENERGY failures), minimum 5 TRX
   const minFeeLimit = parseInt(process.env.TRON_MIN_FEE_LIMIT_TRX || "5");
   const maxFeeLimit = parseInt(process.env.TRON_MAX_FEE_LIMIT_TRX || "30");
-  const feeLimitTRX = Math.max(Math.ceil(estimatedCostTRX * 1.2), minFeeLimit);
+  const feeLimitTRX = Math.max(Math.ceil(estimatedCostTRX * 1.5), minFeeLimit);
   const finalFeeLimit = Math.min(feeLimitTRX, maxFeeLimit);
 
   const savingsPercent = ((50 - finalFeeLimit) / 50) * 100;
@@ -419,8 +420,9 @@ export const calculateDynamicTRC20Fee = async (
     }
   }
 
-  // Assume existing recipient (65k energy) as the common case
-  const energyNeeded = TRC20_ENERGY.EXISTING_RECIPIENT;
+  // Use NEW_RECIPIENT energy (130k) as the safe default since activation checks can fail
+  // This prevents OUT_OF_ENERGY failures — excess TRX stays in the address for future use
+  const energyNeeded = TRC20_ENERGY.NEW_RECIPIENT;
   const energyDeficit = Math.max(0, energyNeeded - availableEnergy);
 
   // Cost in TRX
@@ -430,8 +432,8 @@ export const calculateDynamicTRC20Fee = async (
   const bandwidthCostTRX = (TRC20_BANDWIDTH * networkParams.bandwidthPriceSun) / 1_000_000;
   const totalCostTRX = energyCostTRX + bandwidthCostTRX;
 
-  // Round up with 15% buffer, min 1 TRX
-  const fastFee = Math.max(Math.ceil(totalCostTRX * 1.15 * 10) / 10, 1);
+  // Round up with 40% buffer (increased from 15% to prevent OUT_OF_ENERGY), min 1 TRX
+  const fastFee = Math.max(Math.ceil(totalCostTRX * 1.40 * 10) / 10, 1);
 
   cronLogger.info(
     `[TronEnergy] 📊 Dynamic TRC20 fee: ${fastFee} TRX ` +

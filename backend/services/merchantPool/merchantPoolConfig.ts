@@ -25,7 +25,7 @@ export const POOL_CONFIG = {
   STALE_LOCK_TIMEOUT_MINUTES: 120,
   
   // Smart Gas Funding Settings
-  GAS_SAFETY_BUFFER: 1.3,  // 30% extra to ensure transaction success
+  GAS_SAFETY_BUFFER: 1.5,  // 50% extra to ensure transaction success (increased from 30%)
   
   // Minimum gas to maintain (fallback if estimation fails)
   TRX_GAS_FALLBACK: 30,

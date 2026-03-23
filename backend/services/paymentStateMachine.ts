@@ -71,6 +71,7 @@ const VALID_TRANSITIONS: Record<PaymentState, Set<PaymentState>> = {
     PaymentState.FAILED,
   ]),
   [PaymentState.PROCESSING]: new Set([
+    PaymentState.PROCESSING,      // Allow retry/re-processing (e.g., after OUT_OF_ENERGY recovery)
     PaymentState.PAYOUT_COMPLETE,
     PaymentState.CONVERTED,
     PaymentState.FAILED,

@@ -219,7 +219,24 @@ export function startWebhookWorker(
         webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${delayed} delayed jobs (retrying with backoff)`);
       }
       if (failed > 0) {
-        webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${failed} failed jobs — check DLQ or reconciliation`);
+        webhookLogs.warn(`[WebhookQueue] ⚠️ Health check: ${failed} failed jobs — cleaning up old failed jobs`);
+        // Auto-clean failed jobs older than 1 hour (they've already been moved to DLQ by the "failed" handler)
+        try {
+          const failedJobs = await webhookQueue.getFailed(0, 50);
+          let cleaned = 0;
+          for (const fJob of failedJobs) {
+            const jobAge = Date.now() - (fJob.finishedOn || fJob.timestamp || 0);
+            if (jobAge > 3600_000) { // Older than 1 hour
+              await fJob.remove();
+              cleaned++;
+            }
+          }
+          if (cleaned > 0) {
+            webhookLogs.info(`[WebhookQueue] 🧹 Cleaned ${cleaned} old failed jobs from queue`);
+          }
+        } catch (cleanErr) {
+          webhookLogs.warn(`[WebhookQueue] Failed to clean old jobs: ${(cleanErr as Error).message}`);
+        }
       }
 
       if (waiting > 0 && active === 0) {
