@@ -5030,7 +5030,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           
           const enhancedWebhookPayload: Record<string, unknown> = {
             // Core payment info
-            event: "payment.confirmed",
+            event: "payment.settled",
             payment_type: paymentType,
             payment_id: webhookPaymentId,
             transaction_reference: transactionId,
@@ -5103,13 +5103,13 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           };
           
           try {
-            // BUG-1 FIX: Use Redis dedup flag to prevent duplicate payment.confirmed webhooks.
+            // BUG-1 FIX: Use Redis dedup flag to prevent duplicate payment.settled webhooks.
             // Both cryptoVerification and webhookProcessor used to send this webhook independently.
             const confirmedWebhookKey = `confirmed-webhook-sent-${webhookPaymentId || transactionId}`;
             const alreadySentConfirmed = await getRedisItem(confirmedWebhookKey);
             
             if (alreadySentConfirmed && alreadySentConfirmed.sent) {
-              cronLogger.info(`[cryptoVerification] payment.confirmed webhook already sent for ${webhookPaymentId || transactionId}, skipping duplicate`);
+              cronLogger.info(`[cryptoVerification] payment.settled webhook already sent for ${webhookPaymentId || transactionId}, skipping duplicate`);
             } else {
               // Set flag BEFORE sending to prevent race conditions
               await setRedisItem(confirmedWebhookKey, { sent: true, sentAt: new Date().toISOString(), source: "cryptoVerification" });

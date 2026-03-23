@@ -854,14 +854,14 @@ async function handleNewTransaction(
   const isDirectApiUnderpayment = isUnderpayment && !isMinorUnderpayment && !(customerData?.link_id || items?.link_id);
   const finalReceivedAmount = (isCompletionPayment || isDirectApiUnderpayment) ? totalReceivedAmount : incomingAmount;
 
-  // ── Send payment.received webhook — crypto IS on-chain, BEFORE settlement ──
-  // This is distinct from payment.confirmed (which means settled to merchant wallet)
+  // ── Send payment.confirmed webhook — crypto IS on-chain, BEFORE settlement ──
+  // This is distinct from payment.settled (which means delivered to merchant wallet)
   if (customerData && (customerData.webhook_url || customerData.callback_url)) {
     try {
       const receivedLinkId = customerData?.link_id || items?.link_id || null;
       const receivedPaymentType = receivedLinkId ? "payment_link" : "direct_api";
       await callMerchantWebhook(customerData, {
-        event: "payment.received",
+        event: "payment.confirmed",
         payment_type: receivedPaymentType,
         address,
         txId: payload.txId,
@@ -869,8 +869,8 @@ async function handleNewTransaction(
         amount: finalReceivedAmount,
         currency: items?.currency || payload.asset,
         payment_id: items?.payment_id || items?.unique_tx_id,
-        status: "received",
-        payment_status: "received",
+        status: "confirmed",
+        payment_status: "confirmed",
         base_amount: customerData?.base_amount || items?.base_amount_usd || null,
         base_currency: customerData?.base_currency || "USD",
         customer_name: customerData?.customer_name || null,
@@ -881,11 +881,11 @@ async function handleNewTransaction(
         meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
         created_at: new Date().toISOString(),
         received_at: new Date().toISOString(),
-        note: "Payment received on-chain. Settlement to merchant wallet in progress.",
+        note: "Payment confirmed on-chain. Settlement to merchant wallet in progress.",
       });
-      webhookLogs.info(`[WebhookProcessor] ✅ payment.received webhook sent for payment ${paymentId} — crypto confirmed on-chain before settlement`);
+      webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId} — crypto confirmed on-chain before settlement`);
     } catch (receivedWebhookErr) {
-      webhookLogs.error("[WebhookProcessor] Error sending payment.received webhook:", receivedWebhookErr);
+      webhookLogs.error("[WebhookProcessor] Error sending payment.confirmed webhook:", receivedWebhookErr);
     }
   }
 
@@ -919,7 +919,7 @@ async function handleNewTransaction(
           throw new Error(`cryptoVerification error ${verifyResult.status}: ${verifyResult.message || "Settlement failed"}`);
         }
         // ── DUPLICATE GUARD: If cryptoVerification detected a duplicate, stop here ──
-        // Do NOT proceed to the success path (which sends payment.confirmed webhook).
+        // Do NOT proceed to the success path (which sends payment.settled webhook).
         // The payment was already settled — no merchant notifications should be sent.
         if (verifyResult && verifyResult.duplicate) {
           webhookLogs.warn(`[WebhookProcessor] ⛔ cryptoVerification returned duplicate=true for tx ${payload.txId}. Skipping all post-verification webhooks.`);
@@ -930,7 +930,7 @@ async function handleNewTransaction(
             duplicate_blocked: true, source: "cryptoVerification-duplicate",
           });
           await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
-          return; // EXIT — no payment.confirmed webhook
+          return; // EXIT — no payment.settled webhook
         }
         webhookLogs.info("[WebhookProcessor] cryptoVerification completed successfully");
         lastError = null;
@@ -1018,14 +1018,14 @@ async function handleNewTransaction(
     });
     await setRedisTTL(`processed-tx-${payload.txId}`, 172800);
 
-    // ── Send payment.confirmed webhook to merchant (with BUG-1 FIX dedup) ──
+    // ── Send payment.settled webhook to merchant (with BUG-1 FIX dedup) ──
     try {
-      // BUG-1 FIX: Check if cryptoVerification already sent the confirmed webhook
+      // BUG-1 FIX: Check if cryptoVerification already sent the settled webhook
       const confirmedWebhookKey = `confirmed-webhook-sent-${paymentId}`;
       const alreadySentConfirmed = await getRedisItem(confirmedWebhookKey);
       
       if (alreadySentConfirmed && alreadySentConfirmed.sent) {
-        webhookLogs.info(`[WebhookProcessor] payment.confirmed webhook already sent by cryptoVerification for ${paymentId}, skipping duplicate`);
+        webhookLogs.info(`[WebhookProcessor] payment.settled webhook already sent by cryptoVerification for ${paymentId}, skipping duplicate`);
       } else {
         let confirmedCustomerData = await getRedisItem(items?.ref);
         if (!confirmedCustomerData || Object.keys(confirmedCustomerData).length === 0) {
@@ -1047,7 +1047,7 @@ async function handleNewTransaction(
           await setRedisTTL(confirmedWebhookKey, 86400);
 
           await callMerchantWebhook(confirmedCustomerData, {
-            event: "payment.confirmed",
+            event: "payment.settled",
             payment_type: confirmedPaymentType,
             address,
             txId: payload.txId,
@@ -1055,8 +1055,8 @@ async function handleNewTransaction(
             amount: finalReceivedAmount,
             currency: items?.currency || payload.asset,
             payment_id: items?.payment_id || items?.unique_tx_id,
-            status: "successful",
-            payment_status: "confirmed",
+            status: "settled",
+            payment_status: "settled",
             base_amount: confirmedCustomerData?.base_amount || items?.base_amount_usd || null,
             base_currency: confirmedCustomerData?.base_currency || "USD",
             customer_name: confirmedCustomerData?.customer_name || null,
@@ -1066,13 +1066,13 @@ async function handleNewTransaction(
             fee_payer: confirmedCustomerData?.fee_payer || items?.fee_payer || "company",
             meta_data: confirmedCustomerData?.meta_data ? (typeof confirmedCustomerData.meta_data === 'string' ? JSON.parse(confirmedCustomerData.meta_data) : confirmedCustomerData.meta_data) : null,
             created_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
+            settled_at: new Date().toISOString(),
           });
-          webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId}`);
+          webhookLogs.info(`[WebhookProcessor] ✅ payment.settled webhook sent for payment ${paymentId}`);
         }
       }
     } catch (confirmedWebhookErr) {
-      webhookLogs.error("[WebhookProcessor] Error sending payment.confirmed webhook:", confirmedWebhookErr);
+      webhookLogs.error("[WebhookProcessor] Error sending payment.settled webhook:", confirmedWebhookErr);
     }
 
   } catch (verifyError: unknown) {
