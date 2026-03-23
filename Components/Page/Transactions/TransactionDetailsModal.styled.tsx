@@ -109,7 +109,7 @@ export const DetailValue = styled(Typography)(({ theme }) => ({
 }));
 
 export const StatusBadge = styled(Box)<{
-  status: "done" | "pending" | "failed";
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
 }>(({ theme, status }) => {
   const statusColors = {
     done: {
@@ -166,7 +166,7 @@ export const StatusIconWrapper = styled(Box)(({ theme }) => {
 });
 
 export const StatusText = styled(Typography)<{
-  status: "done" | "pending" | "failed";
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
 }>(({ status, theme }) => {
   const statusColors = {
     done: {

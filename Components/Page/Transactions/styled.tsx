@@ -215,14 +215,22 @@ export const TransactionsTableFooterText = styled(Typography)(({ theme }) => ({
 }));
 
 export const StatusBadge = styled(Box)<{
-  status: "done" | "pending" | "failed";
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
 }>(({ theme, status }) => {
-  const statusColors = {
-    done: {
+  const statusColors: Record<string, { bg: string; border: string }> = {
+    settled: {
       bg: "#EAFFF0",
       border: "#DCF6E4",
     },
+    confirmed: {
+      bg: "#E3F2FD",
+      border: "#BBDEFB",
+    },
     pending: {
+      bg: "#FFEDD7",
+      border: "#FFE3C0",
+    },
+    processing: {
       bg: "#FFEDD7",
       border: "#FFE3C0",
     },
@@ -232,7 +240,7 @@ export const StatusBadge = styled(Box)<{
     },
   };
 
-  const colors = statusColors[status];
+  const colors = statusColors[status] || statusColors.pending;
 
   return {
     display: "inline-flex",
@@ -253,7 +261,7 @@ export const StatusBadge = styled(Box)<{
 });
 
 export const StatusIconWrapper = styled(Box)<{
-  status: "done" | "pending" | "failed";
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
 }>(({ theme }) => {
   return {
     display: "flex",
@@ -273,13 +281,19 @@ export const StatusIconWrapper = styled(Box)<{
 });
 
 export const StatusText = styled(Typography)<{
-  status: "done" | "pending" | "failed";
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
 }>(({ status, theme }) => {
-  const statusColors = {
-    done: {
+  const statusColors: Record<string, { textColor: string }> = {
+    settled: {
       textColor: "#47B464",
     },
+    confirmed: {
+      textColor: "#1565C0",
+    },
     pending: {
+      textColor: "#F7931A",
+    },
+    processing: {
       textColor: "#F7931A",
     },
     failed: {
@@ -290,7 +304,7 @@ export const StatusText = styled(Typography)<{
   return {
     fontSize: "13px",
     fontWeight: 500,
-    color: statusColors[status].textColor,
+    color: (statusColors[status] || statusColors.pending).textColor,
     fontFamily: "UrbanistMedium",
     textTransform: "capitalize",
     lineHeight: "16px",
