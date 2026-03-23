@@ -279,14 +279,14 @@ export function toExternalStatus(state: PaymentState): string {
     [PaymentState.PENDING]:         "waiting",
     [PaymentState.DETECTED]:        "pending",
     [PaymentState.CONFIRMING]:      "pending",
-    [PaymentState.CONFIRMED]:       "pending",
+    [PaymentState.CONFIRMED]:       "confirmed",
     [PaymentState.UNDERPAID]:       "underpaid",
-    [PaymentState.PROCESSING]:      "pending",
-    [PaymentState.CONVERTED]:       "confirmed",
-    [PaymentState.PAYOUT_COMPLETE]: "confirmed",
+    [PaymentState.PROCESSING]:      "processing",
+    [PaymentState.CONVERTED]:       "settled",
+    [PaymentState.PAYOUT_COMPLETE]: "settled",
     [PaymentState.FAILED]:          "failed",
-    [PaymentState.EXPIRED]:         "failed",
-    [PaymentState.REFUNDED]:        "confirmed",
+    [PaymentState.EXPIRED]:         "expired",
+    [PaymentState.REFUNDED]:        "refunded",
   };
   return EXTERNAL_MAP[state];
 }
@@ -294,15 +294,22 @@ export function toExternalStatus(state: PaymentState): string {
 /**
  * Convert internal PaymentState to the webhook event name.
  * This is what merchants see in the X-DynoPay-Event header.
+ * 
+ * Webhook events:
+ *   payment.pending           — crypto detected at temp address
+ *   payment.confirmed         — crypto confirmed on-chain (before settlement)
+ *   payment.settled           — crypto delivered to merchant wallet
+ *   payment.underpaid         — amount received is less than expected
+ *   payment.settlement_failed — settlement failed but crypto was received
  */
 export function toWebhookEvent(state: PaymentState): string | null {
   const EVENT_MAP: Partial<Record<PaymentState, string>> = {
     [PaymentState.PENDING]:         "payment.pending",
     [PaymentState.DETECTED]:        "payment.pending",
     [PaymentState.CONFIRMED]:       "payment.confirmed",
-    [PaymentState.PAYOUT_COMPLETE]: "payment.confirmed",
+    [PaymentState.PAYOUT_COMPLETE]: "payment.settled",
     [PaymentState.UNDERPAID]:       "payment.underpaid",
-    [PaymentState.FAILED]:          "payment.failed",
+    [PaymentState.FAILED]:          "payment.settlement_failed",
   };
   return EVENT_MAP[state] || null;
 }

@@ -155,9 +155,9 @@ const TransactionPage = () => {
           dateTime: formatDateTime(item.createdAt),
           status: (() => {
             const s = (item.status || "").toLowerCase().trim();
-            if (s === "success" || s === "successful" || s === "completed" || s === "confirmed" || s === "payout_complete" || s === "converted" || s === "recovered" || s === "done")
+            if (s === "success" || s === "successful" || s === "completed" || s === "confirmed" || s === "payout_complete" || s === "converted" || s === "recovered" || s === "done" || s === "settled")
               return "done" as const;
-            if (s === "failed" || s === "expired" || s === "refunded")
+            if (s === "failed" || s === "expired" || s === "refunded" || s === "settlement_failed")
               return "failed" as const;
             return "pending" as const;
           })(),
