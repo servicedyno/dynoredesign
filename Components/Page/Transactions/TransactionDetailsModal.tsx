@@ -566,7 +566,7 @@ const TransactionDetailsModal: React.FC<TransactionDetailsModalProps> = ({
                 },
               }}
             />
-            {(transaction?.status === "settled" || transaction?.status === "done" || transaction?.status === "successful" || transaction?.status === "confirmed") && (
+            {(transaction?.status === "settled" || transaction?.status === "confirmed") && (
               <CustomButton
                 label="Invoice"
                 startIcon={<DownloadRounded sx={{ fontSize: 16 }} />}

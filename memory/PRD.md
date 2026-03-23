@@ -5,12 +5,24 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-03-23 — Auto-Convert Icon Fix
+- Fixed auto-convert icon visibility in `TransactionsTable.tsx` and `TransactionDetailsModal.tsx`
+- Updated references from legacy `"done"` status to `"settled"` to match the refactored status system
+
 ### 2026-03-01 — Critical Bug Fix & Fund Recovery
 1. **Bug Fix (tatumApi.ts):** `waitForTransactionConfirmation` now validates `ret[0].contractRet === 'SUCCESS'` for TRON transactions
 2. **Retry Logic (paymentController.ts):** Settlement retries on TRON execution errors like `OUT_OF_ENERGY`
-3. **Recovery Endpoint (diagnosticsRouter.ts):** Rewrote `/diagnostics/recover-stuck-payment` to use correct data models (`merchantTempAddressModel` + `merchantPoolTransactionModel` instead of broken `customerTransactionModel` lookup). Supports `payment_id`, `temp_address`, and manual override params.
-4. **Fund Recovery Executed:** Successfully recovered 98.7577 USDT from `TVzJHr4EynTsdtQGXtnppTTfCLSC8LXnY5` → `TTve8v6Y48ChsCTEiCjMRFSbjNtz4mAkxR` (TX: `7995bdcf...`, block 80553581, contractResult: SUCCESS)
-5. **Data Consistency Fix (paymentController.ts):** `recordPoolTransaction` now stores actual post-gas `sendAmount` (what merchant received on-chain) instead of pre-gas `userAmountToSend`. This ensures `pool_tx.merchant_amount` matches the real on-chain transfer.
+3. **Recovery Endpoint (diagnosticsRouter.ts):** Rewrote `/diagnostics/recover-stuck-payment` to use correct data models
+4. **Fund Recovery Executed:** Successfully recovered 98.7577 USDT from stuck payment
+5. **Data Consistency Fix (paymentController.ts):** `recordPoolTransaction` now stores actual post-gas `sendAmount`
+
+### Previous Session — Comprehensive Bug Fixing
+- 13+ bugs fixed: registration validation, payment link creation, wallet management
+- Auto API key creation on onboarding
+- TRON `OUT_OF_ENERGY` fix and stuck payment recovery
+- Gas drain fix with funding cap
+- Webhook & status refactoring (`payment.confirmed` / `payment.settled`)
+- Frontend status system: `pending`, `confirmed`, `processing`, `settled`, `failed`
 
 ## Prioritized Backlog
 
@@ -22,3 +34,4 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - Low gas balance alerting (Slack/email)
 - Improved webhook retry logic and dead letter queue
 - Admin dashboard for stuck payment visibility
+- Refactoring of `paymentController.ts` (8,500+ lines) into smaller services
