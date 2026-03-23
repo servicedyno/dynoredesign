@@ -858,6 +858,14 @@ async function handleNewTransaction(
     // Soft-enforce: varies → processing (pre-cryptoVerification)
     softValidate(items.status, "processing", paymentId, "pre-crypto-verification");
 
+    // Set early processing guard to prevent duplicate webhooks from re-triggering settlement
+    await setRedisItem(`processed-tx-${payload.txId}`, {
+      address, payment_id: items.payment_id || items.ref,
+      amount: finalReceivedAmount, processing_started: new Date().toISOString(),
+      status: "settlement_in_progress",
+    });
+    await setRedisTTL(`processed-tx-${payload.txId}`, 600); // 10 min guard — will be updated to permanent on completion
+
     await setRedisItem(redisKey, {
       ...items, status: "processing",
       receivedAmount: finalReceivedAmount, txId: payload.txId,

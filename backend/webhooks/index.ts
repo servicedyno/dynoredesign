@@ -563,7 +563,8 @@ const tatumCryptoWebHook = async (
 
     // PERF: Fire-and-forget dedup SET — doesn't need to complete before enqueue
     // The parallel GET already passed, so this is purely for future duplicate protection
-    setRedisItemWithTTL(receiverDedupKey, { received: Date.now() }, 30)
+    // TTL 300s (5 min) to prevent duplicate webhooks from re-triggering settlement gas funding
+    setRedisItemWithTTL(receiverDedupKey, { received: Date.now() }, 300)
       .catch(() => { /* non-critical: dedup is best-effort, worker has its own dedup */ });
 
     // Quick duplicate check (fast-path reject, worker also checks)

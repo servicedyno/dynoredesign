@@ -3224,6 +3224,8 @@ const settleCryptoTransaction = async ({
       // Enhanced with OUT_OF_ENERGY recovery for TRON TRC20 transfers
       const isTRC20 = currency.includes("TRC20") || (String(currency) === "TRX" && !!contractAddress);
       const MAX_TRANSFER_ATTEMPTS = isTRC20 ? 3 : 1; // Extra retries for TRC20 energy issues
+      const MAX_GAS_PER_PAYMENT_TRX = 30; // Cap: max 30 TRX total gas per payment to prevent wallet drain
+      let totalGasFundedTRX = 0;
       
       for (let transferAttempt = 1; transferAttempt <= MAX_TRANSFER_ATTEMPTS; transferAttempt++) {
         try {
@@ -3253,11 +3255,18 @@ const settleCryptoTransaction = async ({
             cronLogger.warn(`[settleCryptoTransaction] ⚡ OUT_OF_ENERGY detected for TRC20 transfer (attempt ${transferAttempt}/${MAX_TRANSFER_ATTEMPTS}). Re-funding gas with energy-aware estimation...`);
             
             try {
+              // Check gas cap to prevent fee wallet drain
+              if (totalGasFundedTRX >= MAX_GAS_PER_PAYMENT_TRX) {
+                cronLogger.error(`[settleCryptoTransaction] ❌ Gas cap reached (${totalGasFundedTRX} TRX funded, cap: ${MAX_GAS_PER_PAYMENT_TRX} TRX). Stopping retries to prevent fee wallet drain.`);
+                throw new Error(`Gas cap exceeded for payment. ${totalGasFundedTRX} TRX already funded. Manual recovery required.`);
+              }
+
               // Use tronEnergyService for accurate energy estimation
               const dynamicFee = await calculateDynamicTRC20Fee(fromAddress);
               const extraGasNeeded = dynamicFee.fast;
+              totalGasFundedTRX += extraGasNeeded;
               
-              cronLogger.info(`[settleCryptoTransaction] 🔋 Energy-aware re-funding: ${extraGasNeeded} TRX (energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
+              cronLogger.info(`[settleCryptoTransaction] 🔋 Energy-aware re-funding: ${extraGasNeeded} TRX (total funded: ${totalGasFundedTRX}/${MAX_GAS_PER_PAYMENT_TRX} TRX cap, energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
               
               // Re-fund gas from fee wallet
               if (true) {
