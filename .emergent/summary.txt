@@ -1,134 +1,145 @@
-<analysis>**original_problem_statement:** The user reported that a USDT-TRC20 payment was received but never forwarded to the merchant, and the admin fee was being held. They provided a Railway deployment ID to investigate the logs. The initial investigation was incorrect, but after user feedback, the root cause was identified: a transaction to the merchant failed with an  error on the TRON network, but the system incorrectly marked it as successful () because it didn't check the transaction's . This left the merchant's funds stuck in a temporary wallet, invisible to all automated recovery systems. The user requested a fix for the bug and a manual recovery of the stuck funds.
+<analysis>**original_problem_statement:** 
+The user's initial request was to set up the project environment. This evolved into a multi-stage bug-fixing and feature-enhancement task based on user feedback and analysis of a provided bug report and production logs.
 
-**PRODUCT REQUIREMENTS:**
-1.  Fix the bug in the transaction confirmation logic to correctly handle TRON smart contract failures.
-2.  Implement a retry mechanism for failed settlement transactions.
-3.  Manually recover the specific stuck payment and send the funds to the merchant.
-4.  Investigate and resolve the empty TRX gas wallet issue.
-5.  Investigate and fix the failing merchant webhook (returning 404).
+PRODUCT REQUIREMENTS:
+1.  Fix all bugs listed in the provided Google Sheet.
+2.  Automatically create a default USD API key for users upon completing onboarding.
+3.  Investigate and resolve low gas wallet email alerts.
+4.  Analyze Railway production logs to identify the root cause of failed payments and error emails.
+5.  Recover a specific stuck USDT-TRC20 payment.
+6.  Refactor the payment webhook logic for better clarity and consistency, distinguishing between on-chain confirmation and merchant settlement.
+7.  Ensure the frontend transaction history UI is consistent with the updated backend statuses.
 
 **User's preferred language**: English
 
 **what currently exists?**
-The application is a full-stack payment gateway. The agent has successfully diagnosed a critical bug in the TRON (USDT-TRC20) transaction confirmation logic.
-The following fixes have been implemented and tested via the test suite:
-1.  The  function in  has been patched to correctly validate the  field for TRON transactions, preventing future  failures from being marked as successful.
-2.  The settlement logic in  has been enhanced to retry failed transfers.
-3.  An existing diagnostics endpoint () has been significantly improved to correctly distinguish between merchant funds and admin fees during a manual recovery.
-
-The backend services have been restarted with the new code, and all 182 automated tests have passed.
+A fully operational crypto payment gateway application (DynoPay) with a React/Next.js frontend and a Node.js/TypeScript backend. The environment is set up, and all services are running. A significant number of bugs related to form validation, UI display, and payment processing have been fixed. The core payment pipeline, especially for TRON (TRC20) tokens, has been made more robust by addressing  errors, fixing gas drain issues, and recovering a stuck payment. The webhook and transaction status system has been refactored for logical consistency across the stack.
 
 **Last working item**:
-- Last item agent was working: The agent was preparing to execute the manual recovery of the stuck payment. It has confirmed all necessary details: the stuck temporary address, the merchant's destination address, and the exact amount of USDT to be sent to the merchant (98.7577 USDT). The user has given the final approval to proceed.
-- Status: **IN PROGRESS**
-- Agent Testing Done: N
-- Which testing method agent to use?: **manual testing by curl** to call the improved recovery endpoint: . After the call, on-chain verification of wallet balances is required.
-- User Testing Done: N
+-   **Last item agent was working:** The agent was fixing the visibility of the auto-converted icon in the frontend transaction history. This icon disappeared because its display logic was tied to the old status , which has been renamed to . The agent's last attempt to replace the string failed due to a tool constraint.
+-   **Status:** IN PROGRESS
+-   **Agent Testing Done:** N
+-   **Which testing method agent to use?** frontend testing agent
+-   **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-- **Issue 1 (P0):** Manually recover stuck funds for payment .
+-   **Issue 1 (P0):** The auto-converted icon is not visible on the transactions page for settled payments.
 
-  - **Issues Detail:**
-    - **Issue 1:** The merchant's portion of a payment (98.7577 USDT) is stuck in a temporary wallet () due to a previous  transaction failure that was incorrectly marked as successful.
-      - **Attempted fixes:** The underlying bug has been fixed to prevent recurrence. A specialized recovery endpoint has been created and improved.
-      - **Next debug checklist:**
-        1.  Execute a  POST request to the  endpoint with the payload .
-        2.  Verify the API response for a successful transaction hash.
-        3.  Check the on-chain balance of the temporary address  to confirm the funds have been sent.
-        4.  Check the on-chain balance of the merchant's wallet  to confirm the funds have been received.
-      - **Why fix this issue and what will be achieved with the fix?:** To resolve the user's primary problem and ensure the merchant receives their funds from the failed transaction.
-      - **Status:** **IN PROGRESS**
-      - **Is recurring issue?:** N (The root cause is fixed, this is a one-time recovery).
-      - **Should Test frontend/backend/both after fix?:** Backend (on-chain verification).
-      - **Blocked on other issue:** None.
+**Issues Detail:**
+-   **Issue 1:**
+    -   **Attempted fixes:** The agent tried using  to update  to  in . The tool failed because the target string appeared in multiple locations within the file.
+    -   **Next debug checklist:**
+        1.  Use  with  in  to replace all instances of  with .
+        2.  Perform the same replacement in  to ensure consistency in the modal view.
+    -   **Why fix this issue and what will be achieved with the fix?** This fix is required to restore a key visual indicator in the UI, ensuring that users can easily identify which transactions were automatically converted to their preferred currency. It aligns the UI with the recent backend status refactoring.
+    -   **Status:** IN PROGRESS
+    -   **Is recurring issue?** N
+    -   **Should Test frontend/backend/both after fix?** Frontend
+    -   **Blocked on other issue:** None
 
 **In progress Task List**:
-There are no other tasks in progress. The focus is solely on the manual recovery of funds.
+-   There are no other tasks in progress.
 
 **Upcoming and Future Tasks**
-- **Upcoming Tasks (P1):**
-  - **Investigate and Refill TRX Hot Wallet:** The initial transaction failure was triggered because the TRX hot wallet was empty and could not fund the gas fee. This needs to be investigated to prevent future settlement delays.
-  - **Fix Merchant Webhook 404 Error:** The agent discovered that all webhook notifications to the merchant are failing with a 404 error at the URL . This needs to be debugged and fixed to ensure merchants receive timely notifications.
+There are no explicit upcoming tasks from the user. The immediate priority is to complete the final bug fix and confirm the stability of all recent changes.
 
 **Completed work in this session**
-- **Bug Fix in :** Modified the  function to correctly check the  status for TRON transactions, preventing false positives on failed contract executions.
-- **Improved Settlement Logic in :** Added a retry mechanism to the settlement flow. If a TRON transfer fails due to an execution error like , the system will now attempt to re-fund gas and retry the transfer.
-- **Enhanced Recovery Endpoint in :** Replaced the simple recovery endpoint with a more robust version that looks up the correct merchant amount from the database and only sends that specific amount, leaving the admin fees untouched for the regular sweep process.
-- **Testing:** Successfully ran the entire backend test suite (182 tests) to ensure no regressions were introduced by the fixes.
+-   **Full Project Setup:** Installed all backend (pip) and frontend (yarn) dependencies and successfully started all services.
+-   **Comprehensive Bug Fixing (13+ bugs):**
+    -   **Registration:** Fixed name/referral code validation and added a session timeout ().
+    -   **Payment Link Creation:** Added email validation, a warning for missing API keys, and debounce protection on the create button ().
+    -   **Wallet Management:** Implemented the previously broken Edit Wallet flow and improved validation in the Add Wallet modal ().
+-   **Feature Implementation: Auto API Key:**
+    -   Added logic to automatically create a default USD API key upon first wallet creation during user onboarding ().
+-   **Critical Payment Pipeline Fixes:**
+    -   **TRON  Errors:** Resolved the root cause by increasing energy cost estimates and safety buffers for TRC20 transfers ().
+    -   **TRX Gas Drain:** Fixed a critical bug causing the gas wallet to be drained by repeated, failing transaction attempts. Implemented a gas funding cap and improved webhook deduplication (, ).
+    -   **Stuck Payment Recovery:** Successfully diagnosed and recovered a stuck 3 USDT-TRC20 payment by manually triggering a fixed recovery process.
+-   **Webhook & Status Refactoring:**
+    -   Renamed webhook events for clarity:  (on-chain receipt) and  (merchant wallet deposit).
+    -   Aligned frontend transaction statuses with backend states, introducing a more granular five-status system: , , , , . This impacted multiple files in .
 
 **Earlier issues found/mentioned but not fixed**
-- **Issue 1:** The TRX hot wallet used for funding gas fees () is depleted.
-  - **Debug checklist:**
-    1.  Identify the configuration file or environment variable for the hot wallet.
-    2.  Check its current on-chain balance.
-    3.  Investigate why it was not automatically refilled or why alerts were not triggered.
-  - **Why to solve this issue and what will be achieved with this?:** This is the root cause of the initial failure. Fixing it is critical to ensure smooth and timely processing of future TRC20 payments without relying on Tatum's internal gas handling, which can be unpredictable.
-  - **Should Test frontend/backend/both after fix:** Backend.
-  - **Is recurring issue?:** Y
-- **Issue 2:** The merchant's webhook endpoint is returning a 404 error.
-  - **Debug checklist:**
-    1.  Confirm the webhook URL is correct with the merchant/user.
-    2.  Check the server logs for the application running at  to see why the  route is not found.
-    3.  Verify the routing configuration in the merchant's application code.
-  - **Why to solve this issue and what will be achieved with this?:** Merchants are not receiving critical payment status notifications, which harms the user experience and business operations.
-  - **Should Test frontend/backend/both after fix:** Backend.
-  - **Is recurring issue?:** Y
+-   None. All identified issues and user requests during this session have been addressed or are currently in progress.
 
 **Known issue recurrence from previous fork**
-- None.
+-   The initial context mentioned a problem with a TRC20 payment not being forwarded. This was the core theme of this session's work on stuck payments and  errors, which has now been thoroughly investigated and resolved.
 
 **Code Architecture**
 
 
 **Key Technical Concepts**
-- **Blockchain:** TRON
-- **Token Standard:** TRC20 (for USDT)
-- **3rd Party API:** Tatum for blockchain operations.
-- **Error Handling:** Identifying and handling specific blockchain errors like .
-- **Transaction Lifecycle:** Understanding that a transaction's inclusion in a block does not guarantee successful smart contract execution on TRON.
-- **Backend:** FastAPI (though the code shown is TypeScript, suggesting a Node.js/Express-like framework).
+-   **Full-Stack:** React/Next.js frontend with a Node.js/TypeScript backend.
+-   **Crypto Payment Processing:** Integrates with the Tatum API for blockchain operations.
+-   **Asynchronous Webhooks:** Uses BullMQ for a reliable webhook queue, including a Dead Letter Queue (DLQ) for failures.
+-   **Payment State Machine:** A robust state machine in  governs the lifecycle of payments.
+-   **TRON Energy Model:** Contains specialized logic to handle the nuances of TRON's energy requirements for TRC20 transfers.
 
 **key DB schema**
-- **merchantTempAddress:**
-  - : string
-  - : string
-  - : number (The amount due to the merchant)
-  - : number (The accumulated admin fees to be swept)
-  - : string (, , etc.)
+-   **tbl_admin_fee_wallet:** Manages wallets used for funding transaction gas, including , , and .
+-   **tbl_user_temp_address:** Tracks temporary crypto addresses generated for incoming user payments.
+-   **tbl_api_keys:** Stores API keys generated by users.
+-   **tbl_user_wallets:** Stores merchants' final settlement wallet addresses.
+
+**changes in tech stack**
+-   None.
 
 **All files of reference**
-- : **Modified** to add  validation for TRON transactions.
-- : **Modified** to add a retry loop for settlement failures.
-- : **Modified** to create a robust manual recovery endpoint.
+-   : **(Fix In Progress)** Contains the UI for the transaction list where the auto-convert icon logic needs to be fixed.
+-   : Core file for handling incoming webhooks and managing the payment lifecycle. Was heavily refactored.
+-   : A large controller that handles payment creation and verification. Was modified to fix fee alerts and webhook logic.
+-   : Contains the critical logic for calculating TRON energy costs. Was modified to prevent  errors.
+-   : Defines all payment states and their valid transitions. Was updated to align frontend and backend statuses.
+-   : Contains credentials used for accessing Railway production logs for analysis.
+
+**Areas that need refactoring**:
+-   The file  is extremely large (over 8,500 lines) and handles too many responsibilities. It should be broken down into smaller, more focused services to improve readability and maintainability.
 
 **key api endpoints**
-- : **(Improved)** An internal admin endpoint used to manually trigger the re-sending of a stuck payment from a temporary address to the merchant.
+-   : Backend health check.
+-   : Admin endpoint to trigger recovery for a failed payment.
+-   : Fetches the transaction history for the dashboard.
+-   : Creates a public payment link.
 
 **Critical Info for New Agent**
-1.  **The Bug is Fixed:** You do not need to re-investigate why the payment failed. The root cause was a false positive confirmation on a failed TRON transaction. The code has been patched.
-2.  **Immediate Task:** Your first and only immediate task is to execute the manual recovery for payment . Use a  command to  to .
-3.  **Post-Recovery:** After confirming the funds have been successfully transferred, you should propose to the user to fix the two other outstanding issues: the empty TRX hot wallet and the failing merchant webhooks.
+-   **New Webhook Standard:** The payment webhook system has been refactored.  now signifies on-chain confirmation.  signifies the funds have reached the merchant's wallet. This is a critical distinction.
+-   **New Status System:** The frontend now uses five statuses: ,  (on-chain), ,  (in merchant wallet), and . Ensure any new UI work adheres to this.
+-   **TRON Energy Fixes:** The primary cause of TRON settlement failures () has been fixed by increasing the estimated energy cost for transactions. The logic resides in .
+-   **Gas Wallet:** The system uses a dedicated fee wallet to fund transaction gas. The TRON fee wallet address is . This is separate from the admin wallet that receives profits.
+
+**documents and test reports created in this job**
+-    (updated multiple times)
+-    (and other temporary log files)
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (pending):** continue (Approval to proceed with manual fund transfer)
-2.  **User:** continue (Approval to prepare for manual transfer)
-3.  **User:** continue and manually send the funds to the merchant and confirm the address before sending
-4.  **User:** yes both (Agreement to fix the bug and perform a manual recovery)
-5.  **User:** the only reason it failed is because gas fee wallet is low and i have just funded it. apart from that, what bug do you think should be fixed? and since i already funded the gas, would it automatically retry?
-6.  **User:** payment was not forwarded to merchant.. check temporary wallet because it has never been received. merchant and admin use the same address
-7.  **User:** access railway log... and confirm if any USDT-TRC20 was received... and if true, confirm why payment never forwarded to merchant and admin fee held for threshold
+1.  **for auto converted, there is a little icon that indicates that, confirm it still exists and working** - User is asking to verify the auto-convert icon works with the new status system. (Status: In Progress, this is the current task).
+2.  **is payment has confirmed, frontend status should also be confirmed and when settled it should be settled and when pending it should be pending.** - User requested precise alignment between backend states and frontend UI statuses. (Status: Completed, implemented granular statuses).
+3.  **yes** - User confirmed to proceed with sending a manual webhook. (Status: Completed).
+4.  **at what stage would webhook be sent to merchant about payment confirmed?** - User asked for clarification on the webhook flow. (Status: Completed).
+5.  **b** - User chose a specific naming convention for the webhook refactor. (Status: Completed).
+6.  **but i thought webhook should be sent when payment received, not if successfully settled? these are two different things** - User identified a key logical flaw in the webhook system, which initiated the refactoring task. (Status: Completed).
+7.  **okay i deployed the latest code, can you also confirm whether webhook was sent for the 3 USDT to Nomadly from the previous railway log after payment was received?** - User confirmed a deployment and asked for log verification. (Status: Completed).
+8.  **yes check if there is actually payment stucked. also, would it send cheaper if the recipients already has USDT before?** - User asked for confirmation of a stuck payment and clarification on TRON fees. (Status: Completed).
+9.  **yes trigger the stuck payment** - User gave approval to attempt recovery of the stuck payment. (Status: Completed).
+10. **okay i just funded the gas wallet again, it was funded less than 12 hours ago also and not sure what is draining the TRX** - User reported an issue with the gas wallet being drained, which led to the discovery and fix of the gas drain bug. (Status: Completed).
 
 **Project Health Check:**
-- **Broken:**
-  - The TRX hot wallet funding mechanism is not working, requiring manual intervention.
-  - Merchant webhooks are consistently failing with a 404 error.
-- **Mocked:**
-  - None.
+-   **Broken:** None.
+-   **Mocked:** None.
 
 **3rd Party Integrations**
-- **Tatum:** Used for all blockchain interactions (address generation, transaction broadcasting, on-chain data fetching).
+-   **Tatum:** Blockchain infrastructure API for all crypto operations. Requires an API key.
+-   **Railway:** Application hosting platform. API is used via a Project-Access-Token for log analysis.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES (The agent ran the full test suite via ).
-- **Test files created:** None.
-- **Known regressions:** None. All 182 tests passed.</analysis>
+-   **Testing agent used after significant changes:** YES
+-   **Troubleshoot agent used after agent stuck in loop:** NO
+-   **Test files created:** None
+-   **Known regressions:** The auto-convert icon on the transaction page is not working due to the recent status name changes. This is the issue currently being fixed.
+
+**Credentials to test flow:**
+-   The Railway Project-Access-Token is stored in  and can be used for production log analysis.
+-   Admin JWT for local API testing can be generated using the  in .
+
+**What agent forgot to execute**
+The agent did not forget any major tasks. The final action was a logical next step that failed due to a tooling limitation ( without ), not a planning error.</analysis>
