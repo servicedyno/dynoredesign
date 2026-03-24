@@ -391,8 +391,8 @@ const CreatePaymentLinkPage = ({
   }, [paymentSettings.value, paymentSettings.currency, dispatch]);
 
   const handleCreatePaymentLink = () => {
-    // Prevent multiple rapid clicks
-    if (isCreating || paymentLinkState?.loading) return;
+    // Prevent multiple rapid clicks — use createLoading (not generic loading which can be stuck from fee preview)
+    if (isCreating || paymentLinkState?.createLoading) return;
 
     // Always validate payment settings from Tab 0 regardless of active tab
     setPaymentSettingsTouched({

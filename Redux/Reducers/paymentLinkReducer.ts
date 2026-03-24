@@ -33,6 +33,12 @@ const paymentLinkReducer = (
 
   switch (action.type) {
     case PAYLINK_INIT:
+      // Only set loading for FETCH/CREATE/UPDATE/DELETE — NOT for FEE_PREVIEW
+      // Bug fix: FEE_PREVIEW was setting loading=true for new users (0 payment links)
+      // and never resetting it, causing the Create button to silently do nothing.
+      if ((action as any).crudType === PAYLINK_FEE_PREVIEW) {
+        return state; // fee preview should not affect loading state
+      }
       return {
         ...state,
         loading: state.paymentLinks.length === 0,
@@ -49,6 +55,7 @@ const paymentLinkReducer = (
     case PAYLINK_CREATE:
       return {
         ...state,
+        loading: false,
         createLoading: false,
         paymentLinks: [payload.paymentLink, ...state.paymentLinks],
       };
@@ -84,6 +91,7 @@ const paymentLinkReducer = (
     case PAYLINK_FEE_PREVIEW:
       return {
         ...state,
+        loading: false,
         feePreview: payload.feePreview,
       };
 
