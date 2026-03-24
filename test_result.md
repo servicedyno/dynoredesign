@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://dynopay-fix-1.preview.emergentagent.com/api
+  - target_url: https://onboarding-flow-88.preview.emergentagent.com/api
   - test_endpoints:
     - GET /api/: Health check (should return 200)
     - POST /api/public/create-trial-link: Should now return 403/404 (REMOVED feature)
@@ -16,7 +16,7 @@ backend:
     - No 500 errors on public endpoints ✅ VERIFIED
 
 frontend:
-  - target_url: https://dynopay-fix-1.preview.emergentagent.com
+  - target_url: https://onboarding-flow-88.preview.emergentagent.com
   - not testing frontend at this time
 
 ## Testing Protocol
