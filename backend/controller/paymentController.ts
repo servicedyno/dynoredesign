@@ -8214,7 +8214,7 @@ const calculateCheckoutFees = async (
     }
 
     // Validate fiat currency (common fiat currencies supported)
-    const validFiatCurrencies = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'NZD', 'SGD', 'HKD', 'NGN', 'KES', 'ZAR', 'BRL', 'MXN', 'INR', 'AED', 'SAR', 'PHP', 'THB', 'IDR', 'MYR', 'VND', 'KRW', 'TWD', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'TRY', 'ILS', 'CLP', 'COP', 'PEN', 'ARS'];
+    const validFiatCurrencies = ['USD', 'EUR', 'GBP', 'AUD', 'CAD', 'CHF', 'CNY', 'JPY', 'NZD', 'SGD', 'HKD', 'NGN', 'KES', 'ZAR', 'BRL', 'MXN', 'INR', 'PKR', 'AED', 'SAR', 'PHP', 'THB', 'IDR', 'MYR', 'VND', 'KRW', 'TWD', 'SEK', 'NOK', 'DKK', 'PLN', 'CZK', 'HUF', 'RON', 'TRY', 'ILS', 'CLP', 'COP', 'PEN', 'ARS'];
     if (!validFiatCurrencies.includes(fiatCurrency)) {
       return errorResponseHelper(res, 400, `Invalid currency. Common options: USD, EUR, GBP, AUD, CAD, etc.`);
     }

@@ -166,7 +166,7 @@ const CreatePaymentLinkPage = ({
 
   const [currencyOpen, setCurrencyOpen] = useState(false);
 
-  const currencies = ["USD", "EUR", "GBP", "INR", "AED"];
+  const currencies = ["USD", "EUR", "GBP", "INR", "PKR", "AED"];
 
   const handleCurrencyOpen = (e: React.MouseEvent<HTMLButtonElement>) => {
     currencyAnchorEl.current = e.currentTarget;

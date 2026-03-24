@@ -50,6 +50,28 @@ const linkMiddleware = (
     "HKD",
     "NZD",
     "SGD",  // Singapore Dollar
+    // Fiat - South & Southeast Asia
+    "INR",  // Indian Rupee
+    "PKR",  // Pakistani Rupee
+    "AED",  // UAE Dirham
+    "SAR",  // Saudi Riyal
+    "PHP",  // Philippine Peso
+    "THB",  // Thai Baht
+    "IDR",  // Indonesian Rupiah
+    "MYR",  // Malaysian Ringgit
+    "VND",  // Vietnamese Dong
+    "KRW",  // South Korean Won
+    "TWD",  // Taiwan Dollar
+    // Fiat - European (non-EUR)
+    "SEK",  // Swedish Krona
+    "NOK",  // Norwegian Krone
+    "DKK",  // Danish Krone
+    "PLN",  // Polish Zloty
+    "CZK",  // Czech Koruna
+    "HUF",  // Hungarian Forint
+    "RON",  // Romanian Leu
+    "TRY",  // Turkish Lira
+    "ILS",  // Israeli Shekel
     // Fiat - Latin America (high crypto adoption)
     "BRL",  // Brazilian Real
     "ARS",  // Argentine Peso

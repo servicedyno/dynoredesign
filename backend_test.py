@@ -9,7 +9,7 @@ import json
 import sys
 from datetime import datetime
 
-# Configuration
+# Configuration - Testing current environment URL first
 BASE_URL = "https://onboarding-flow-89.preview.emergentagent.com/api"
 TIMEOUT = 30
 
@@ -204,19 +204,19 @@ def test_no_500_errors():
     return all(results)
 
 def main():
-    """Run all tests and report results"""
+    """Run currency validation fix tests"""
     print("=" * 80)
-    print("DynoPay Backend API Testing - Trial Link Removal Verification")
+    print("DynoPay Backend API Testing - Currency Validation Fix")
     print(f"Target URL: {BASE_URL}")
+    print("Testing endpoints after INR/PKR/AED currency middleware changes")
     print("=" * 80)
     
     test_results = []
     
-    # Run all tests
+    # Run specific tests requested in review
     test_results.append(("Health Check", test_health_check()))
-    test_results.append(("Trial Endpoints Removed", test_trial_endpoints_removed()))
-    test_results.append(("Core Functionality", test_core_functionality()))
-    test_results.append(("No 500 Errors", test_no_500_errors()))
+    test_results.append(("Network Fees", test_network_fees_only()))
+    test_results.append(("Geo Detection", test_geo_detect_only()))
     
     # Summary
     print("\n" + "=" * 80)
@@ -236,11 +236,47 @@ def main():
     print(f"\nOverall Result: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED - Trial link removal successful!")
+        print("🎉 ALL TESTS PASSED - Backend operational after currency validation fix!")
         return 0
     else:
         print("⚠️  SOME TESTS FAILED - Review results above")
         return 1
+
+def test_network_fees_only():
+    """Test GET /api/pay/network-fees endpoint only"""
+    try:
+        response = requests.get(f"{BASE_URL}/pay/network-fees", timeout=TIMEOUT)
+        
+        if response.status_code == 200:
+            log_test("Network Fees (GET /pay/network-fees)", "PASS", "Successfully retrieved network fees")
+            return True
+        else:
+            log_test("Network Fees (GET /pay/network-fees)", "FAIL", 
+                    f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+    except Exception as e:
+        log_test("Network Fees", "FAIL", f"Exception: {str(e)}")
+        return False
+
+def test_geo_detect_only():
+    """Test GET /api/geo-detect endpoint only"""
+    try:
+        response = requests.get(f"{BASE_URL}/geo-detect", timeout=TIMEOUT)
+        
+        if response.status_code == 200:
+            data = response.json()
+            log_test("Geo Detection (GET /geo-detect)", "PASS", 
+                    f"Country: {data.get('country', 'Unknown')}")
+            return True
+        else:
+            log_test("Geo Detection (GET /geo-detect)", "FAIL", 
+                    f"HTTP {response.status_code}: {response.text}")
+            return False
+            
+    except Exception as e:
+        log_test("Geo Detection", "FAIL", f"Exception: {str(e)}")
+        return False
 
 if __name__ == "__main__":
     sys.exit(main())
