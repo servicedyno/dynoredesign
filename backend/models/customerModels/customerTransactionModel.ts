@@ -65,6 +65,11 @@ const customerTransactionModel = sequelize.define(
       type: DataTypes.STRING,
       defaultValue: "failed",
     },
+    unique_tx_id: {
+      type: DataTypes.STRING,
+      allowNull: true,
+      comment: "Payment ID linking this transaction to the payment tracker (crypto-{address} or payment link ID)",
+    },
   },
   {
     tableName: "tbl_customer_transaction",

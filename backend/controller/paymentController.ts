@@ -2210,6 +2210,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             paid_amount: data.amount.toFixed(2),
             paid_currency: data.currency,
             transaction_reference: data.flw_ref,
+            unique_tx_id: tempData.payment_id || tempData.unique_tx_id || tempData.id,
             transaction_type: tempData?.pathType?.includes("addFund")
               ? "CREDIT"
               : "PAYMENT",
@@ -2388,6 +2389,7 @@ const confirmPayment = async (req: express.Request, res: express.Response) => {
             paid_amount: Number(tempData.paid_amount).toFixed(2),
             paid_currency: tempData.paid_currency,
             transaction_reference: tempData.id,
+            unique_tx_id: tempData.payment_id || tempData.unique_tx_id || tempData.id,
             transaction_type: "DEBIT",
             transaction_details: product_name
               ? "Made payment for " +
@@ -4193,6 +4195,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         paid_amount: Number(receivedAmount).toFixed(6),
         paid_currency: tempCurrency,
         transaction_reference: transactionId,
+        unique_tx_id: tempData?.payment_id || tempData?.unique_tx_id || customerData?.payment_id,
         transaction_type: customerData?.pathType?.includes("addFund")
           ? "CREDIT"
           : "PAYMENT",
