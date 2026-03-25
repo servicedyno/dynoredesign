@@ -100,6 +100,10 @@ let restFallbackCooldownUntil = 0;
 const REST_MAX_FAILURES = 5;
 const REST_COOLDOWN_MS = 5 * 60 * 1000; // 5 min cooldown after consecutive REST failures
 
+/** Mutex to prevent concurrent REST fallback calls from creating error storms */
+let restFetchInProgress = false;
+let restFetchPromise: Promise<void> | null = null;
+
 // ============================================
 // WebSocket Connection
 // ============================================
@@ -347,11 +351,30 @@ const BINANCE_HEADERS = {
 /**
  * Fetch current prices via REST (single call for all symbols).
  * Only used when WebSocket data is stale.
- * Falls through to CoinGecko if Binance REST is geo-blocked (451).
+ * Falls through: Binance REST → CoinGecko → Kraken → Coinbase.
+ * Mutex-protected: concurrent callers share a single in-flight request.
  */
 const restFetchPrices = async (): Promise<void> => {
   if (Date.now() < restFallbackCooldownUntil) return; // Respect cooldown
 
+  // Mutex: if a fetch is already in progress, await it and return
+  if (restFetchInProgress && restFetchPromise) {
+    await restFetchPromise.catch(() => {}); // Swallow — caller reads priceCache
+    return;
+  }
+
+  restFetchInProgress = true;
+  restFetchPromise = _restFetchPricesImpl();
+  try {
+    await restFetchPromise;
+  } finally {
+    restFetchInProgress = false;
+    restFetchPromise = null;
+  }
+};
+
+const _restFetchPricesImpl = async (): Promise<void> => {
+  // ── Attempt 1: Binance REST (via proxy if configured) ──
   try {
     const symbols = TRACKED_ASSETS.map((a) => `"${a}USDT"`).join(",");
     const url = `${BINANCE_REST_BASE}/api/v3/ticker/price?symbols=[${symbols}]`;
@@ -371,38 +394,57 @@ const restFetchPrices = async (): Promise<void> => {
       };
     }
 
-    restFallbackFailures = 0; // Reset on success
+    restFallbackFailures = 0;
     log("REST fallback price refresh succeeded (Binance)");
+    return;
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     const is451 = msg.includes("451") || msg.includes("403");
-
-    // If geo-blocked, try CoinGecko as secondary REST fallback
     if (is451) {
-      log("Binance REST geo-blocked (451) — trying CoinGecko fallback...");
-      try {
-        await restFetchPricesCoinGecko();
-        restFallbackFailures = 0; // CoinGecko worked, reset counter
-        return; // Success via CoinGecko
-      } catch (cgErr) {
-        logError(`CoinGecko fallback also failed: ${cgErr instanceof Error ? cgErr.message : String(cgErr)}`);
-      }
+      log("Binance REST geo-blocked (451) — trying fallback chain...");
     }
+  }
 
-    restFallbackFailures++;
+  // ── Attempt 2: CoinGecko ──
+  try {
+    await restFetchPricesCoinGecko();
+    restFallbackFailures = 0;
+    return;
+  } catch (cgErr) {
+    logError(`CoinGecko fallback failed: ${cgErr instanceof Error ? cgErr.message : String(cgErr)}`);
+  }
 
-    if (restFallbackFailures >= REST_MAX_FAILURES) {
-      restFallbackCooldownUntil = Date.now() + REST_COOLDOWN_MS;
-      // Downgrade severity if we have cached prices that are still somewhat fresh (< 30 min)
-      const hasFreshCache = Object.values(priceCache).some(p => (Date.now() - p.updatedAt) < 30 * 60 * 1000);
-      const severity = hasFreshCache ? "low" : "high";
-      logError(`❌ REST fallback failed ${restFallbackFailures}x — cooling down for ${REST_COOLDOWN_MS / 1000}s`);
-      captureError(
-        new Error(`Binance REST fallback exhausted after ${restFallbackFailures} failures: ${msg}`),
-        "blockchain",
-        { severity, extraContext: `REST price fallback circuit open${is451 ? " (geo-blocked, CoinGecko also failed)" : ""}` }
-      );
-    }
+  // ── Attempt 3: Kraken (US-based, no geo-blocking) ──
+  try {
+    await restFetchPricesKraken();
+    restFallbackFailures = 0;
+    return;
+  } catch (krakenErr) {
+    logError(`Kraken fallback failed: ${krakenErr instanceof Error ? krakenErr.message : String(krakenErr)}`);
+  }
+
+  // ── Attempt 4: Coinbase (US-based, always accessible) ──
+  try {
+    await restFetchPricesCoinbase();
+    restFallbackFailures = 0;
+    return;
+  } catch (cbErr) {
+    logError(`Coinbase fallback failed: ${cbErr instanceof Error ? cbErr.message : String(cbErr)}`);
+  }
+
+  // ── All fallbacks exhausted ──
+  restFallbackFailures++;
+
+  if (restFallbackFailures >= REST_MAX_FAILURES) {
+    restFallbackCooldownUntil = Date.now() + REST_COOLDOWN_MS;
+    const hasFreshCache = Object.values(priceCache).some(p => (Date.now() - p.updatedAt) < 30 * 60 * 1000);
+    const severity = hasFreshCache ? "low" : "high";
+    logError(`❌ All REST price fallbacks exhausted (Binance→CoinGecko→Kraken→Coinbase) after ${restFallbackFailures} cycles — cooling down for ${REST_COOLDOWN_MS / 1000}s`);
+    captureError(
+      new Error(`All price fallbacks exhausted after ${restFallbackFailures} cycles`),
+      "blockchain",
+      { severity, extraContext: `All 4 price sources failed. Cache ${hasFreshCache ? "still fresh (<30m)" : "STALE — prices may be inaccurate"}.` }
+    );
   }
 };
 
@@ -438,6 +480,100 @@ const restFetchPricesCoinGecko = async (): Promise<void> => {
     }
   }
   log("REST fallback price refresh succeeded (CoinGecko)");
+};
+
+/**
+ * Kraken fallback for price fetching.
+ * Kraken is US-based — no geo-blocking issues. Free, no API key needed.
+ * Note: BNB/POL are not on Kraken — they retain their last cached value.
+ */
+const KRAKEN_PAIR_MAP: Record<string, string> = {
+  BTC: "XBTUSD", ETH: "ETHUSD", LTC: "LTCUSD", DOGE: "DOGEUSD",
+  SOL: "SOLUSD", XRP: "XRPUSD", BCH: "BCHUSD", TRX: "TRXUSD",
+};
+/** Kraken returns non-standard keys in result — map from Kraken's result key to our asset */
+const KRAKEN_RESULT_TO_ASSET: Record<string, string> = {
+  "XXBTZUSD": "BTC", "XETHUSD": "ETH", "XLTCZUSD": "LTC", "XDOGEUSD": "DOGE",
+  "SOLUSD": "SOL", "XXRPZUSD": "XRP", "BCHUSD": "BCH", "TRXUSD": "TRX",
+  // Kraken sometimes returns the exact pair name too
+  "XBTUSD": "BTC", "ETHUSD": "ETH", "LTCUSD": "LTC", "DOGEUSD": "DOGE",
+  "XRPUSD": "XRP",
+};
+
+const restFetchPricesKraken = async (): Promise<void> => {
+  const pairs = Object.values(KRAKEN_PAIR_MAP).join(",");
+  const url = `https://api.kraken.com/0/public/Ticker?pair=${pairs}`;
+  const resp = await axios.get(url, { timeout: 10000 });
+
+  if (resp.data.error && resp.data.error.length > 0) {
+    throw new Error(`Kraken API error: ${resp.data.error.join(", ")}`);
+  }
+
+  const result = resp.data.result;
+  let updated = 0;
+  for (const [krakenKey, tickerData] of Object.entries(result)) {
+    const asset = KRAKEN_RESULT_TO_ASSET[krakenKey];
+    if (!asset) continue;
+    const td = tickerData as { c?: string[]; o?: string };
+    const price = td.c ? parseFloat(td.c[0]) : 0; // c = [last_trade_price, lot_volume]
+    const open = td.o ? parseFloat(td.o) : 0;
+    const changePercent = open > 0 ? ((price - open) / open) * 100 : 0;
+    if (price > 0) {
+      priceCache[asset] = {
+        symbol: `${asset}USDT`,
+        asset,
+        price,
+        priceChangePercent: parseFloat(changePercent.toFixed(4)),
+        volume: priceCache[asset]?.volume || 0,
+        quoteVolume: priceCache[asset]?.quoteVolume || 0,
+        updatedAt: Date.now(),
+      };
+      updated++;
+    }
+  }
+  if (updated === 0) throw new Error("Kraken returned no valid prices");
+  log(`REST fallback price refresh succeeded (Kraken — ${updated} assets)`);
+};
+
+/**
+ * Coinbase fallback — last resort. US-based, always accessible, no API key.
+ * Uses exchange rates endpoint to get all crypto prices in one call.
+ */
+const COINBASE_ASSET_MAP: Record<string, string> = {
+  BTC: "BTC", ETH: "ETH", LTC: "LTC", DOGE: "DOGE",
+  SOL: "SOL", XRP: "XRP", BCH: "BCH", BNB: "BNB",
+  TRX: "TRX", POL: "POL",
+};
+
+const restFetchPricesCoinbase = async (): Promise<void> => {
+  // Coinbase exchange-rates returns 1 USD = X crypto, so price = 1/rate
+  const url = `https://api.coinbase.com/v2/exchange-rates?currency=USD`;
+  const resp = await axios.get(url, { timeout: 10000 });
+
+  const rates = resp.data?.data?.rates;
+  if (!rates) throw new Error("Coinbase returned no rate data");
+
+  let updated = 0;
+  for (const asset of TRACKED_ASSETS) {
+    const cbAsset = COINBASE_ASSET_MAP[asset] || asset;
+    const rate = rates[cbAsset];
+    if (!rate) continue;
+    const price = 1 / parseFloat(rate); // Convert from "1 USD = X crypto" to "1 crypto = Y USD"
+    if (price > 0 && Number.isFinite(price)) {
+      priceCache[asset] = {
+        symbol: `${asset}USDT`,
+        asset,
+        price: parseFloat(price.toFixed(8)),
+        priceChangePercent: priceCache[asset]?.priceChangePercent || 0,
+        volume: priceCache[asset]?.volume || 0,
+        quoteVolume: priceCache[asset]?.quoteVolume || 0,
+        updatedAt: Date.now(),
+      };
+      updated++;
+    }
+  }
+  if (updated === 0) throw new Error("Coinbase returned no valid prices");
+  log(`REST fallback price refresh succeeded (Coinbase — ${updated} assets)`);
 };
 
 /**
