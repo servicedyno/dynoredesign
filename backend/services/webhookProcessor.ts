@@ -40,15 +40,23 @@ import { Op } from "sequelize";
  * in this map is treated as unknown (potential spam/scam token).
  */
 const TATUM_ASSET_TO_CURRENCY: Record<string, string[]> = {
-  // Native chains
+  // Native chains — ONLY native currency, NOT tokens on that chain.
+  // Gas funding (e.g., TRON arriving at USDT-TRC20 address) is handled
+  // separately by GAS_TOKEN_FOR_CURRENCY below.
+  // 
+  // ⚠️ CRITICAL: Do NOT add token currencies here (e.g., USDT-TRC20 under TRON).
+  //    A native TRON webhook (asset="TRON") means TRX was transferred, NOT USDT.
+  //    Adding USDT-TRC20 here would cause dust TRX transactions (gas change, spam)
+  //    to be misidentified as USDT payments — leading to $0 merchant emails and
+  //    corrupted payment records. See incident 2026-03-25.
   BTC:        ["BTC"],
-  ETH:        ["ETH", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20"],   // ETH is gas token for ERC-20
-  TRON:       ["TRX", "USDT-TRC20"],                                  // TRON is gas token for TRC-20
+  ETH:        ["ETH"],                   // Native ETH only — NOT ERC-20 tokens
+  TRON:       ["TRX"],                   // Native TRX only — NOT TRC-20 tokens
   LTC:        ["LTC"],
   DOGE:       ["DOGE"],
   BCH:        ["BCH"],
-  XRP:        ["XRP", "RLUSD"],
-  MATIC:      ["POLYGON", "USDT-POLYGON"],
+  XRP:        ["XRP"],                   // Native XRP only — NOT RLUSD token
+  MATIC:      ["POLYGON"],               // Native MATIC only — NOT Polygon tokens
   BNB:        ["BSC"],
   SOL:        ["SOL"],
 
@@ -372,6 +380,41 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       }
 
       webhookLogs.info(`[WebhookProcessor] ✅ Asset validated: "${webhookAsset}" → "${expectedCurrency}"`);
+    }
+
+    // ── PAYMENT-LEVEL GUARD: Prevent parallel settlement of same payment ────
+    // Two different txIds can arrive for the same payment_id within seconds
+    // (e.g., a real USDT transfer + a native TRX dust/gas change). Even though
+    // Fix 1 (asset validation) blocks most of these, this guard provides
+    // defense-in-depth against any race condition on the same payment.
+    const paymentId_guard = items.payment_id || items.ref;
+    if (paymentId_guard) {
+      const paymentSettlementKey = `payment-settlement-lock-${paymentId_guard}`;
+      const existingSettlement = await getRedisItem(paymentSettlementKey);
+      if (existingSettlement) {
+        // Block if settlement already completed for this payment
+        if (existingSettlement.status === "completed") {
+          webhookLogs.info(
+            `[WebhookProcessor] ⚠️ PAYMENT GUARD: Payment ${paymentId_guard} already settled by TX ${existingSettlement.txId}. Skipping TX ${payload.txId}.`
+          );
+          return;
+        }
+        // Block if another TX is actively being settled (< 2 min)
+        if (existingSettlement.status === "in_progress") {
+          const startedAt = new Date(existingSettlement.started_at as string).getTime();
+          const elapsed = Date.now() - startedAt;
+          if (elapsed < 120000) {
+            webhookLogs.info(
+              `[WebhookProcessor] ⚠️ PAYMENT GUARD: Payment ${paymentId_guard} already being settled by TX ${existingSettlement.txId} (${Math.round(elapsed / 1000)}s ago). Skipping TX ${payload.txId} to prevent race condition.`
+            );
+            return;
+          }
+          // If > 2 minutes, consider stale and allow re-processing
+          webhookLogs.warn(
+            `[WebhookProcessor] Payment settlement lock for ${paymentId_guard} is stale (${Math.round(elapsed / 1000)}s), proceeding with TX ${payload.txId}`
+          );
+        }
+      }
     }
 
     // ── RELIABILITY: Journal payment detection to PostgreSQL ──
@@ -901,6 +944,18 @@ async function handleNewTransaction(
     });
     await setRedisTTL(`processed-tx-${payload.txId}`, 600); // 10 min guard — will be updated to permanent on completion
 
+    // ── PAYMENT-LEVEL SETTLEMENT LOCK ─────────────────────────────────────────
+    // Mark this payment as actively being settled so parallel webhooks for the
+    // same payment_id are blocked by the guard above (Fix 2).
+    const paymentSettlementKey = `payment-settlement-lock-${items.payment_id || items.ref}`;
+    await setRedisItem(paymentSettlementKey, {
+      status: "in_progress",
+      txId: payload.txId,
+      amount: finalReceivedAmount,
+      started_at: new Date().toISOString(),
+    });
+    await setRedisTTL(paymentSettlementKey, 300); // 5 min — auto-expires if settlement hangs
+
     await setRedisItem(redisKey, {
       ...items, status: "processing",
       receivedAmount: finalReceivedAmount, txId: payload.txId,
@@ -993,6 +1048,16 @@ async function handleNewTransaction(
       incomplete: "false", completedAt: new Date().toISOString(),
     });
     await setRedisTTL(redisKey, 1800);
+
+    // Clear the payment-level settlement lock now that settlement is complete
+    const completedSettlementKey = `payment-settlement-lock-${items.payment_id || items.ref}`;
+    await setRedisItem(completedSettlementKey, {
+      status: "completed",
+      txId: payload.txId,
+      amount: finalReceivedAmount,
+      completed_at: new Date().toISOString(),
+    });
+    await setRedisTTL(completedSettlementKey, 300); // Keep for 5 min so late duplicates are still blocked
 
     if (items?.ref) {
       const custData = await getRedisItem(items.ref);

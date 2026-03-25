@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend Testing Script
-Testing endpoints after double SUN→TRX conversion bug fix
+Testing specific endpoints from review request:
+1. GET /api/ — Health check, should return 200 with status "operational"
+2. GET /api/pay/network-fees — Should return 200 with network fee data
+3. GET /api/geo-detect — Should return 200 with geo detection info
 """
 
 import requests
@@ -47,17 +50,16 @@ def test_endpoint(method, url, description):
 def main():
     """Run all backend tests"""
     print("=" * 60)
-    print("🚀 DynoPay Backend Testing - Double SUN→TRX Bug Fix Verification")
+    print("🚀 DynoPay Backend Testing - Review Request Verification")
     print("=" * 60)
     print(f"Target URL: {BASE_URL}")
     print(f"Test Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     
     # Test endpoints as specified in review request
     test_cases = [
-        ("GET", f"{BASE_URL}/api/status/health", "Health status with database/redis info"),
-        ("GET", f"{BASE_URL}/health", "Basic health check"),
-        ("GET", f"{BASE_URL}/api/csrf-token", "CSRF token endpoint"),
-        ("GET", f"{BASE_URL}/api/docs", "Swagger documentation"),
+        ("GET", f"{BASE_URL}/api/", "Health check - should return 200 with status 'operational'"),
+        ("GET", f"{BASE_URL}/api/pay/network-fees", "Network fees - should return 200 with network fee data"),
+        ("GET", f"{BASE_URL}/api/geo-detect", "Geo detection - should return 200 with geo detection info"),
     ]
     
     results = []
