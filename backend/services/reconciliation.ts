@@ -91,11 +91,28 @@ export async function runStartupReconciliation(): Promise<{
   webhookLogs.info(`[Reconciliation] Complete. Total re-queued: ${total}, Errors: ${stats.errors.length}`);
 
   if (total > 0) {
+    // Severity logic:
+    // - Stuck/failed payments are ACTUAL issues → count toward high severity
+    // - Tatum missed webhooks are REPLAYS that go through full validation pipeline
+    //   (asset check, payment guard, etc.) → only concerning if many are missed
+    // - BullMQ failed jobs are internal retries → moderate concern
+    const criticalCount = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments;
+    const replayCount = stats.tatumMissed + stats.bullmqFailedJobs;
+
+    let severity: "high" | "medium" | "low";
+    if (criticalCount > 3 || total > 20) {
+      severity = "high";  // Actual stuck/failed payments, or huge backlog
+    } else if (criticalCount > 0 || replayCount > 10) {
+      severity = "medium"; // Some real issues, or notable replay backlog
+    } else {
+      severity = "low";   // Only Tatum replays — normal after restart
+    }
+
     captureError(
       new Error(`Reconciliation found ${total} items to process`),
       "system",
       {
-        severity: total > 5 ? "high" : "low",
+        severity,
         extraContext: JSON.stringify(stats),
       }
     );
@@ -404,6 +421,18 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
         const isOutgoing = await getRedisItem(outgoingTxKey);
         if (isOutgoing && Object.keys(isOutgoing).length > 0) {
           skippedProcessed++;
+          continue;
+        }
+
+        // Skip obvious gas/dust transactions — native chain tokens with dust amounts.
+        // These are gas-change or spam TXs that the webhook processor would reject anyway
+        // via asset validation, but filtering here avoids unnecessary queue churn.
+        const GAS_DUST_ASSETS = new Set(["TRON", "ETH", "MATIC", "BNB"]);
+        const webhookAmount = parseFloat(webhookData.amount || "0");
+        if (GAS_DUST_ASSETS.has((webhookData.asset || "").toUpperCase()) && webhookAmount < 0.01) {
+          webhookLogs.info(`[Reconciliation] Skipping gas/dust TX: txId=${webhookData.txId}, asset=${webhookData.asset}, amount=${webhookAmount}`);
+          const reconciledKey2 = `reconciled-tx-${webhookData.txId}`;
+          await setRedisItemWithTTL(reconciledKey2, { reconciledAt: new Date().toISOString(), source: "gas-dust-skip" }, 30 * 24 * 60 * 60);
           continue;
         }
 
