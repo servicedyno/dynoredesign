@@ -45,6 +45,7 @@ frontend:
 ## Incorporate User Feedback
 - **2026-03-25: Double SUN→TRX conversion bug fix** — Removed extra /1000000 in 4 files (merchantPoolSweep.ts, paymentController.ts×2, adminController.ts). Root cause of TRX fee wallet drain and false $0 balance alerts.
 - **2026-03-25: Added unique_tx_id column to customerTransactionModel** — Missing column caused force-resolve-payment to fail at update_customer_transaction step. Added to model (auto-migrated via sync alter) and populated in all 3 customerTransactionModel.create() sites.
+- **2026-03-25: Fixed reconciliation re-queuing fee wallet transactions** — Reconciliation now loads fee wallet addresses from DB and skips webhooks targeting them. Also marks `recover-excess-trx` transactions as `outgoing-tx-{txId}` in Redis to prevent double processing.
 - Railway log analysis completed — identified TRON spam token attack (ha138com) as root cause of TRX payment issues
 - Implemented asset validation fix in webhookProcessor.ts and webhooks/index.ts
 - Fixed watchdog deduplication in paymentReliability.ts

@@ -330,6 +330,17 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
     return 0;
   }
 
+  // Build a set of fee wallet addresses to skip (internal fund movements are not customer payments)
+  let feeWalletAddresses: Set<string> = new Set();
+  try {
+    const { adminFeeModel } = await import("../models");
+    const feeWallets = await adminFeeModel.findAll({ attributes: ["wallet_address"] });
+    feeWalletAddresses = new Set(feeWallets.map((w: any) => w.dataValues.wallet_address?.toLowerCase()).filter(Boolean));
+    webhookLogs.info(`[Reconciliation] Loaded ${feeWalletAddresses.size} fee wallet addresses to exclude`);
+  } catch (feeErr) {
+    webhookLogs.error(`[Reconciliation] Could not load fee wallets (non-fatal): ${(feeErr as Error).message}`);
+  }
+
   try {
     // Get failed webhooks from Tatum (most recent first so we can stop early)
     const headers = { "x-api-key": tatumKey };
@@ -347,6 +358,7 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
     // Filter to only recent webhooks (last 7 days)
     let skippedStale = 0;
     let skippedProcessed = 0;
+    let skippedFeeWallet = 0;
 
     for (const webhook of failedWebhooks) {
       try {
@@ -362,6 +374,16 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
 
         const webhookData = typeof webhook.data === "string" ? JSON.parse(webhook.data) : webhook.data;
         if (!webhookData?.txId) continue;
+
+        // Skip webhooks targeting fee wallet addresses (internal fund movements, not customer payments)
+        const webhookAddress = (webhookData.address || "").toLowerCase();
+        if (webhookAddress && feeWalletAddresses.has(webhookAddress)) {
+          skippedFeeWallet++;
+          // Mark as reconciled so it doesn't appear again
+          const reconciledKey = `reconciled-tx-${webhookData.txId}`;
+          await setRedisItemWithTTL(reconciledKey, { reconciledAt: new Date().toISOString(), source: "fee-wallet-skip" }, 30 * 24 * 60 * 60);
+          continue;
+        }
 
         // Check if we already processed OR already reconciled this transaction
         const processedKey = `processed-tx-${webhookData.txId}`;
@@ -409,7 +431,7 @@ async function reconcileTatumFailedWebhooks(): Promise<number> {
     }
 
     webhookLogs.info(
-      `[Reconciliation] Tatum webhooks: ${count} re-queued, ${skippedStale} skipped (older than ${MAX_AGE_DAYS}d), ${skippedProcessed} skipped (already processed)`
+      `[Reconciliation] Tatum webhooks: ${count} re-queued, ${skippedStale} skipped (older than ${MAX_AGE_DAYS}d), ${skippedProcessed} skipped (already processed), ${skippedFeeWallet} skipped (fee wallet)`
     );
   } catch (apiErr) {
     const msg = (apiErr as Error).message;

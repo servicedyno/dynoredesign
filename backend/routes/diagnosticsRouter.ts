@@ -632,7 +632,7 @@ router.get("/weekly-conversion-email-preview", async (_req: express.Request, res
 // ─── STUCK PAYMENT RECOVERY ──────────────────────────────────────────────────
 
 import tatumApi from "../apis/tatumApi";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, setRedisItemWithTTL } from "../utils/redisInstance";
 import { userWalletModel } from "../models";
 import { merchantTempAddressModel, merchantPoolTransactionModel } from "../models/merchantPoolModels";
 import { fundGasIfNeeded } from "../services/merchantPool/merchantPoolSweep";
@@ -1455,6 +1455,17 @@ router.post("/recover-excess-trx", adminAuthMiddleware, async (req: express.Requ
           totalRecovered += recoverable;
 
           cronLogger.info(`[RecoverExcessTRX] Sent ${recoverable} TRX from ${walletAddress} → ${feeWalletAddress} (TX: ${txResult?.txId})`);
+
+          // Mark as outgoing so reconciliation doesn't re-queue it as a missed customer payment
+          if (txResult?.txId) {
+            await setRedisItemWithTTL(`outgoing-tx-${txResult.txId}`, {
+              type: "recover-excess-trx",
+              from: walletAddress,
+              to: feeWalletAddress,
+              amount: recoverable,
+              createdAt: new Date().toISOString(),
+            }, 30 * 24 * 60 * 60); // 30-day TTL
+          }
 
           // Small delay between transactions to avoid rate limits
           await new Promise(resolve => setTimeout(resolve, 3000));
