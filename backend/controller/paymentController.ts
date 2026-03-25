@@ -6939,10 +6939,8 @@ const sweepNativeAdminFees = async () => {
         cronLogger.info(`[sweepNativeAdminFees] Will sweep to admin wallet: ${adminWalletAddress}`);
         let balance = Number(addressBalance?.balance ?? 0);
         
-        // For TRX, convert from SUN to TRX
-        if (wallet_type === "TRX") {
-          balance = balance / 1000000;
-        }
+        // NOTE: getAddressBalance() already converts SUN→TRX for TRX currency.
+        // Do NOT divide by 1,000,000 again — double-division caused incorrect sweep amounts.
 
         cronLogger.info(`[sweepNativeAdminFees] Address balance: ${balance} ${wallet_type}`);
 
@@ -7098,10 +7096,9 @@ const checkFeeBalance = async () => {
         throw balErr;
       }
       let amount = adminFeesWallets[i]?.dataValues.amount;
-      let newBalance =
-        wallet_type === "TRX"
-          ? currentBalance?.balance / 1000000
-          : currentBalance?.balance;
+      // NOTE: getAddressBalance() already converts SUN→TRX for TRX currency.
+      // Do NOT divide by 1,000,000 again — double-division caused false $0 alerts.
+      let newBalance = currentBalance?.balance;
       
       // Quiet mode: only log when balance changes, not every check cycle
       if (Math.abs(Number(newBalance) - Number(adminFeesWallets[i]?.dataValues.amount)) > 0.000001) {

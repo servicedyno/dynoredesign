@@ -78,9 +78,9 @@ export const fundGasIfNeeded = async (
     }
     let currentBalance = Number(balanceResult?.balance ?? 0);
     
-    if (gasToken === "TRX") {
-      currentBalance = currentBalance / 1000000;
-    }
+    // NOTE: getAddressBalance() already converts SUN→TRX for TRX currency.
+    // Do NOT divide by 1,000,000 again — that was causing double-division,
+    // making balances appear 1M× smaller and triggering unnecessary gas funding.
 
     cronLogger.info(`[SmartGas] Current balance: ${currentBalance} ${gasToken} in ${tempAddress}`);
 

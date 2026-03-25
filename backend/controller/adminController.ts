@@ -418,10 +418,9 @@ const getFeeWalletBalance = async (
         adminFeesWallets[i]?.dataValues.wallet_type
       );
       let amount = adminFeesWallets[i]?.dataValues.amount;
-      let newBalance =
-        adminFeesWallets[i]?.dataValues.wallet_type === "TRX"
-          ? currentBalance?.balance / 1000000
-          : currentBalance?.balance;
+      // NOTE: getAddressBalance() already converts SUN→TRX for TRX currency.
+      // Do NOT divide by 1,000,000 again — double-division caused wrong admin display.
+      let newBalance = currentBalance?.balance;
       adminLogger.info("newBalance=========>", newBalance);
       if (newBalance != adminFeesWallets[i]?.dataValues.amount) {
         amount = newBalance;

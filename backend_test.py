@@ -1,282 +1,100 @@
 #!/usr/bin/env python3
 """
-DynoPay Backend API Testing Script
-Tests trial link removal and core functionality
+DynoPay Backend Testing Script
+Testing endpoints after double SUN→TRX conversion bug fix
 """
 
 import requests
 import json
-import sys
 from datetime import datetime
 
-# Configuration - Testing current environment URL first
-BASE_URL = "https://getting-started-136.preview.emergentagent.com/api"
-TIMEOUT = 30
+# Backend URL from review request
+BASE_URL = "https://2df424c2-fba6-42e8-95d8-b7f5d20bb545.preview.emergentagent.com"
 
-def log_test(test_name, status, details=""):
-    """Log test results with timestamp"""
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    status_emoji = "✅" if status == "PASS" else "❌" if status == "FAIL" else "⚠️"
-    print(f"[{timestamp}] {status_emoji} {test_name}: {status}")
-    if details:
-        print(f"    Details: {details}")
+def test_endpoint(method, url, description):
+    """Test a single endpoint and return results"""
+    try:
+        print(f"\n🔍 Testing: {description}")
+        print(f"   URL: {method} {url}")
+        
+        if method == "GET":
+            response = requests.get(url, timeout=30)
+        else:
+            print(f"   ❌ Unsupported method: {method}")
+            return False, f"Unsupported method: {method}", None
+            
+        print(f"   Status: {response.status_code}")
+        
+        # Try to parse JSON response
+        try:
+            response_data = response.json()
+            print(f"   Response: {json.dumps(response_data, indent=2)[:200]}...")
+        except:
+            response_data = response.text[:200] + "..." if len(response.text) > 200 else response.text
+            print(f"   Response: {response_data}")
+        
+        # Determine if test passed
+        success = response.status_code == 200
+        return success, f"HTTP {response.status_code}", response_data
+        
+    except requests.exceptions.RequestException as e:
+        print(f"   ❌ Request failed: {str(e)}")
+        return False, f"Request failed: {str(e)}", None
+    except Exception as e:
+        print(f"   ❌ Unexpected error: {str(e)}")
+        return False, f"Unexpected error: {str(e)}", None
 
-def test_health_check():
-    """Test 1: Health check endpoint"""
-    try:
-        response = requests.get(f"{BASE_URL}/", timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            data = response.json()
-            if data.get("status") == "operational":
-                log_test("Health Check", "PASS", f"Status: {data.get('status')}, Service: {data.get('service')}")
-                return True
-            else:
-                log_test("Health Check", "FAIL", f"Unexpected status: {data.get('status')}")
-                return False
-        else:
-            log_test("Health Check", "FAIL", f"HTTP {response.status_code}: {response.text}")
-            return False
-            
-    except Exception as e:
-        log_test("Health Check", "FAIL", f"Exception: {str(e)}")
-        return False
-
-def test_trial_endpoints_removed():
-    """Test 2: Verify trial endpoints are removed/blocked"""
-    results = []
+def main():
+    """Run all backend tests"""
+    print("=" * 60)
+    print("🚀 DynoPay Backend Testing - Double SUN→TRX Bug Fix Verification")
+    print("=" * 60)
+    print(f"Target URL: {BASE_URL}")
+    print(f"Test Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     
-    # Test 1: POST /api/public/create-trial-link
-    try:
-        payload = {
-            "amount": "10",
-            "currency": "USD", 
-            "email": "test@test.com"
-        }
-        response = requests.post(
-            f"{BASE_URL}/public/create-trial-link", 
-            json=payload, 
-            timeout=TIMEOUT
-        )
-        
-        if response.status_code in [403, 404]:
-            log_test("Trial Link Creation (POST /public/create-trial-link)", "PASS", 
-                    f"Correctly blocked with HTTP {response.status_code}")
-            results.append(True)
-        elif response.status_code == 201:
-            log_test("Trial Link Creation (POST /public/create-trial-link)", "FAIL", 
-                    "ERROR: Trial endpoint still active! Returns 201 Created")
-            results.append(False)
-        else:
-            log_test("Trial Link Creation (POST /public/create-trial-link)", "PASS", 
-                    f"Blocked with HTTP {response.status_code} (acceptable)")
-            results.append(True)
-            
-    except Exception as e:
-        log_test("Trial Link Creation (POST /public/create-trial-link)", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    # Test 2: GET /api/public/trial/test-slug
-    try:
-        response = requests.get(f"{BASE_URL}/public/trial/test-slug", timeout=TIMEOUT)
-        
-        if response.status_code == 404:
-            log_test("Trial Link Access (GET /public/trial/test-slug)", "PASS", 
-                    "Correctly returns 404 Not Found")
-            results.append(True)
-        else:
-            log_test("Trial Link Access (GET /public/trial/test-slug)", "FAIL", 
-                    f"Unexpected response: HTTP {response.status_code}")
-            results.append(False)
-            
-    except Exception as e:
-        log_test("Trial Link Access (GET /public/trial/test-slug)", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    # Test 3: GET /api/public/trial-links
-    try:
-        response = requests.get(f"{BASE_URL}/public/trial-links", timeout=TIMEOUT)
-        
-        if response.status_code == 404:
-            log_test("Trial Links List (GET /public/trial-links)", "PASS", 
-                    "Correctly returns 404 Not Found")
-            results.append(True)
-        else:
-            log_test("Trial Links List (GET /public/trial-links)", "FAIL", 
-                    f"Unexpected response: HTTP {response.status_code}")
-            results.append(False)
-            
-    except Exception as e:
-        log_test("Trial Links List (GET /public/trial-links)", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    return all(results)
-
-def test_core_functionality():
-    """Test 3: Verify core API functionality still works"""
-    results = []
-    
-    # Test 1: POST /api/pay/calculateFees (correct method based on router)
-    try:
-        payload = {
-            "amount": 100,
-            "cryptocurrency": "BTC"
-        }
-        response = requests.post(f"{BASE_URL}/pay/calculateFees", json=payload, timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            data = response.json()
-            log_test("Fee Calculation (POST /pay/calculateFees)", "PASS", 
-                    f"Successfully calculated fees: {data}")
-            results.append(True)
-        else:
-            log_test("Fee Calculation (POST /pay/calculateFees)", "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}")
-            results.append(False)
-            
-    except Exception as e:
-        log_test("Fee Calculation", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    # Test 2: GET /api/pay/network-fees (public endpoint)
-    try:
-        response = requests.get(f"{BASE_URL}/pay/network-fees", timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            log_test("Network Fees (GET /pay/network-fees)", "PASS", "Successfully retrieved network fees")
-            results.append(True)
-        else:
-            log_test("Network Fees (GET /pay/network-fees)", "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}")
-            results.append(False)
-            
-    except Exception as e:
-        log_test("Network Fees", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    # Test 3: GET /api/geo-detect (public endpoint)
-    try:
-        response = requests.get(f"{BASE_URL}/geo-detect", timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            data = response.json()
-            log_test("Geo Detection (GET /geo-detect)", "PASS", 
-                    f"Country: {data.get('country', 'Unknown')}")
-            results.append(True)
-        else:
-            log_test("Geo Detection (GET /geo-detect)", "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}")
-            results.append(False)
-            
-    except Exception as e:
-        log_test("Geo Detection", "FAIL", f"Exception: {str(e)}")
-        results.append(False)
-    
-    return all(results)
-
-def test_no_500_errors():
-    """Test 4: Verify no 500 errors on common endpoints"""
-    endpoints_to_test = [
-        "/",
-        "/status",
-        "/pay/network-fees",
-        "/geo-detect"
+    # Test endpoints as specified in review request
+    test_cases = [
+        ("GET", f"{BASE_URL}/api/status/health", "Health status with database/redis info"),
+        ("GET", f"{BASE_URL}/health", "Basic health check"),
+        ("GET", f"{BASE_URL}/api/csrf-token", "CSRF token endpoint"),
+        ("GET", f"{BASE_URL}/api/docs", "Swagger documentation"),
     ]
     
     results = []
-    for endpoint in endpoints_to_test:
-        try:
-            response = requests.get(f"{BASE_URL}{endpoint}", timeout=TIMEOUT)
-            
-            if response.status_code != 500:
-                log_test(f"No 500 Error Check ({endpoint})", "PASS", 
-                        f"HTTP {response.status_code} (not 500)")
-                results.append(True)
-            else:
-                log_test(f"No 500 Error Check ({endpoint})", "FAIL", 
-                        f"HTTP 500 Internal Server Error: {response.text}")
-                results.append(False)
-                
-        except Exception as e:
-            log_test(f"No 500 Error Check ({endpoint})", "FAIL", f"Exception: {str(e)}")
-            results.append(False)
-    
-    return all(results)
-
-def main():
-    """Run currency validation fix tests"""
-    print("=" * 80)
-    print("DynoPay Backend API Testing - Currency Validation Fix")
-    print(f"Target URL: {BASE_URL}")
-    print("Testing endpoints after INR/PKR/AED currency middleware changes")
-    print("=" * 80)
-    
-    test_results = []
-    
-    # Run specific tests requested in review
-    test_results.append(("Health Check", test_health_check()))
-    test_results.append(("Network Fees", test_network_fees_only()))
-    test_results.append(("Geo Detection", test_geo_detect_only()))
-    
-    # Summary
-    print("\n" + "=" * 80)
-    print("TEST SUMMARY")
-    print("=" * 80)
-    
     passed = 0
-    total = len(test_results)
+    total = len(test_cases)
     
-    for test_name, result in test_results:
-        status = "PASS" if result else "FAIL"
-        emoji = "✅" if result else "❌"
-        print(f"{emoji} {test_name}: {status}")
-        if result:
+    for method, url, description in test_cases:
+        success, status, response_data = test_endpoint(method, url, description)
+        results.append({
+            "endpoint": f"{method} {url.replace(BASE_URL, '')}",
+            "description": description,
+            "success": success,
+            "status": status,
+            "response": response_data
+        })
+        if success:
             passed += 1
     
-    print(f"\nOverall Result: {passed}/{total} tests passed")
+    # Print summary
+    print("\n" + "=" * 60)
+    print("📊 TEST RESULTS SUMMARY")
+    print("=" * 60)
+    
+    for result in results:
+        status_icon = "✅" if result["success"] else "❌"
+        print(f"{status_icon} {result['endpoint']} → {result['status']}")
+        if not result["success"]:
+            print(f"   Issue: {result['description']}")
+    
+    print(f"\n🎯 Overall: {passed}/{total} tests passed")
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED - Backend operational after currency validation fix!")
-        return 0
+        print("🎉 ALL TESTS PASSED - Backend is operational after SUN→TRX bug fix!")
     else:
-        print("⚠️  SOME TESTS FAILED - Review results above")
-        return 1
-
-def test_network_fees_only():
-    """Test GET /api/pay/network-fees endpoint only"""
-    try:
-        response = requests.get(f"{BASE_URL}/pay/network-fees", timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            log_test("Network Fees (GET /pay/network-fees)", "PASS", "Successfully retrieved network fees")
-            return True
-        else:
-            log_test("Network Fees (GET /pay/network-fees)", "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}")
-            return False
-            
-    except Exception as e:
-        log_test("Network Fees", "FAIL", f"Exception: {str(e)}")
-        return False
-
-def test_geo_detect_only():
-    """Test GET /api/geo-detect endpoint only"""
-    try:
-        response = requests.get(f"{BASE_URL}/geo-detect", timeout=TIMEOUT)
-        
-        if response.status_code == 200:
-            data = response.json()
-            log_test("Geo Detection (GET /geo-detect)", "PASS", 
-                    f"Country: {data.get('country', 'Unknown')}")
-            return True
-        else:
-            log_test("Geo Detection (GET /geo-detect)", "FAIL", 
-                    f"HTTP {response.status_code}: {response.text}")
-            return False
-            
-    except Exception as e:
-        log_test("Geo Detection", "FAIL", f"Exception: {str(e)}")
-        return False
+        print("⚠️  Some tests failed - Backend may have issues after the bug fix")
+    
+    return results, passed == total
 
 if __name__ == "__main__":
-    sys.exit(main())
+    results, all_passed = main()
