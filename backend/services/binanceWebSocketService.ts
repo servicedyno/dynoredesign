@@ -97,8 +97,8 @@ const klineCache: Record<string, KlineCandle[]> = {};
 /** REST fallback circuit breaker */
 let restFallbackFailures = 0;
 let restFallbackCooldownUntil = 0;
-const REST_MAX_FAILURES = 3;
-const REST_COOLDOWN_MS = 5 * 60 * 1000; // 5 min cooldown after 3 consecutive REST failures
+const REST_MAX_FAILURES = 5;
+const REST_COOLDOWN_MS = 5 * 60 * 1000; // 5 min cooldown after consecutive REST failures
 
 // ============================================
 // WebSocket Connection
@@ -205,7 +205,9 @@ const connect = () => {
       if (!geoBlocked) {
         geoBlocked = true;
         logWarn(`🌍 Binance WebSocket geo-blocked from this server region. ` +
-          `Will retry every 5 minutes. In production (non-US server), this will work automatically.`);
+          `Using CoinGecko fallback for prices. Will probe every 5 minutes in case block lifts.`);
+        // Immediately fetch prices via CoinGecko so we don't have stale data
+        restFetchPricesCoinGecko().catch(() => {});
       }
     }
   });
@@ -345,6 +347,7 @@ const BINANCE_HEADERS = {
 /**
  * Fetch current prices via REST (single call for all symbols).
  * Only used when WebSocket data is stale.
+ * Falls through to CoinGecko if Binance REST is geo-blocked (451).
  */
 const restFetchPrices = async (): Promise<void> => {
   if (Date.now() < restFallbackCooldownUntil) return; // Respect cooldown
@@ -369,21 +372,72 @@ const restFetchPrices = async (): Promise<void> => {
     }
 
     restFallbackFailures = 0; // Reset on success
-    log("REST fallback price refresh succeeded");
+    log("REST fallback price refresh succeeded (Binance)");
   } catch (err: unknown) {
-    restFallbackFailures++;
     const msg = err instanceof Error ? err.message : String(err);
+    const is451 = msg.includes("451") || msg.includes("403");
+
+    // If geo-blocked, try CoinGecko as secondary REST fallback
+    if (is451) {
+      log("Binance REST geo-blocked (451) — trying CoinGecko fallback...");
+      try {
+        await restFetchPricesCoinGecko();
+        restFallbackFailures = 0; // CoinGecko worked, reset counter
+        return; // Success via CoinGecko
+      } catch (cgErr) {
+        logError(`CoinGecko fallback also failed: ${cgErr instanceof Error ? cgErr.message : String(cgErr)}`);
+      }
+    }
+
+    restFallbackFailures++;
 
     if (restFallbackFailures >= REST_MAX_FAILURES) {
       restFallbackCooldownUntil = Date.now() + REST_COOLDOWN_MS;
+      // Downgrade severity if we have cached prices that are still somewhat fresh (< 30 min)
+      const hasFreshCache = Object.values(priceCache).some(p => (Date.now() - p.updatedAt) < 30 * 60 * 1000);
+      const severity = hasFreshCache ? "low" : "high";
       logError(`❌ REST fallback failed ${restFallbackFailures}x — cooling down for ${REST_COOLDOWN_MS / 1000}s`);
       captureError(
         new Error(`Binance REST fallback exhausted after ${restFallbackFailures} failures: ${msg}`),
         "blockchain",
-        { severity: "high", extraContext: "REST price fallback circuit open" }
+        { severity, extraContext: `REST price fallback circuit open${is451 ? " (geo-blocked, CoinGecko also failed)" : ""}` }
       );
     }
   }
+};
+
+/**
+ * CoinGecko fallback for price fetching when Binance is geo-blocked.
+ */
+const COINGECKO_ID_MAP: Record<string, string> = {
+  BTC: "bitcoin", ETH: "ethereum", LTC: "litecoin", DOGE: "dogecoin",
+  SOL: "solana", XRP: "ripple", BCH: "bitcoin-cash", BNB: "binancecoin",
+  TRX: "tron", POL: "matic-network",
+};
+
+const restFetchPricesCoinGecko = async (): Promise<void> => {
+  const coinIds = TRACKED_ASSETS.map(a => COINGECKO_ID_MAP[a]).filter(Boolean).join(",");
+  const url = `https://api.coingecko.com/api/v3/simple/price?ids=${coinIds}&vs_currencies=usd&include_24hr_change=true`;
+  const resp = await axios.get(url, { timeout: 10000 });
+
+  for (const asset of TRACKED_ASSETS) {
+    const coinId = COINGECKO_ID_MAP[asset];
+    if (!coinId || !resp.data[coinId]) continue;
+    const price = resp.data[coinId].usd || 0;
+    const change24h = resp.data[coinId].usd_24h_change || 0;
+    if (price > 0) {
+      priceCache[asset] = {
+        symbol: `${asset}USDT`,
+        asset,
+        price,
+        priceChangePercent: change24h,
+        volume: priceCache[asset]?.volume || 0,
+        quoteVolume: priceCache[asset]?.quoteVolume || 0,
+        updatedAt: Date.now(),
+      };
+    }
+  }
+  log("REST fallback price refresh succeeded (CoinGecko)");
 };
 
 /**
