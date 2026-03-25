@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Backend URL from review request
-BASE_URL = "https://2df424c2-fba6-42e8-95d8-b7f5d20bb545.preview.emergentagent.com"
+BASE_URL = "https://onboard-flow-79.preview.emergentagent.com"
 
 def test_endpoint(method, url, description):
     """Test a single endpoint and return results"""
