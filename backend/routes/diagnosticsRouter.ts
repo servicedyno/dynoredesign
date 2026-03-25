@@ -1356,4 +1356,139 @@ router.get("/reliability/journal", adminAuthMiddleware, async (req: express.Requ
   }
 });
 
+/**
+ * POST /diagnostics/recover-excess-trx
+ * One-time recovery: sweep excess TRX from over-funded pool addresses back to the fee wallet.
+ * Caused by double SUN→TRX conversion bug (fixed 2026-03-25).
+ * Keeps a configurable reserve per address for future gas needs.
+ *
+ * Body: { reserve_per_address?: number, dry_run?: boolean }
+ *   - reserve_per_address: TRX to keep in each address (default: 2)
+ *   - dry_run: if true, only report what WOULD be recovered (default: true)
+ */
+router.post("/recover-excess-trx", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const reservePerAddress = Number(req.body.reserve_per_address ?? 2);
+    const dryRun = req.body.dry_run !== false; // default true for safety
+
+    // Get TRX fee wallet address
+    const { adminFeeModel } = await import("../models");
+    const feeWallet = await adminFeeModel.findOne({ where: { wallet_type: "TRX" } });
+    if (!feeWallet) {
+      return res.status(404).json({ error: "TRX fee wallet not found in database" });
+    }
+    const feeWalletAddress = feeWallet.dataValues.wallet_address;
+
+    // Find all USDT-TRC20 and TRX pool addresses
+    const { Op } = await import("sequelize");
+    const poolAddresses = await merchantTempAddressModel.findAll({
+      where: {
+        wallet_type: { [Op.in]: ["USDT-TRC20", "TRX"] },
+      },
+    });
+
+    const results: Array<{
+      address: string;
+      wallet_type: string;
+      balance_trx: number;
+      reserve: number;
+      recoverable: number;
+      tx_id?: string;
+      status: string;
+    }> = [];
+
+    let totalRecovered = 0;
+
+    for (const addr of poolAddresses) {
+      const walletAddress = addr.dataValues.wallet_address;
+      try {
+        // Get TRX balance (getAddressBalance already converts SUN→TRX)
+        const balanceResult = await tatumApi.getAddressBalance(walletAddress, "TRX");
+        const balanceTRX = Number(balanceResult?.balance ?? 0);
+
+        if (balanceTRX <= reservePerAddress) {
+          // Nothing to recover
+          continue;
+        }
+
+        const recoverable = Math.floor((balanceTRX - reservePerAddress) * 1000000) / 1000000;
+
+        if (recoverable <= 0.1) {
+          continue; // Skip dust amounts
+        }
+
+        if (dryRun) {
+          results.push({
+            address: walletAddress,
+            wallet_type: addr.dataValues.wallet_type,
+            balance_trx: balanceTRX,
+            reserve: reservePerAddress,
+            recoverable,
+            status: "DRY_RUN",
+          });
+          totalRecovered += recoverable;
+        } else {
+          // Actually send TRX back to fee wallet
+          const privateKey = await tatumApi.decryptSymmetric(
+            addr.dataValues.private_key,
+            process.env.TEMP_KEY_ID
+          );
+
+          const txResult = await tatumApi.assetToOtherAddress({
+            currency: "TRX",
+            fromAddress: walletAddress,
+            toAddress: feeWalletAddress,
+            privateKey,
+            amount: recoverable,
+            fee: null,
+          });
+
+          results.push({
+            address: walletAddress,
+            wallet_type: addr.dataValues.wallet_type,
+            balance_trx: balanceTRX,
+            reserve: reservePerAddress,
+            recoverable,
+            tx_id: txResult?.txId,
+            status: txResult?.txId ? "SENT" : "FAILED",
+          });
+          totalRecovered += recoverable;
+
+          cronLogger.info(`[RecoverExcessTRX] Sent ${recoverable} TRX from ${walletAddress} → ${feeWalletAddress} (TX: ${txResult?.txId})`);
+
+          // Small delay between transactions to avoid rate limits
+          await new Promise(resolve => setTimeout(resolve, 3000));
+        }
+      } catch (addrError) {
+        const errMsg = (addrError as Error).message || String(addrError);
+        // Skip addresses that don't exist on-chain
+        if (errMsg.includes("account.not.found") || errMsg.includes("not.found")) {
+          continue;
+        }
+        results.push({
+          address: walletAddress,
+          wallet_type: addr.dataValues.wallet_type,
+          balance_trx: 0,
+          reserve: reservePerAddress,
+          recoverable: 0,
+          status: `ERROR: ${errMsg.substring(0, 100)}`,
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      dry_run: dryRun,
+      fee_wallet: feeWalletAddress,
+      reserve_per_address: reservePerAddress,
+      total_recovered_trx: totalRecovered,
+      addresses_processed: results.length,
+      results,
+    });
+  } catch (err) {
+    cronLogger.error(`[RecoverExcessTRX] Failed: ${(err as Error).message}`);
+    res.status(500).json({ error: (err as Error).message });
+  }
+});
+
 export default router;
