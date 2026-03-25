@@ -401,8 +401,41 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       return { success: true, amount: 0, message: "No balance to sweep" };
     }
 
-    let gasFunding: { funded: boolean; amount: number; txId: string | null } = { funded: false, amount: 0, txId: null };
     const isToken = TOKEN_CHAINS.includes(walletType);
+
+    // === PROFITABILITY CHECK FIRST — before funding gas ===
+    // This prevents wasting gas (TRX/ETH) on sweeps that turn out to be unprofitable.
+    // Previously, gas was funded BEFORE profitability check, silently draining fee wallets.
+    const feeData = await tatumApi.feeEstimation(
+      walletType,
+      poolAddress.dataValues.wallet_address,
+      adminWallet,
+      actualBalance.toString()
+    );
+
+    const profitabilityResult = await checkSweepProfitability(walletType, actualBalance, feeData);
+    
+    if (!profitabilityResult.profitable) {
+      cronLogger.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
+      cronLogger.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
+      cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
+      cronLogger.warn(`[MerchantPool]    Skipping sweep — NO gas funded (profitability-first optimization)`);
+      
+      await poolAddress.update({ status: "AVAILABLE" });
+      
+      return { 
+        success: false, 
+        skipped: true, 
+        reason: "Not profitable",
+        balanceUSD: profitabilityResult.balanceUSD,
+        feeUSD: profitabilityResult.feeUSD
+      };
+    }
+    
+    cronLogger.info(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
+
+    // === GAS FUNDING — only after profitability confirmed ===
+    let gasFunding: { funded: boolean; amount: number; txId: string | null } = { funded: false, amount: 0, txId: null };
     
     if (isToken) {
       const adminWalletForGas = ADMIN_WALLETS[walletType];
@@ -432,34 +465,6 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       poolAddress.dataValues.private_key,
       process.env.TEMP_KEY_ID
     );
-
-    const feeData = await tatumApi.feeEstimation(
-      walletType,
-      poolAddress.dataValues.wallet_address,
-      adminWallet,
-      actualBalance.toString()
-    );
-
-    const profitabilityResult = await checkSweepProfitability(walletType, actualBalance, feeData);
-    
-    if (!profitabilityResult.profitable) {
-      cronLogger.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
-      cronLogger.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
-      cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
-      cronLogger.warn(`[MerchantPool]    Skipping sweep - will retry when balance is higher`);
-      
-      await poolAddress.update({ status: "AVAILABLE" });
-      
-      return { 
-        success: false, 
-        skipped: true, 
-        reason: "Not profitable",
-        balanceUSD: profitabilityResult.balanceUSD,
-        feeUSD: profitabilityResult.feeUSD
-      };
-    }
-    
-    cronLogger.info(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
 
     const isAccountChain = ACCOUNT_CHAINS.includes(walletType);
     const isUTXOChain = ["BTC", "LTC", "DOGE", "BCH"].includes(walletType);

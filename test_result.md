@@ -169,7 +169,18 @@ frontend:
   3. CreatePaymentLink/index.tsx: Added PKR to frontend currency dropdown
 - Files changed: backend/middleware/linkMiddleware.ts, backend/controller/paymentController.ts, Components/Page/CreatePaymentLink/index.tsx
 
-## Backend Test Request — Currency Validation Fix
+## Phase 6: TRX Gas Wallet Drain Fix — Profitability-First Sweep — 2026-03-24
+- agent: main
+- message: Fixed TRX fee wallet silent drain bug in scheduled sweeps
+- Root cause: In sweepPoolAddress(), gas was funded from the TRX fee wallet BEFORE checking if the sweep was profitable. Unprofitable sweeps would skip the sweep but waste 15-45 TRX gas each time. Every 15 min cron tick could drain TRX without any actual sweeps happening.
+- Fix: Moved profitability check BEFORE gas funding. Now the sequence is:
+  1. Estimate fees (API call, no gas needed)
+  2. Check profitability
+  3. If NOT profitable → skip immediately, zero gas wasted
+  4. If profitable → fund gas, then sweep
+- Files changed: backend/services/merchantPool/merchantPoolSweep.ts
+
+## Backend Test Request — TRX Drain Fix + Currency Fix
 - test_endpoints:
   - GET /api/: Health check (should return 200)
   - GET /api/pay/network-fees: Core functionality test
@@ -191,3 +202,19 @@ frontend:
   * Core payment functionality working correctly after currency middleware changes
   * No 500 errors detected on any tested endpoint
   * Backend API fully operational but deployed at different URL than requested
+
+## Review Request Testing Results - 2026-03-25 06:34:30 UTC
+- agent: testing
+- message: Completed review request testing of DynoPay backend API endpoints after sweep profitability-first fix in merchantPoolSweep.ts
+- test_results: ALL TESTS PASSED ✅
+  * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0)
+  * GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains: BTC, ETH, LTC, DOGE, TRX, USDT_ERC20, USDC_ERC20, RLUSD_ERC20, USDT_TRC20, SOL, XRP, RLUSD)
+  * GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
+- verification_status: COMPLETE ✅
+  * All endpoints return appropriate status codes (200 - NOT 500) as requested in review
+  * Health check shows operational status with comprehensive API documentation
+  * Network fees endpoint returns real-time fee data for all supported cryptocurrencies
+  * Geo detection service working correctly
+  * No 500 errors detected on any tested endpoint
+  * Backend API fully operational after sweep profitability-first fix
+  * Sweep logic reordering (profitability check before gas funding) did not break any core functionality
