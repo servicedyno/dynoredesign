@@ -10,7 +10,7 @@ import sys
 from datetime import datetime
 
 # Configuration - Testing current environment URL first
-BASE_URL = "https://onboarding-flow-89.preview.emergentagent.com/api"
+BASE_URL = "https://getting-started-136.preview.emergentagent.com/api"
 TIMEOUT = 30
 
 def log_test(test_name, status, details=""):

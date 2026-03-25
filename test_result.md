@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://onboarding-flow-89.preview.emergentagent.com/api
+  - target_url: https://getting-started-136.preview.emergentagent.com/api
   - test_endpoints:
     - GET /api/: Health check (should return 200)
     - POST /api/public/create-trial-link: Should now return 403/404 (REMOVED feature)
@@ -16,7 +16,7 @@ backend:
     - No 500 errors on public endpoints ✅ VERIFIED
 
 frontend:
-  - target_url: https://onboarding-flow-89.preview.emergentagent.com
+  - target_url: https://getting-started-136.preview.emergentagent.com
   - not testing frontend at this time
 
 ## Testing Protocol
@@ -190,8 +190,8 @@ frontend:
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints for currency validation fix
 - test_results: MIXED RESULTS ⚠️
-  * Target URL https://onboarding-flow-88.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
-  * Current URL https://onboarding-flow-89.preview.emergentagent.com/api → ALL TESTS PASSED ✅
+  * Target URL https://getting-started-136.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
+  * Current URL https://getting-started-136.preview.emergentagent.com/api → ALL TESTS PASSED ✅
     - GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0)
     - GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains)
     - GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)

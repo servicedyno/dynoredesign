@@ -10,7 +10,7 @@ import json
 import time
 
 # Configuration
-BASE_URL = "https://onboarding-flow-89.preview.emergentagent.com"
+BASE_URL = "https://getting-started-136.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials
