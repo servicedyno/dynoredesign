@@ -271,6 +271,35 @@ frontend:
   * Node.js/TypeScript API running behind Python proxy is functioning correctly
   * Re-verification confirms continued stability after all recent bug fixes
 
+## Phase 8: 17 QA Bug Fixes — 2026-03-26
+- agent: main
+- message: Fixed all 17 remaining QA bugs from spreadsheet
+- Changes:
+  ### CRITICAL + HIGH (Password Bugs):
+  1. **TC_PROFILE_020**: Fixed password update — removed broken custom password masking in InputField (was converting type="password" to type="text" with manual asterisks). Now uses native browser password handling.
+  2. **TC_PROFILE_018**: Password complexity enforced — oldPassword now required, newPassword validates against regex (8-20 chars, upper+lower+number+special)
+  3. **TC_PROFILE_019**: Confirm password mismatch now properly displays error
+  4. **TC_PROFILE_021**: Password eye icon toggle now works natively (no more custom masking conflict)
+  
+  ### MEDIUM:
+  5. **TC_PROFILE_007/008**: Profile first/last name validates letters-only (regex blocks numbers & special chars)
+  6. **TC_PROFILE_005**: Profile photo upload rejects files >10MB with error message
+  7. **CUS-014**: Customer search now debounced (400ms), clears results on error, proper empty state
+  8. **TC_COMP_012**: Company website field validates URL format
+  9. **TC_COMP_027**: Company logo upload rejects non-image files (PDF, etc.) with error message
+  10. **TC_HELP_022/023**: "Email us" text now clickable mailto: link (opens email client with support@dynopay.com)
+  
+  ### LOW:
+  11. **TC_WALLET_029**: Loading spinner added to wallet Continue button during submission
+  12. **TC_WALLET_042**: Wallet icons (edit, copy, labels) now invert for dark mode visibility
+  13. **TC_COMP_036**: Company creation button shows CircularProgress spinner during submission
+  14. **TC_HELP_027**: Help page headings/text use theme colors instead of hardcoded dark colors
+  15. **TC_HELP_030**: Help page already had loading indicator; search input color fixed for dark mode
+  
+  ### ALSO FIXED:
+  16. All logout handlers (UserMenu, Header, AdminHeader) now clear both token AND refreshToken
+  17. Global 15-min idle timeout (Phase 7) covers all session timeout bugs
+
 ## Phase 7: App-Wide Idle Timeout (15 min) — Security Fix — 2026-03-26
 - agent: main
 - message: Implemented global 15-minute idle timeout for all authenticated pages (security leak fix per QA)
@@ -320,3 +349,21 @@ frontend:
   * No 500 errors detected on any tested endpoint
   * Backend API fully operational and unaffected by idle timeout feature (frontend-only changes)
   * Regression testing confirms continued stability after IdleTimeoutManager implementation
+
+## Review Request Testing Results - 2026-03-26 20:19:38 UTC
+- agent: testing
+- message: Completed review request testing of DynoPay backend API endpoints (regression check after frontend bug fixes)
+- test_results: ALL TESTS PASSED ✅
+  * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0, timestamp: 2026-03-26T20:19:38.133Z)
+  * GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains: SOL, RLUSD, BTC, ETH, LTC, DOGE, TRX, USDT_ERC20, USDC_ERC20, RLUSD_ERC20, USDT_TRC20, XRP)
+  * GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
+  * POST /api/pay/calculateFees → HTTP 400 (Proper validation - "Cryptocurrency selection is required" - not a 500 error)
+- verification_status: COMPLETE ✅
+  * All endpoints return appropriate status codes (200, 400 - NOT 500) as specifically requested in review
+  * Health check shows operational status with comprehensive API documentation and current timestamp
+  * Network fees endpoint returns real-time fee data for all supported cryptocurrencies
+  * Geo detection service working correctly with proper country identification
+  * Fee calculation endpoint properly validates input and returns meaningful error messages
+  * No 500 errors detected on any tested endpoint - all return appropriate status codes
+  * Backend API fully operational after frontend bug fixes - no regressions detected
+  * All 4 specified endpoints tested successfully with expected behavior

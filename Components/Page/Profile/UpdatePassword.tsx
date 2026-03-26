@@ -61,11 +61,13 @@ const UpdatePassword = () => {
     /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-=__+{}\[\]:;<>,.?/~]).{8,20}$/;
 
   const passwordSchema = yup.object().shape({
-    oldPassword: yup.string().optional(),
+    oldPassword: yup
+      .string()
+      .required(t("oldPasswordRequired") || "Old password is required"),
     newPassword: yup
       .string()
-      .nullable()
-      .test("password-validation", "", function (value) {
+      .required(t("newPasswordRequired") || "New password is required")
+      .test("password-validation", t("passwordComplexity") || "Password must be 8-20 characters with uppercase, lowercase, number, and special character", function (value) {
         if (!value || value.trim() === "") {
           return true;
         }
@@ -73,8 +75,8 @@ const UpdatePassword = () => {
       }),
     confirmPassword: yup
       .string()
-      .nullable()
-      .test("password-match", t("passwordMismatch"), function (value) {
+      .required(t("confirmPasswordRequired") || "Please confirm your new password")
+      .test("password-match", t("passwordMismatch") || "Passwords do not match", function (value) {
         if (!value || value.trim() === "") {
           return true;
         }

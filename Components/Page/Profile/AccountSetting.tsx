@@ -39,9 +39,17 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
   const [userPhoto, setUserPhoto] = useState("");
   const [imageError, setImageError] = useState(false);
 
+  const nameRegex = /^[A-Za-z\s'-]+$/;
+
   const registerSchema = yup.object().shape({
-    firstName: yup.string().required(t("firstNameRequired")),
-    lastName: yup.string().required(t("lastNameRequired")),
+    firstName: yup
+      .string()
+      .required(t("firstNameRequired"))
+      .matches(nameRegex, t("firstNameInvalid") || "First name must contain only letters, spaces, hyphens, or apostrophes"),
+    lastName: yup
+      .string()
+      .required(t("lastNameRequired"))
+      .matches(nameRegex, t("lastNameInvalid") || "Last name must contain only letters, spaces, hyphens, or apostrophes"),
     email: yup.string().email(t("emailInvalid")).required(t("emailRequired")),
   });
 
@@ -97,9 +105,18 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
     setMedia(undefined);
   };
 
+  const MAX_FILE_SIZE_MB = 10;
+  const [photoError, setPhotoError] = useState("");
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const file = e.target.files[0];
+      if (file.size > MAX_FILE_SIZE_MB * 1024 * 1024) {
+        setPhotoError(`Image size must be less than ${MAX_FILE_SIZE_MB}MB`);
+        if (fileRef.current) fileRef.current.value = "";
+        return;
+      }
+      setPhotoError("");
       setUserPhoto(URL.createObjectURL(file));
       setMedia(file);
       setImageError(false);
@@ -264,6 +281,19 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
           ref={fileRef}
           onChange={handleFileChange}
         />
+        {photoError && (
+          <Typography
+            sx={{
+              color: theme.palette.error.main,
+              fontSize: "12px",
+              fontFamily: "UrbanistMedium",
+              textAlign: "center",
+              mt: 0.5,
+            }}
+          >
+            {photoError}
+          </Typography>
+        )}
       </Box>
       <FormManager
         initialValues={initialUser}

@@ -218,6 +218,7 @@ const HelpAndSupport = () => {
                                 padding: "12px 13.5px",
                                 border: "1px solid #E9ECF2",
                                 backgroundColor: theme.palette.background.paper,
+                                color: theme.palette.text.primary,
                                 borderRadius: "6px",
                                 outline: "none",
                                 transition: "0.2s",
@@ -257,7 +258,7 @@ const HelpAndSupport = () => {
                                         width: isMobile ? "330px" : "355px",
                                         height: isMobile ? "160px" : "202px",
                                         backgroundColor: theme.palette.background.paper,
-                                        border: "1px solid #E9ECF2",
+                                    border: `1px solid ${theme.palette.divider}`,
                                         borderRadius: "14px",
                                         display: "flex",
                                         flexDirection: "column",
@@ -271,10 +272,10 @@ const HelpAndSupport = () => {
                                     }}
                                     onClick={() => router.push(`/help-support/${item.slug}`)}
                                 >
-                                    <TextDecoration style={{ fontSize: isMobile ? "15px" : "20px", color: "#242428" }}>
+                                    <TextDecoration style={{ fontSize: isMobile ? "15px" : "20px", color: theme.palette.text.primary }}>
                                         {item.title}
                                     </TextDecoration>
-                                    <TextDecoration style={{ fontSize: isMobile ? "13px" : "15px", color: "#676768" }}>
+                                    <TextDecoration style={{ fontSize: isMobile ? "13px" : "15px", color: theme.palette.text.secondary }}>
                                         {item.excerpt || item.description}
                                     </TextDecoration>
 
@@ -298,11 +299,11 @@ const HelpAndSupport = () => {
                     </Box>
                 )}
 
-                <TextDecoration sx={{ fontSize: "24px" }}>{t("needHelp")}</TextDecoration>
+                <TextDecoration sx={{ fontSize: "24px", color: theme.palette.text.primary }}>{t("needHelp")}</TextDecoration>
 
                 <Box
                     sx={{
-                        border: "1px solid #E9ECF2",
+                        border: `1px solid ${theme.palette.divider}`,
                         p: "20px",
                         display: "flex",
                         flexDirection: isMobile ? "column" : "row",
@@ -347,8 +348,16 @@ const HelpAndSupport = () => {
                                     <ArrowOutwardIcon sx={{ color: "#0004FF", fontSize: 15 }} />
                                 </Button>
                             ) : (
-                                <TextDecoration style={{ fontSize: isMobile ? "14px" :"18px", color: "#191339" }}>
-                                    {item.contectDetail}
+                                <TextDecoration style={{ fontSize: isMobile ? "14px" :"18px", color: theme.palette.text.primary }}>
+                                    <a
+                                        href={`mailto:${item.contectDetail}`}
+                                        style={{
+                                            color: theme.palette.primary.main,
+                                            textDecoration: "none",
+                                        }}
+                                    >
+                                        {item.contectDetail}
+                                    </a>
                                 </TextDecoration>
                             )}
                             <TextDecoration style={{ fontSize: isMobile ? "10px" :"12px" }}>

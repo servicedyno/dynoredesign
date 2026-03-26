@@ -11,6 +11,7 @@ import {
 } from "@mui/icons-material";
 import {
   Box,
+  CircularProgress,
   Dialog,
   IconButton,
   Slide,
@@ -67,11 +68,28 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
       newErrors.email = "Please enter a valid email";
     if (!mobile || mobile.replace(/\D/g, "").length < 10)
       newErrors.mobile = "Valid mobile number is required";
+    if (website.trim()) {
+      const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=%]*)?$/i;
+      if (!urlPattern.test(website.trim()))
+        newErrors.website = "Please enter a valid URL (e.g., https://yourcompany.com)";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
+  const [fileError, setFileError] = useState("");
+
   const handleFileChange = (file: File) => {
+    const allowedTypes = ["image/jpeg", "image/png", "image/gif", "image/webp", "image/svg+xml"];
+    if (!allowedTypes.includes(file.type)) {
+      setFileError("Only image files are allowed (JPEG, PNG, GIF, WebP, SVG)");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setFileError("File size must be less than 5MB");
+      return;
+    }
+    setFileError("");
     setMediaFile(file);
     setFileName(file.name);
     setImagePreview(URL.createObjectURL(file));
@@ -317,7 +335,12 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           label="Website (optional)"
           placeholder="https://yourcompany.com"
           value={website}
-          onChange={(e) => setWebsite(e.target.value)}
+          onChange={(e) => {
+            setWebsite(e.target.value);
+            if (errors.website) setErrors({ ...errors, website: "" });
+          }}
+          error={!!errors.website}
+          helperText={errors.website}
           data-testid="company-website-input"
         />
 
@@ -406,6 +429,18 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
               }}
             />
           </Box>
+          {fileError && (
+            <Typography
+              sx={{
+                color: theme.palette.error.main,
+                fontSize: "12px",
+                fontFamily: "UrbanistMedium",
+                mt: 0.5,
+              }}
+            >
+              {fileError}
+            </Typography>
+          )}
         </Box>
       </Box>
 
@@ -423,12 +458,13 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
       >
         <CustomButton
           data-testid="create-company-submit-btn"
-          label={submitting ? "Creating..." : "Create Company"}
+          label={submitting ? "" : "Create Company"}
           variant="primary"
           size={isMobile ? "small" : "medium"}
           fullWidth
           disabled={submitting}
           onClick={handleSubmit}
+          startIcon={submitting ? <CircularProgress size={18} sx={{ color: "#fff" }} /> : undefined}
         />
         {onClose && (
           <CustomButton

@@ -218,6 +218,11 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                       width={isMobile ? 12 : 14}
                       height={isMobile ? 12 : 14}
                       draggable={false}
+                      style={{
+                        filter: theme.palette.mode === "dark"
+                          ? "brightness(0) saturate(100%) invert(70%)"
+                          : "none",
+                      }}
                     />
                   </CopyButton>
                 </WalletCardBodyRow>
@@ -292,7 +297,9 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                         height={isMobile ? 14 : 16}
                         draggable={false}
                         style={{
-                          filter: "brightness(0) saturate(100%) invert(0%)",
+                          filter: theme.palette.mode === "dark"
+                            ? "brightness(0) saturate(100%) invert(100%)"
+                            : "brightness(0) saturate(100%) invert(0%)",
                         }}
                       />
                     </WalletEditButton>

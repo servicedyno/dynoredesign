@@ -121,6 +121,9 @@ export const WalletLabel = styled(Box)(({ theme }) => ({
   "& img": {
     width: 16,
     height: 16,
+    filter: theme.palette.mode === "dark"
+      ? "brightness(0) saturate(100%) invert(70%)"
+      : "none",
   },
   "& span": {
     fontSize: "15px",

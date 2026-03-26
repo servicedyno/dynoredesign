@@ -11,7 +11,7 @@ import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import { verifyOtp } from "@/Redux/Sagas/WalletSaga";
 import { rootReducer } from "@/utils/types";
 import { Address, AddWalletModalProps } from "@/utils/types/wallet";
-import { Box, Typography, useTheme } from "@mui/material";
+import { Box, CircularProgress, Typography, useTheme } from "@mui/material";
 import Image from "next/image";
 import React, { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
@@ -614,6 +614,7 @@ const AddWalletModal: React.FC<AddWalletModalProps> = ({
             variant="primary"
             onClick={handleSubmit}
             disabled={popupLoading || isSubmitting || !walletName.trim() || !cryptocurrency || !walletAddress.trim()}
+            startIcon={popupLoading || isSubmitting ? <CircularProgress size={16} sx={{ color: "#fff" }} /> : undefined}
             sx={{
               flex: 1,
               [muiTheme.breakpoints.down("sm")]: {

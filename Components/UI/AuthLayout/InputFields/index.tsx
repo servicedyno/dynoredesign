@@ -109,7 +109,6 @@ const InputField: React.FC<InputFieldProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useIsMobile("sm");
-  const [internalValue, setInternalValue] = useState(value);
 
   const borderColor = useMemo(
     () =>
@@ -305,26 +304,18 @@ const InputField: React.FC<InputFieldProps> = ({
           <TextField
             id={name}
             placeholder={placeholder}
-            value={
-              type === "password" ? "*".repeat(internalValue.length) : value
-            }
+            value={value}
             name={name}
             onChange={(e) => {
               if (type === "password") {
-                const newValue = e.target.value;
-                const realValue =
-                  newValue.length > internalValue.length
-                    ? internalValue + newValue.slice(-1)
-                    : internalValue.slice(0, -1);
-
-                setInternalValue(realValue);
-
+                // Strip spaces from password input
+                const newValue = e.target.value.replace(/\s/g, "");
                 if (onChange) {
                   onChange({
                     ...e,
                     target: {
                       ...e.target,
-                      value: realValue,
+                      value: newValue,
                     },
                   } as React.ChangeEvent<HTMLInputElement>);
                 }
@@ -334,7 +325,7 @@ const InputField: React.FC<InputFieldProps> = ({
             }}
             onBlur={onBlur}
             onFocus={onFocus}
-            type={type === "password" ? "text" : type}
+            type={type}
             variant={variant}
             disabled={disabled}
             inputRef={handleInputRef}

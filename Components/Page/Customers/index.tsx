@@ -107,11 +107,22 @@ const CustomersPage: React.FC = () => {
     (state: any) => state?.companyReducer?.selectedCompanyId
   );
 
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(search);
+      setPage(1);
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [search]);
+
   const fetchCustomers = useCallback(async () => {
     setLoading(true);
     try {
       const params: any = { page, limit: 20 };
-      if (search) params.search = search;
+      if (debouncedSearch.trim()) params.search = debouncedSearch.trim();
       if (selectedCompanyId) params.company_id = selectedCompanyId;
       const res = await axiosBaseApi.get("/userApi/customers", { params });
       const data = res.data?.data;
@@ -121,10 +132,11 @@ const CustomersPage: React.FC = () => {
       setAggregates(data?.aggregates || { total_customers: 0, total_balance: 0, currency: "USD" });
     } catch (err) {
       console.error("Failed to fetch customers", err);
+      setCustomers([]);
     } finally {
       setLoading(false);
     }
-  }, [page, search, selectedCompanyId]);
+  }, [page, debouncedSearch, selectedCompanyId]);
 
   useEffect(() => {
     fetchCustomers();
@@ -359,7 +371,6 @@ const CustomersPage: React.FC = () => {
           value={search}
           onChange={(e) => {
             setSearch(e.target.value);
-            setPage(1);
           }}
           InputProps={{
             startAdornment: (
