@@ -19,6 +19,7 @@ import { Provider } from "react-redux";
 import LanguageBootstrap from "@/helpers/LanguageBootstrap";
 import store from "@/store";
 import { ThemeProvider as AppThemeProvider, useThemeMode } from "@/contexts/ThemeContext";
+import IdleTimeoutManager from "@/Components/UI/IdleTimeoutManager";
 
 import { homeTheme, homeThemeDark } from "@/styles/homeTheme";
 import { theme, themeDark } from "@/styles/theme";
@@ -421,6 +422,7 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
           />
         )}
       </Head>
+      <IdleTimeoutManager />
       {renderWithLayout()}
     </MuiThemeProvider>
   );

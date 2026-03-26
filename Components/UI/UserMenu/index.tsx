@@ -36,6 +36,7 @@ export default function UserMenu() {
   const handleLogout = () => {
     if (customWindow) {
       customWindow.localStorage.removeItem("token");
+      customWindow.localStorage.removeItem("refreshToken");
       customWindow.location.replace("/auth/login");
     }
   };
