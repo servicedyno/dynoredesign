@@ -189,7 +189,7 @@ const addApi = async (req: express.Request, res: express.Response) => {
       type: 'admin_token',
       environment,
     };
-    const adminToken = jwt.sign(adminTokenPayload, adminTokenSecret, { expiresIn: '365d' });
+    const adminToken = jwt.sign(adminTokenPayload, adminTokenSecret, { expiresIn: '30d' });
     
     // Default test mode restrictions for development keys
     const testModeRestrictions = environment === 'development' 
@@ -255,7 +255,7 @@ const getAccessToken = async (id) => {
   const { customer_id, ...userData } = user.dataValues;
   apiLogger.info(userData);
   if (tokenSecret) {
-    const token = jwt.sign(userData, tokenSecret);
+    const token = jwt.sign(userData, tokenSecret, { expiresIn: '30d' });
     const resData = { token, customer_id: userData.id };
     return resData;
   }

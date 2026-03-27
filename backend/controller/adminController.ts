@@ -27,12 +27,15 @@ import sequelize from "../utils/dbInstance";
 import { IAdminWallet } from "../utils/types";
 import { QueryTypes } from "sequelize";
 import sha256 from "crypto-js/sha256";
+import bcrypt from "bcryptjs";
 import {
   selfTransactionModel,
   userModel,
   userTransactionModel,
 } from "../models/userModels";
 import { adminUnlockAccount } from "../services/accountLockoutService";
+
+const BCRYPT_ROUNDS = 12;
 import crypto from "crypto";
 
 const getTransactionFee = async (
@@ -302,18 +305,49 @@ const createWallets = async (_req: express.Request, res: express.Response) => {
 const login = async (req: express.Request, res: express.Response) => {
   try {
     const { email, password } = req.body;
-    const hashedPassword = sha256(password).toString();
     
-    // Use parameterized query to prevent SQL injection
-    const data = await sequelize.query(
-      `SELECT * FROM tbl_admin WHERE email = :email AND password = :password`,
+    // Use parameterized query to prevent SQL injection — fetch admin by email only
+    const data = await sequelize.query<{ email: string; password: string }>(
+      `SELECT * FROM tbl_admin WHERE email = :email`,
       { 
-        replacements: { email, password: hashedPassword },
+        replacements: { email },
         type: QueryTypes.SELECT 
       }
     );
 
-    if (data.length > 0) {
+    if (data.length === 0) {
+      throw { message: "Invalid username or password!" };
+    }
+
+    const admin = data[0];
+    const storedHash = admin.password;
+
+    // Check if stored hash is bcrypt format ($2a$, $2b$, $2y$)
+    const isBcryptHash = /^\$2[aby]?\$/.test(storedHash);
+    let passwordValid = false;
+
+    if (isBcryptHash) {
+      passwordValid = bcrypt.compareSync(password, storedHash);
+    } else {
+      // Legacy SHA-256 comparison
+      const sha256Hash = sha256(password).toString();
+      if (sha256Hash === storedHash) {
+        passwordValid = true;
+        // Transparent migration: rehash with bcrypt and update DB
+        try {
+          const bcryptHash = bcrypt.hashSync(password, BCRYPT_ROUNDS);
+          await sequelize.query(
+            `UPDATE tbl_admin SET password = :newPassword WHERE email = :email`,
+            { replacements: { newPassword: bcryptHash, email: admin.email }, type: QueryTypes.UPDATE }
+          );
+          adminLogger.info(`[PasswordMigration] Admin ${admin.email} migrated from SHA-256 to bcrypt`);
+        } catch (migErr) {
+          adminLogger.error(`[PasswordMigration] Failed to migrate admin ${admin.email}:`, migErr);
+        }
+      }
+    }
+
+    if (passwordValid) {
       const tokenSecret = process.env.ACCESS_TOKEN_SECRET;
       const userData = {
         email,
@@ -322,7 +356,7 @@ const login = async (req: express.Request, res: express.Response) => {
 
       if (tokenSecret) {
         const accessToken = jwt.sign(userData, tokenSecret, {
-          expiresIn: "365d",
+          expiresIn: "30d",
         });
         successResponseHelper(res, 200, "Login Success!", { accessToken });
       }
@@ -454,24 +488,40 @@ const changePassword = async (req: express.Request, res: express.Response) => {
   try {
     const { oldPassword, newPassword } = req.body;
     const adminData = jwt.decode(res.locals.token) as { email?: string } | null;
-    const hashedOldPassword = oldPassword ? sha256(oldPassword).toString() : null;
 
-    // Use parameterized query to prevent SQL injection
-    const data = await sequelize.query(
-      `SELECT * FROM tbl_admin WHERE email = :email AND password = :password`,
+    // Fetch admin by email using parameterized query
+    const data = await sequelize.query<{ email: string; password: string }>(
+      `SELECT * FROM tbl_admin WHERE email = :email`,
       { 
-        replacements: { email: adminData?.email, password: hashedOldPassword },
+        replacements: { email: adminData?.email },
         type: QueryTypes.SELECT 
       }
     );
     
-    if (data.length > 0) {
-      const hashedNewPassword = sha256(newPassword).toString();
-      // Use parameterized query for UPDATE
+    if (data.length === 0) {
+      return errorResponseHelper(res, 500, "Admin account not found!");
+    }
+
+    const admin = data[0];
+    const storedHash = admin.password;
+    const isBcryptHash = /^\$2[aby]?\$/.test(storedHash);
+    let passwordValid = false;
+
+    if (isBcryptHash) {
+      passwordValid = bcrypt.compareSync(oldPassword, storedHash);
+    } else {
+      // Legacy SHA-256 comparison
+      const sha256Hash = sha256(oldPassword).toString();
+      passwordValid = sha256Hash === storedHash;
+    }
+
+    if (passwordValid) {
+      // Always hash new password with bcrypt
+      const bcryptHash = bcrypt.hashSync(newPassword, BCRYPT_ROUNDS);
       await sequelize.query(
         `UPDATE tbl_admin SET password = :newPassword WHERE email = :email`,
         {
-          replacements: { newPassword: hashedNewPassword, email: adminData?.email },
+          replacements: { newPassword: bcryptHash, email: adminData?.email },
           type: QueryTypes.UPDATE,
         }
       );
@@ -491,8 +541,8 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
     const adminData = jwt.decode(res.locals.token) as { email?: string } | null;
     if (!otp) {
       const data = await sequelize.query(
-        `select * from tbl_admin where email='${adminData?.email}'`,
-        { type: QueryTypes.SELECT }
+        `SELECT * FROM tbl_admin WHERE email = :adminEmail`,
+        { replacements: { adminEmail: adminData?.email }, type: QueryTypes.SELECT }
       );
       if (data.length > 0) {
         const randomNumberOTP = Math.floor(100000 + Math.random() * 900000);
@@ -519,8 +569,9 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
         }
 
         await sequelize.query(
-          `update tbl_admin set email='${email}' where email='${adminData?.email}'`,
+          `UPDATE tbl_admin SET email = :newEmail WHERE email = :adminEmail`,
           {
+            replacements: { newEmail: email, adminEmail: adminData?.email },
             type: QueryTypes.UPDATE,
           }
         );
@@ -532,7 +583,7 @@ const updateEmail = async (req: express.Request, res: express.Response) => {
 
         if (tokenSecret) {
           const accessToken = jwt.sign(userData, tokenSecret, {
-            expiresIn: "365d",
+            expiresIn: "30d",
           });
           await deleteRedisItem(email + "-update-otp");
           successResponseHelper(res, 200, "Email updated successfully!", {
@@ -706,10 +757,12 @@ const getAdminAnalytics = async (
     ).count;
 
     let where = "";
+    const safeYear = parseInt(year) || new Date().getFullYear();
+    const safeMonth = parseInt(month) || (new Date().getMonth() + 1);
     if (periodType === "YEAR") {
-      where = `where extract(year from ut."createdAt")=${year}`;
+      where = `where extract(year from ut."createdAt")=${safeYear}`;
     } else if (periodType === "MONTH") {
-      where = `where extract(year from ut."createdAt")=${year} and extract(month from ut."createdAt")=${month}`;
+      where = `where extract(year from ut."createdAt")=${safeYear} and extract(month from ut."createdAt")=${safeMonth}`;
     } else {
       where = "";
     }

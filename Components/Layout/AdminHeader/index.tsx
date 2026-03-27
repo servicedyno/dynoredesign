@@ -78,6 +78,7 @@ const AdminHeader = ({ pageName, pageDescription, component }: AdminHeaderProps)
     if (customWindow) {
       customWindow.localStorage.removeItem("token");
       customWindow.localStorage.removeItem("refreshToken");
+      customWindow.localStorage.removeItem("admin_token");
       customWindow.location.replace("/admin/login");
     }
   };

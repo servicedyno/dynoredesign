@@ -18,6 +18,7 @@ import { Provider } from "react-redux";
 
 import LanguageBootstrap from "@/helpers/LanguageBootstrap";
 import store from "@/store";
+import ErrorBoundary from "@/Components/ErrorBoundary";
 import { ThemeProvider as AppThemeProvider, useThemeMode } from "@/contexts/ThemeContext";
 import IdleTimeoutManager from "@/Components/UI/IdleTimeoutManager";
 
@@ -434,13 +435,15 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
 
 export default function App(props: AppPropsWithLayout) {
   return (
-    <Provider store={store}>
-      <LanguageBootstrap />
-      <SessionProvider session={props.pageProps.session} refetchInterval={0} refetchOnWindowFocus={false}>
-        <AppThemeProvider>
-          <AppInner {...props} />
-        </AppThemeProvider>
-      </SessionProvider>
-    </Provider>
+    <ErrorBoundary>
+      <Provider store={store}>
+        <LanguageBootstrap />
+        <SessionProvider session={props.pageProps.session} refetchInterval={0} refetchOnWindowFocus={false}>
+          <AppThemeProvider>
+            <AppInner {...props} />
+          </AppThemeProvider>
+        </SessionProvider>
+      </Provider>
+    </ErrorBoundary>
   );
 }

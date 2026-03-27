@@ -12,6 +12,7 @@ import Image from "next/image";
 import axiosBaseApi from "@/axiosConfig";
 import ThumbUpIcon from "@mui/icons-material/ThumbUp";
 import ThumbDownIcon from "@mui/icons-material/ThumbDown";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 interface KBArticleDetail {
   article_id: number;
@@ -241,7 +242,7 @@ const HelpDetail = ({
                 "&:hover": { textDecoration: "underline" },
               },
             }}
-            dangerouslySetInnerHTML={{ __html: article.content }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(article.content) }}
           />
 
           {/* Feedback Section */}

@@ -6,6 +6,7 @@ import { getBlogPost, blogPosts } from "@/utils/blogData";
 import useIsMobile from "@/hooks/useIsMobile";
 import HomeHeader from "@/Components/Layout/HomeHeader";
 import type { GetStaticPaths, GetStaticProps } from "next";
+import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
 const categoryColors: Record<string, string> = {
   "Integration Guide": "#0004FF",
@@ -337,10 +338,10 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
                 lineHeight: 1.7,
               }}
               dangerouslySetInnerHTML={{
-                __html: text
+                __html: sanitizeHtml(text
                   .replace(/\*\*(.*?)\*\*/g, '<strong style="color: ' + (isDark ? "#E5E7EB" : "#1F2937") + '">$1</strong>')
                   .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color: #0004FF; text-decoration: none;">$1</a>')
-                  .replace(/`(.*?)`/g, '<code style="background: ' + (isDark ? "#1E2030" : "#F3F4F6") + '; padding: 1px 5px; border-radius: 4px; font-size: 13px;">$1</code>'),
+                  .replace(/`(.*?)`/g, '<code style="background: ' + (isDark ? "#1E2030" : "#F3F4F6") + '; padding: 1px 5px; border-radius: 4px; font-size: 13px;">$1</code>')),
               }}
             />
           </Box>
@@ -371,10 +372,10 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
                 lineHeight: 1.7,
               }}
               dangerouslySetInnerHTML={{
-                __html: numberedMatch[2]
+                __html: sanitizeHtml(numberedMatch[2]
                   .replace(/\*\*(.*?)\*\*/g, '<strong style="color: ' + (isDark ? "#E5E7EB" : "#1F2937") + '">$1</strong>')
                   .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color: #0004FF; text-decoration: none;">$1</a>')
-                  .replace(/`(.*?)`/g, '<code style="background: ' + (isDark ? "#1E2030" : "#F3F4F6") + '; padding: 1px 5px; border-radius: 4px; font-size: 13px;">$1</code>'),
+                  .replace(/`(.*?)`/g, '<code style="background: ' + (isDark ? "#1E2030" : "#F3F4F6") + '; padding: 1px 5px; border-radius: 4px; font-size: 13px;">$1</code>')),
               }}
             />
           </Box>
@@ -394,11 +395,11 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             mb: 2,
           }}
           dangerouslySetInnerHTML={{
-            __html: line
+            __html: sanitizeHtml(line
               .replace(/\*\*(.*?)\*\*/g, '<strong style="color: ' + (isDark ? "#E5E7EB" : "#1F2937") + '">$1</strong>')
               .replace(/\[(.*?)\]\((.*?)\)/g, '<a href="$2" style="color: #0004FF; text-decoration: none;">$1</a>')
               .replace(/`(.*?)`/g, '<code style="background: ' + (isDark ? "#1E2030" : "#F3F4F6") + '; padding: 1px 5px; border-radius: 4px; font-size: 13px;">$1</code>')
-              .replace(/\\"(.*?)\\"/g, '"$1"'),
+              .replace(/\\"(.*?)\\"/g, '"$1"')),
           }}
         />
       );

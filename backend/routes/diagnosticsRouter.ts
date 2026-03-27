@@ -32,7 +32,7 @@ router.get("/tunnel-status", adminAuthMiddleware, (_req: express.Request, res: e
  * GET /diagnostics/email-preview
  * Preview all email template styles in a gallery
  */
-router.get("/email-preview", async (req: express.Request, res: express.Response) => {
+router.get("/email-preview", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   const template = req.query.template as string || 'payment';
   
   const templates: Record<string, () => string> = {
@@ -116,7 +116,7 @@ router.get("/email-preview", async (req: express.Request, res: express.Response)
  * GET /diagnostics/binance-ping
  * Test basic Binance connectivity (public endpoint, no auth)
  */
-router.get("/binance-ping", async (_req: express.Request, res: express.Response) => {
+router.get("/binance-ping", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     await binanceService.ping();
     res.status(200).json({
@@ -138,7 +138,7 @@ router.get("/binance-ping", async (_req: express.Request, res: express.Response)
  * GET /diagnostics/binance-time
  * Get Binance server time (public endpoint)
  */
-router.get("/binance-time", async (_req: express.Request, res: express.Response) => {
+router.get("/binance-time", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const serverTime = await binanceService.getServerTime();
     res.status(200).json({
@@ -159,7 +159,7 @@ router.get("/binance-time", async (_req: express.Request, res: express.Response)
  * GET /diagnostics/binance-account
  * Test authenticated Binance endpoint (requires API key)
  */
-router.get("/binance-account", async (_req: express.Request, res: express.Response) => {
+router.get("/binance-account", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const accountInfo: any = await binanceService.getAccountInfo();
     res.status(200).json({
@@ -184,7 +184,7 @@ router.get("/binance-account", async (_req: express.Request, res: express.Respon
  * GET /diagnostics/binance-quote
  * Test spot price quote (non-executing, safe for testing)
  */
-router.get("/binance-quote", async (req: express.Request, res: express.Response) => {
+router.get("/binance-quote", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const fromAsset = req.query.from as string || "BTC";
     const toAsset = req.query.to as string || "USDT";
@@ -219,7 +219,7 @@ router.get("/binance-quote", async (req: express.Request, res: express.Response)
  * GET /diagnostics/binance-exchange-info
  * Get trading pair info (min quantity, step size)
  */
-router.get("/binance-exchange-info", async (req: express.Request, res: express.Response) => {
+router.get("/binance-exchange-info", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const symbol = req.query.symbol as string || "BTCUSDT";
     const info = await binanceService.getExchangeInfo(symbol);
@@ -233,7 +233,7 @@ router.get("/binance-exchange-info", async (req: express.Request, res: express.R
  * GET /diagnostics/binance-info
  * Get Binance connection info
  */
-router.get("/binance-info", async (_req: express.Request, res: express.Response) => {
+router.get("/binance-info", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   const hasApiKey = !!process.env.BINANCE_API_KEY;
   const hasApiSecret = !!process.env.BINANCE_API_SECRET;
   
@@ -252,7 +252,7 @@ router.get("/binance-info", async (_req: express.Request, res: express.Response)
  * GET /diagnostics/binance-balances
  * List all non-zero balances in the Binance account
  */
-router.get("/binance-balances", async (_req: express.Request, res: express.Response) => {
+router.get("/binance-balances", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const account: any = await binanceService.getAccountInfo();
     const nonZero = account.balances
@@ -274,7 +274,7 @@ router.get("/binance-balances", async (_req: express.Request, res: express.Respo
  * Execute a market sell order for testing. Body: { asset: "POL", amount: 10.5 }
  * Sells to USDT via spot market order.
  */
-router.post("/binance-sell", async (req: express.Request, res: express.Response) => {
+router.post("/binance-sell", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { asset, amount } = req.body;
     if (!asset || !amount) {
@@ -320,7 +320,7 @@ router.post("/binance-sell", async (req: express.Request, res: express.Response)
  * GET /diagnostics/binance-orderbook
  * Get order book depth for a trading pair
  */
-router.get("/binance-orderbook", async (req: express.Request, res: express.Response) => {
+router.get("/binance-orderbook", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const symbol = (req.query.symbol as string) || "BTCUSDT";
     const limit = parseInt(req.query.limit as string) || 5;
@@ -336,7 +336,7 @@ router.get("/binance-orderbook", async (req: express.Request, res: express.Respo
  * Preview the auto-conversion payout email template with sample data
  * Query params: ?volatile=true for volatile market version, default is stable
  */
-router.get("/conversion-email-preview", async (req: express.Request, res: express.Response) => {
+router.get("/conversion-email-preview", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   const isVolatile = req.query.volatile === "true";
 
   // Sample data for preview
@@ -494,7 +494,7 @@ router.get("/conversion-email-preview", async (req: express.Request, res: expres
  * GET /diagnostics/weekly-conversion-email-preview
  * Preview the weekly conversion summary email with sample data
  */
-router.get("/weekly-conversion-email-preview", async (_req: express.Request, res: express.Response) => {
+router.get("/weekly-conversion-email-preview", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   const sampleData = {
     periodStart: "2026-02-05",
     periodEnd: "2026-02-12",

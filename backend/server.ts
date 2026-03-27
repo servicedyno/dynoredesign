@@ -116,15 +116,37 @@ const port = process.env.PORT || 3300;
 app.set('trust proxy', 1);
 
 // CORS Configuration — builds allowed origins from env vars
-// Priority: CORS_ALLOWED_ORIGINS explicit list > auto-build from FRONTEND_URL + CHECKOUT_URL > allow all
+// Priority: CORS_ALLOWED_ORIGINS explicit list > auto-build from FRONTEND_URL + CHECKOUT_URL > dynamic origin matching
 const allowedOrigins: string[] | null = process.env.CORS_ALLOWED_ORIGINS
   ? process.env.CORS_ALLOWED_ORIGINS.split(',').map(o => o.trim()).filter(Boolean)
   : [process.env.FRONTEND_URL, process.env.CHECKOUT_URL].filter(Boolean).length > 0
     ? [process.env.FRONTEND_URL, process.env.CHECKOUT_URL, 'http://localhost:3000'].filter(Boolean) as string[]
-    : null; // null = allow all (backward compat for merchant API integrations)
+    : null; // null = dynamic origin validation (see below)
+
+// When no explicit origins are configured, use a callback that validates
+// the origin against known patterns instead of wide-open '*'
+const corsOriginHandler = allowedOrigins && allowedOrigins.length > 0
+  ? allowedOrigins
+  : (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (server-to-server, mobile apps, etc.)
+      if (!origin) return callback(null, true);
+      // Allow known safe patterns: localhost, dynopay.com, preview domains, railway
+      const safePatterns = [
+        /^https?:\/\/localhost(:\d+)?$/,
+        /^https?:\/\/(.*\.)?dynopay\.com$/,
+        /^https:\/\/.*\.preview\.emergentagent\.com$/,
+        /^https:\/\/.*\.up\.railway\.app$/,
+      ];
+      if (safePatterns.some(p => p.test(origin))) {
+        return callback(null, true);
+      }
+      // Block unknown origins
+      callback(new Error(`CORS: Origin ${origin} not allowed`));
+    };
+
 app.use(cors({
-  origin: allowedOrigins && allowedOrigins.length > 0 ? allowedOrigins : '*',
-  credentials: !!(allowedOrigins && allowedOrigins.length > 0),
+  origin: corsOriginHandler,
+  credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin', 'X-Request-ID', 'x-csrf-token']
 }));
@@ -526,7 +548,7 @@ app.post("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.
 
 
 // Diagnostics: Volatility monitor states
-app.get("/diagnostics/volatility", async (_req: express.Request, res: express.Response) => {
+app.get("/diagnostics/volatility", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const states = getAllMarketStates();
     const assets = Object.values(states);
@@ -543,7 +565,7 @@ app.get("/diagnostics/volatility", async (_req: express.Request, res: express.Re
 });
 
 // Diagnostics: Force volatility monitor cycle
-app.post("/diagnostics/volatility-refresh", async (_req: express.Request, res: express.Response) => {
+app.post("/diagnostics/volatility-refresh", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const results = await runMonitorCycle();
     res.status(200).json({ success: true, refreshed: results.length, states: results });
@@ -553,7 +575,7 @@ app.post("/diagnostics/volatility-refresh", async (_req: express.Request, res: e
 });
 
 // Diagnostics: Live blockchain fee rates
-app.get("/diagnostics/fee-rates", async (req: express.Request, res: express.Response) => {
+app.get("/diagnostics/fee-rates", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const chain = req.query.chain as string;
     if (chain) {

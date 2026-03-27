@@ -2,10 +2,11 @@ import express from "express";
 import adminController from "../controller/adminController";
 import { adminAuthMiddleware } from "../middleware";
 import adminOrApiKeyMiddleware from "../middleware/adminOrApiKeyMiddleware";
+import { loginRateLimiter } from "../middleware/rateLimitMiddleware";
 
 const adminRouter = express.Router();
 
-adminRouter.post("/login", adminController.login);
+adminRouter.post("/login", loginRateLimiter, adminController.login);
 adminRouter.post(
   "/createWallets",
   adminAuthMiddleware,

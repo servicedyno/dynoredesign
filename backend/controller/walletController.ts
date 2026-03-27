@@ -2637,7 +2637,8 @@ const getUserAnalytics = async (
     const preferredCurrency = await getCompanyBaseCurrency(company_id);
 
     // Build company filter for SQL queries (both tbl_user_transaction and tbl_user_temp_address have company_id)
-    const companyFilterSQL = company_id ? ` and ut.company_id='${company_id}'` : '';
+    const safeCompanyId = company_id ? parseInt(company_id) : null;
+    const companyFilterSQL = safeCompanyId ? ` and ut.company_id=${safeCompanyId}` : '';
 
     const txWhere: any = { user_id: userData.user_id };
     if (company_id) txWhere.company_id = company_id;
@@ -2658,12 +2659,15 @@ const getUserAnalytics = async (
     ).count;
 
     let where = "";
+    const safeYear = parseInt(year) || new Date().getFullYear();
+    const safeMonth = parseInt(month) || (new Date().getMonth() + 1);
+    const safeUserId = Number(userData.user_id);
     if (periodType === "YEAR") {
-      where = `where extract(year from ut."createdAt")=${year} and ut.user_id=${userData.user_id}${companyFilterSQL}`;
+      where = `where extract(year from ut."createdAt")=${safeYear} and ut.user_id=${safeUserId}${companyFilterSQL}`;
     } else if (periodType === "MONTH") {
-      where = `where extract(year from ut."createdAt")=${year} and extract(month from ut."createdAt")=${month} and ut.user_id=${userData.user_id}${companyFilterSQL}`;
+      where = `where extract(year from ut."createdAt")=${safeYear} and extract(month from ut."createdAt")=${safeMonth} and ut.user_id=${safeUserId}${companyFilterSQL}`;
     } else {
-      where = `where ut.user_id=${userData.user_id}${companyFilterSQL}`;
+      where = `where ut.user_id=${safeUserId}${companyFilterSQL}`;
     }
 
     const popularCurrency = await sequelize.query(
@@ -2693,8 +2697,8 @@ const getUserAnalytics = async (
         sum(base_amount) as amount,
 		base_currency
       from tbl_user_transaction ut
-      where ${where && `extract(year from ut."createdAt")=${year} and`
-      } ut.user_id=${userData.user_id}${companyFilterSQL}
+      where ${where && `extract(year from ut."createdAt")=${safeYear} and`
+      } ut.user_id=${safeUserId}${companyFilterSQL}
       group by month,month_name,base_currency 
       order by month`,
       {
@@ -3107,7 +3111,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
         const customerAccessToken = jwt.sign(
           { customer_id: createdCustomer.dataValues.customer_id },
           accessTokenSecret,
-          { expiresIn: '365d' }
+          { expiresIn: '30d' }
         );
 
         // Generate admin token
@@ -3118,7 +3122,7 @@ const verifyOtp = async (req: express.Request, res: express.Response) => {
           type: 'admin_token',
           environment: 'production',
         };
-        const adminToken = jwt.sign(adminTokenPayload, accessTokenSecret, { expiresIn: '365d' });
+        const adminToken = jwt.sign(adminTokenPayload, accessTokenSecret, { expiresIn: '30d' });
 
         const defaultPermissions = ["payments", "transactions", "webhooks", "wallets"];
 

@@ -670,7 +670,7 @@ const getAccessToken = async (id: number) => {
 
   if (tokenSecret) {
     const accessToken = jwt.sign(userData, tokenSecret, {
-      expiresIn: "365d",
+      expiresIn: "30d",
     });
     const resData = { userData, accessToken };
     return resData;
