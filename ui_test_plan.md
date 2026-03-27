@@ -4,7 +4,7 @@
 - **Email**: nomadly@moxx.co
 - **Password**: Katiekendra123@
 - **Company**: Nomadly1
-- **Pod URL**: https://onboard-flow-80.preview.emergentagent.com
+- **Pod URL**: https://getting-started-148.preview.emergentagent.com
 
 ---
 
