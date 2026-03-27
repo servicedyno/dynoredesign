@@ -927,17 +927,19 @@ const getWebhookSettings = async (req: express.Request, res: express.Response) =
       }
     ) as Array<Record<string, unknown>>;
 
-    if (!result) {
+    if (!result || (Array.isArray(result) && result.length === 0)) {
       return errorResponseHelper(res, 404, "Company not found or unauthorized");
     }
 
-    const companyData = result.dataValues as { webhook_url?: string; webhook_secret?: string };
+    // Raw sequelize.query with QueryTypes.SELECT returns plain objects (not model instances)
+    // Access properties directly — .dataValues is only available on Sequelize model instances
+    const companyData = (Array.isArray(result) ? result[0] : result) as { webhook_url?: string; webhook_secret?: string };
     
     successResponseHelper(res, 200, "Webhook settings retrieved", {
       company_id,
-      webhook_url: companyData.webhook_url || null,
-      webhook_secret_set: !!companyData.webhook_secret,
-      webhook_secret_preview: companyData.webhook_secret ? '***' + companyData.webhook_secret.slice(-8) : null,
+      webhook_url: companyData?.webhook_url || null,
+      webhook_secret_set: !!companyData?.webhook_secret,
+      webhook_secret_preview: companyData?.webhook_secret ? '***' + companyData.webhook_secret.slice(-8) : null,
     });
 
   } catch (e) {
@@ -1054,10 +1056,10 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
     } catch (webhookError: unknown) {
       const err = webhookError as { message?: string; response?: { status?: number } };
       const responseTime = Date.now() - startTime;
-      const resultData = result as unknown as { dataValues: { webhook_url?: string; webhook_secret?: string; company_name?: string } };
+      const resultData = result as { webhook_url?: string; webhook_secret?: string; company_name?: string };
       const errorDetails = {
         status: 'failed',
-        webhook_url: resultData.dataValues.webhook_url,
+        webhook_url: resultData.webhook_url,
         error: err.message,
         response_status: err.response?.status || null,
         response_time_ms: responseTime,
@@ -1072,7 +1074,7 @@ const testWebhook = async (req: express.Request, res: express.Response) => {
         {
           replacements: {
             company_id,
-            webhook_url: resultData.dataValues.webhook_url,
+            webhook_url: resultData.webhook_url,
             event_type: 'webhook.test',
             webhook_id: testPayload.webhook_id,
             payload: JSON.stringify(testPayload),

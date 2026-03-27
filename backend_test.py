@@ -107,6 +107,7 @@ def test_diagnostic_auth_protection():
         ("GET", "/diagnostics/binance-ping"),
         ("GET", "/diagnostics/binance-balances"),
         ("GET", "/diagnostics/volatility"),
+        ("GET", "/diagnostics/fee-rates"),
         ("GET", "/diagnostics/email-preview"),
         ("POST", "/diagnostics/binance-sell")
     ]

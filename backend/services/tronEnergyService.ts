@@ -13,7 +13,7 @@
 
 import axios from "axios";
 import { cronLogger } from "../utils/loggers";
-import { getRedisItem, setRedisItem } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -31,7 +31,7 @@ const CACHE_KEYS = {
 const CACHE_TTL = {
   NETWORK_PARAMS: 300,      // 5 min — network params change rarely
   ACCOUNT_RESOURCES: 30,    // 30 sec — resources can change with each block
-  ACCOUNT_ACTIVATED: 3600,  // 1 hour — activation status is permanent once true
+  ACCOUNT_ACTIVATED: 86400,  // 24 hours — activation status is permanent once true
 };
 
 // Energy required for TRC20 transfers
@@ -592,10 +592,31 @@ export const getOptimizationDiagnostics = async (
   };
 };
 
+/**
+ * Mark a recipient address as activated for a specific TRC20 token.
+ * Call this AFTER a successful token transfer to the recipient.
+ * This caches the activation status, preventing future API calls from
+ * defaulting to 130k energy (NEW recipient) when TronGrid/TronScan are unreachable.
+ */
+export const markRecipientActivated = async (
+  recipientAddress: string,
+  tokenContractAddress: string
+): Promise<void> => {
+  try {
+    const cacheKey = `${CACHE_KEYS.ACCOUNT_ACTIVATED_PREFIX}${recipientAddress}:${tokenContractAddress}`;
+    await setRedisItem(cacheKey, { activated: true });
+    // Activation is permanent — set long TTL (7 days)
+    await setRedisTTL(cacheKey, 7 * 24 * 3600);
+  } catch (_e) {
+    // Non-critical — best-effort caching
+  }
+};
+
 export default {
   getTronNetworkParams,
   getAccountResources,
   isRecipientActivatedForToken,
+  markRecipientActivated,
   calculateOptimalFeeLimit,
   calculateDynamicTRC20Fee,
   calculateDynamicTRXNativeFee,

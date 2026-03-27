@@ -3135,15 +3135,24 @@ const settleCryptoTransaction = async ({
 
       // Deduct gas cost from merchant's token payout (consistent with UTXO/native chains)
       // TWO gas costs: (1) merchant transfer gas + (2) estimated sweep gas for admin fee collection
+      // OPTIMIZATION: When admin wallet = merchant wallet (same-wallet mode), skip sweep gas
+      // because the sweep transfers admin fees to the same destination — unnecessary cost to merchant
       // Gas is in native currency (ETH/TRX/XRP/POL), so convert to USD equivalent for stablecoin deduction
       let merchantTransferGasUSD = 0;
       let estimatedSweepGasUSD = 0;
       try {
         const networkFee = await getBlockchainNetworkFee(currency);
         merchantTransferGasUSD = Number(networkFee.feeInUSD) || 0;
-        // Sweep is same type of token transfer on same chain → same gas estimate
-        estimatedSweepGasUSD = merchantTransferGasUSD;
-        cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Transfer gas ≈ $${merchantTransferGasUSD.toFixed(4)}, Sweep gas ≈ $${estimatedSweepGasUSD.toFixed(4)} (both deducted from merchant)`);
+        // Skip sweep gas when admin=merchant wallet (same-wallet mode)
+        // In same-wallet mode, the sweep sends admin fees to the same wallet that receives merchant transfer
+        if (isSameWallet) {
+          estimatedSweepGasUSD = 0;
+          cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Same-wallet mode — sweep gas SKIPPED (admin=merchant wallet). Transfer gas only ≈ $${merchantTransferGasUSD.toFixed(4)}`);
+        } else {
+          // Sweep is same type of token transfer on same chain → same gas estimate
+          estimatedSweepGasUSD = merchantTransferGasUSD;
+          cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Transfer gas ≈ $${merchantTransferGasUSD.toFixed(4)}, Sweep gas ≈ $${estimatedSweepGasUSD.toFixed(4)} (both deducted from merchant)`);
+        }
       } catch (feeErr) {
         // Fallback: convert raw native fee to USD using price lookup
         const rawFee = Number(fees?.fast ?? fees?.slow ?? 0);
@@ -3245,6 +3254,16 @@ const settleCryptoTransaction = async ({
           );
           
           cronLogger.info(`[settleCryptoTransaction] ✅ Token transfer succeeded on attempt ${transferAttempt}`);
+          
+          // Cache recipient as activated for this token — prevents 130k energy overestimation in future payments
+          if (isTRC20 && contractAddress) {
+            try {
+              const { markRecipientActivated } = require("../services/tronEnergyService");
+              await markRecipientActivated(userAddress, contractAddress);
+              cronLogger.info(`[settleCryptoTransaction] 📌 Cached ${userAddress} as activated for ${currency} (future transfers will use 65k energy)`);
+            } catch (_cacheErr) { /* Non-critical */ }
+          }
+          
           break; // Success — exit retry loop
           
         } catch (transferError: unknown) {
@@ -3447,7 +3466,8 @@ const settleCryptoTransaction = async ({
         // Use `fast` tier for gas deduction — this is the actual gas cost the transaction will incur.
         const merchantTransferGas = Number(fees?.fast ?? fees?.slow ?? 0);
         // Sweep gas estimate: same chain, same type of native transfer → approximately same gas
-        const estimatedSweepGas = merchantTransferGas;
+        // OPTIMIZATION: Skip sweep gas in same-wallet mode (admin=merchant wallet)
+        const estimatedSweepGas = isSameWallet ? 0 : merchantTransferGas;
         const totalGasDeduction = merchantTransferGas + estimatedSweepGas;
 
         // Deduct both gas costs from merchant payout — merchant pays for gas (consistent with UTXO)
@@ -3457,7 +3477,7 @@ const settleCryptoTransaction = async ({
           throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
         }
 
-        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas} + sweep gas ${estimatedSweepGas} = ${totalGasDeduction} deducted from merchant)`);
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas}${isSameWallet ? ' [sweep gas SKIPPED — same-wallet]' : ` + sweep gas ${estimatedSweepGas}`} = ${totalGasDeduction} deducted from merchant)`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
@@ -4539,6 +4559,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           - Auto-Convert: ${autoConvertEnabled ? 'YES' : 'NO'}
         `);
 
+        // Compute actual on-chain merchant amount (post-gas deductions) for webhook and records
+        const actualMerchantAmount = adminTransferResult.sendAmount > 0
+          ? adminTransferResult.sendAmount
+          : Number(userAmountToSend);
+
         // ============================================
         // Store incoming & outgoing TX hashes on user transaction
         // ============================================
@@ -4712,11 +4737,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           );
           
           // Record pool transaction for audit
-          // FIX: Store actual post-gas merchant amount (sendAmount) instead of pre-gas (userAmountToSend)
-          // sendAmount reflects what was actually transferred on-chain after gas deductions
-          const actualMerchantAmount = adminTransferResult.sendAmount > 0
-            ? adminTransferResult.sendAmount
-            : Number(userAmountToSend);
+          // Use actualMerchantAmount (computed above) — the actual post-gas on-chain amount
           
           await merchantPoolService.recordPoolTransaction({
             tempAddressId: tempAddressData.temp_address_id,
@@ -5040,16 +5061,23 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             status: "successful",
             payment_status: "confirmed",
             
-            // Amount received (crypto) — use original merchant amount if auto-converting
-            amount: autoConvertEnabled ? originalUserAmount : userAmountToSend,
+            // Amount received (crypto) — use actual on-chain merchant amount (post-gas deductions)
+            // actualMerchantAmount reflects what was ACTUALLY transferred on-chain after gas deductions
+            amount: autoConvertEnabled ? originalUserAmount : actualMerchantAmount,
             currency: tempCurrency,
             
             // Original payment request (fiat)
             base_amount: customerData?.base_amount,
             base_currency: customerData?.base_currency,
             
-            // ENHANCED: Merchant receives (net after fees)
-            merchant_amount: autoConvertEnabled ? originalUserAmount : userAmountToSend,
+            // ENHANCED: Merchant receives (net after fees AND gas deductions)
+            merchant_amount: autoConvertEnabled ? originalUserAmount : actualMerchantAmount,
+            // Pre-gas merchant amount (before blockchain fee deductions)
+            merchant_amount_before_gas: autoConvertEnabled ? originalUserAmount : userAmountToSend,
+            
+            // ENHANCED: Gas/blockchain fee breakdown
+            blockchain_fee: adminTransferResult.blockchainFee || 0,
+            blockchain_fee_currency: tempCurrency,
             
             // ENHANCED: Fee information — show actual fee, not fee+merchant when auto-converting
             total_fee: autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend,
