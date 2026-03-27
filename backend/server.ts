@@ -548,7 +548,7 @@ app.post("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.
 
 
 // Diagnostics: Volatility monitor states
-app.get("/diagnostics/volatility", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+app.get("/api/diagnostics/volatility", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const states = getAllMarketStates();
     const assets = Object.values(states);
@@ -565,7 +565,7 @@ app.get("/diagnostics/volatility", adminAuthMiddleware, async (_req: express.Req
 });
 
 // Diagnostics: Force volatility monitor cycle
-app.post("/diagnostics/volatility-refresh", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
+app.post("/api/diagnostics/volatility-refresh", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const results = await runMonitorCycle();
     res.status(200).json({ success: true, refreshed: results.length, states: results });
@@ -575,7 +575,7 @@ app.post("/diagnostics/volatility-refresh", adminAuthMiddleware, async (_req: ex
 });
 
 // Diagnostics: Live blockchain fee rates
-app.get("/diagnostics/fee-rates", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.get("/api/diagnostics/fee-rates", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const chain = req.query.chain as string;
     if (chain) {
