@@ -15,6 +15,11 @@ backend:
     - Test email endpoints now require auth (401/403) ✅
     - No 500 errors on public endpoints ✅
   - recent_fixes:
+    - FIX: Fee-free promotion not applied — userId now passed to calculateTransactionFees in 3 payment flow callsites
+    - FIX: Fee-free balance never decremented — recordTransactionVolume now called after successful payment
+    - FIX: BTC expected_amount storing USD instead of crypto — pool address updated with correct crypto amount after conversion
+    - FIX: 3 stale RESERVED pool addresses released (temp_id 278, 282, 43)
+    - FIX: Misleading pre-reserve log message clarified with chain type
     - FIX: Privilege escalation - trigger-sweep now uses adminAuthMiddleware
     - FIX: convertToUSD returns NaN instead of silent 0 on failure
     - FIX: forEach(async) replaced with for..of in BCH fee estimation
@@ -600,13 +605,14 @@ frontend:
 - **Issue #5**: getData now caches calculated tax info in Redis (_cached_tax_info). addPayment reads cached tax instead of re-deriving from IP (prevents VPN/proxy inconsistencies).
 - All fixes have legacy fallbacks for older payments without stored data.
 
-## Review Request Testing Results - 2026-03-28 12:02:12 UTC
+## Review Request Testing Results - 2026-03-28 20:52:57 UTC
 - agent: testing
-- message: Completed comprehensive review request testing of DynoPay backend API endpoints - ALL 9 SPECIFIC ENDPOINTS TESTED AS REQUESTED
-- test_results: ALL TESTS PASSED ✅ (Complete verification of security fixes)
+- message: Completed comprehensive review request testing of DynoPay backend API endpoints - ALL 10 SPECIFIC ENDPOINTS TESTED AS REQUESTED
+- test_results: ALL TESTS PASSED ✅ (Complete verification of all review request requirements)
   * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API)
   * GET /api/pay/network-fees → HTTP 200 (Core functionality working - network fees retrieved successfully)
   * GET /api/geo-detect → HTTP 200 (Core functionality working - geo detection operational)
+  * POST /api/pay/calculateFees → HTTP 200 (Core functionality working - fee calculation operational with proper body)
   * GET /api/diagnostics/binance-ping → HTTP 403 (✅ Auth protection working - requires admin auth as expected)
   * GET /api/diagnostics/volatility → HTTP 403 (✅ Auth protection working - requires admin auth as expected)
   * POST /api/test/send-payment-link-email → HTTP 403 (✅ Security fix verified - now requires auth as expected)
@@ -614,10 +620,12 @@ frontend:
   * POST /api/pay/getData (no auth, no body) → HTTP 400 (✅ Rate limiter working - returns 4xx not 500)
   * POST /api/webhook (empty body) → HTTP 401 (✅ Webhook endpoint working - returns auth error not 500)
 - verification_status: COMPLETE ✅
-  * ALL 9 SPECIFIC ENDPOINTS from review request tested successfully
+  * ALL 10 SPECIFIC ENDPOINTS from review request tested successfully
   * No 500 errors detected on any endpoint (key requirement verified)
   * Auth-protected endpoints return 401/403 without valid tokens (security fixes verified)
-  * Core public endpoints work normally (health, network-fees, geo-detect all operational)
+  * Core public endpoints work normally (health, network-fees, geo-detect, calculateFees all operational)
+  * Fee-free service integration check: Backend starts and responds without errors
   * Security fix verification: Test email endpoints now properly require authentication
   * Rate limiter verification: No 500 errors from rate limiting or webhook processing
   * Backend API fully operational and secure after all recent security and reliability fixes
+  * Node.js/TypeScript server proxied through Python/uvicorn functioning correctly
