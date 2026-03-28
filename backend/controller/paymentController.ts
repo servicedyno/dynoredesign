@@ -638,6 +638,20 @@ const getData = async (req: express.Request, res: express.Response) => {
     const subtotalWithTax = amount + taxAmount;
     // grandTotal calculated but not used - kept for reference: amount + totalProcessingFee + taxAmount
     
+    // ── Store calculated tax info back to Redis for addPayment to use ──
+    // This prevents addPayment from re-deriving tax from IP (which could differ due to VPN/proxy changes)
+    if (taxInfo && taxInfo.tax_amount > 0) {
+      try {
+        await setRedisItem("customer-" + data, {
+          ...item,
+          _cached_tax_info: taxInfo,
+          _cached_tax_amount: taxAmount,
+        });
+      } catch (e) {
+        cronLogger.warn('[getData] Failed to cache tax info in Redis:', e);
+      }
+    }
+    
     // Convert incomplete payment amount to USD if exists
     let incompletePaymentUSD = 0;
     if (item.incomplete_payment?.pending_amount && item.incomplete_payment?.currency) {
@@ -1086,20 +1100,34 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           let taxInfo = null;
           
           if (items.apply_tax) {
-            try {
-              const clientIP = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || '';
-              const geoLocation = await getCountryFromIP(clientIP, req.headers);
-              if (geoLocation && geoLocation.country_code) {
-                taxInfo = await calculateTaxForCheckout(geoLocation.country_code, baseAmountUSD, items.base_currency || 'USD');
-                if (taxInfo) {
-                  taxAmount = taxInfo.tax_amount || 0;
-                  // Calculate tax portion in crypto
-                  const totalWithTax = baseAmountUSD + taxAmount;
-                  taxAmountCrypto = crypto_amount * (taxAmount / totalWithTax);
+            // ── Use cached tax info from getData when available ──
+            // This prevents inconsistency from IP re-derivation (VPN/proxy changes between getData and addPayment)
+            if (items._cached_tax_info && items._cached_tax_amount > 0) {
+              taxInfo = items._cached_tax_info;
+              taxAmount = Number(items._cached_tax_amount) || 0;
+              cronLogger.info(`[addPayment] Using cached tax from getData: rate=${taxInfo.tax_rate}%, amount=${taxAmount}`);
+            } else {
+              // Fallback: recalculate from IP (only if getData didn't cache tax)
+              try {
+                const clientIP = req.headers['x-forwarded-for']?.toString().split(',')[0] || req.ip || '';
+                const geoLocation = await getCountryFromIP(clientIP, req.headers);
+                if (geoLocation && geoLocation.country_code) {
+                  taxInfo = await calculateTaxForCheckout(geoLocation.country_code, baseAmountUSD, items.base_currency || 'USD');
+                  if (taxInfo) {
+                    taxAmount = taxInfo.tax_amount || 0;
+                  }
                 }
+              } catch (e) {
+                cronLogger.info('[addPayment] Tax calculation failed:', e);
               }
-            } catch (e) {
-              cronLogger.info('[addPayment] Tax calculation failed:', e);
+            }
+            
+            if (taxAmount > 0) {
+              // Calculate tax portion in crypto
+              // For customer-pays: crypto_amount includes base + tax + fees
+              // For company-pays: crypto_amount includes base + tax only
+              const totalWithTax = baseAmountUSD + taxAmount;
+              taxAmountCrypto = totalWithTax > 0 ? crypto_amount * (taxAmount / totalWithTax) : 0;
             }
           }
           
@@ -1122,9 +1150,21 @@ const addPayment = async (req: express.Request, res: express.Response) => {
               merchant_amount_crypto = crypto_amount * baseCryptoRatio;
               total_fees_crypto = crypto_amount - merchant_amount_crypto;
             } else {
-              // Company pays fees - fees deducted from received amount
-              total_fees_crypto = crypto_amount * feePercentage;
-              merchant_amount_crypto = crypto_amount - total_fees_crypto;
+              // Company pays fees - fees deducted from BASE amount only (not from tax)
+              // This matches createCryptoPayment (Direct API) behavior
+              if (taxAmount > 0) {
+                const totalWithTax = baseAmountUSD + taxAmount;
+                const baseCryptoRatio = baseAmountUSD / totalWithTax;
+                const baseCrypto = crypto_amount * baseCryptoRatio;
+                const taxCrypto = crypto_amount - baseCrypto;
+                // Apply fees only to the base crypto portion
+                total_fees_crypto = baseCrypto * feePercentage;
+                // Merchant gets: base after fees + full tax (tax passes through untouched)
+                merchant_amount_crypto = (baseCrypto - total_fees_crypto) + taxCrypto;
+              } else {
+                total_fees_crypto = crypto_amount * feePercentage;
+                merchant_amount_crypto = crypto_amount - total_fees_crypto;
+              }
             }
             
             cronLogger.info(`[addPayment] Fee calculation:
@@ -4443,18 +4483,18 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         
         let adminAmountToSend, userAmountToSend;
         
-        // ── UNIFIED FEE CALCULATION: Always based on actual received amount ──
-        // Both 'customer' and 'company' fee_payer modes now calculate fees from
-        // totalAmountReceived. This ensures overpayments are distributed correctly
-        // instead of capping the merchant at a pre-calculated amount.
+        // ── IMPROVED FEE CALCULATION: Use stored base_amount_usd for tier consistency ──
+        // Uses pre-calculated base_amount_usd from payment creation for fee tier selection.
+        // This ensures:
+        // 1. Same fee tier as quoted to the customer (consistency)
+        // 2. Fees are NOT applied to the tax portion (tax passes through to merchant)
+        // 3. Overpayments are distributed proportionally using pre-calculated ratios
         //
-        // Previous bug: In 'customer' mode, merchant_amount was pre-calculated at
-        // payment creation (e.g., 8.85 for a $10 expected). If customer overpaid
-        // (e.g., sent 19 USDT), the merchant still only got 8.85 and the entire
-        // overpayment (10.15) went to admin as "fees". Now both modes recalculate
-        // fees from the actual received amount.
+        // Previous bug: Recalculating fees on full received amount caused:
+        // - Fee-on-fee for customer-pays (fees applied to amount that includes pre-paid fees)
+        // - Fee-on-tax for both modes (tax portion subjected to platform fees)
 
-        // Convert crypto amount to USD for fee calculation
+        // Convert crypto amount to USD for reference
         const amountInUSD = await currencyConvert({
           sourceCurrency: tempCurrency,
           currency: [customerData?.base_currency || "USD"],
@@ -4462,36 +4502,79 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           fixedDecimal: false,
         });
         
+        const receivedUSD = Number(amountInUSD[0].amount);
+        
+        // Use stored base_amount_usd for fee tier (same tier as at payment creation)
+        const storedBaseAmountUSD = parseFloat(tempData?.base_amount_usd || '0');
+        const storedTaxAmountUSD = parseFloat(tempData?.tax_amount_usd || '0');
+        const feeCalcBasisUSD = storedBaseAmountUSD > 0 ? storedBaseAmountUSD : receivedUSD;
+        
         const { totalDeduction, minForwarding, fixedFee, transactionFee } = await calculateTransactionFees(
           tempCurrency,
-          Number(amountInUSD[0].amount)  // Pass USD amount for fee calculation
+          feeCalcBasisUSD  // Use base amount for consistent fee tier selection
         );
+        
+        // Fee percentage based on BASE amount (excludes tax)
+        const feePercentage = feeCalcBasisUSD > 0 ? totalDeduction / feeCalcBasisUSD : 0;
 
         cronLogger.info(`[cryptoVerification] Fee calculation (fee_payer=${fee_payer}):
             - Total received (crypto): ${totalAmountReceived} ${tempCurrency}
-            - Total received (USD): $${amountInUSD[0].amount}
+            - Total received (USD): $${receivedUSD.toFixed(2)}
+            - Stored base_amount_usd: $${storedBaseAmountUSD.toFixed(2)}
+            - Stored tax_amount_usd: $${storedTaxAmountUSD.toFixed(2)}
+            - Fee calc basis (USD): $${feeCalcBasisUSD.toFixed(2)}
             - Pre-calculated merchant_amount: ${merchant_amount || 'N/A'} ${tempCurrency}
             - Fee Breakdown:
               • Fixed Fee: $${fixedFee?.toFixed(2) || 'N/A'} (Tier-based)
               • Transaction Fee (1.5%): $${transactionFee?.toFixed(2) || 'N/A'}
             - Total deduction (USD): $${totalDeduction}
             - Min forwarding threshold: $${minForwarding}
-            - Effective Fee %: ${(totalDeduction / Number(amountInUSD[0].amount) * 100).toFixed(2)}%`);
+            - Effective Fee %: ${(feePercentage * 100).toFixed(2)}% (on base, not total)`);
 
-        if (Number(amountInUSD[0].amount) < Number(minForwarding)) {
+        if (receivedUSD < Number(minForwarding)) {
           // Under threshold - all to admin
           adminAmountToSend = Number(totalAmountReceived);
           userAmountToSend = 0;
           cronLogger.info(`[cryptoVerification] UNDER THRESHOLD - all to admin: ${adminAmountToSend} ${tempCurrency}`);
+        } else if (storedBaseAmountUSD > 0 && parseFloat(merchant_amount || '0') > 0) {
+          // ── RATIO-BASED DISTRIBUTION: Scale pre-calculated amounts by actual/expected ──
+          // This handles overpayments and underpayments proportionally while maintaining
+          // correct fee structure from payment creation
+          const expectedCrypto = parseFloat(tempData?.amount || '0');
+          const preCalcMerchantAmount = parseFloat(merchant_amount);
+          
+          if (expectedCrypto > 0) {
+            const paymentRatio = Number(totalAmountReceived) / expectedCrypto;
+            userAmountToSend = preCalcMerchantAmount * paymentRatio;
+            adminAmountToSend = Number(totalAmountReceived) - userAmountToSend;
+            
+            cronLogger.info(`[cryptoVerification] ${fee_payer === 'customer' ? 'CUSTOMER' : 'COMPANY'} PAYS FEES — RATIO-BASED DISTRIBUTION:
+              - Expected: ${expectedCrypto.toFixed(8)} ${tempCurrency}
+              - Payment ratio: ${paymentRatio.toFixed(4)} (${paymentRatio >= 1 ? 'exact/overpaid' : 'underpaid'})
+              - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (scaled from pre-calc ${preCalcMerchantAmount.toFixed(8)})
+              - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency}`);
+          } else {
+            // Fallback: expected amount not available, use fee percentage on non-tax portion
+            const taxRatio = storedTaxAmountUSD > 0 ? storedTaxAmountUSD / (storedBaseAmountUSD + storedTaxAmountUSD) : 0;
+            const receivedTaxPortion = Number(totalAmountReceived) * taxRatio;
+            const receivedNonTaxPortion = Number(totalAmountReceived) - receivedTaxPortion;
+            adminAmountToSend = receivedNonTaxPortion * feePercentage;
+            userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
+            
+            cronLogger.info(`[cryptoVerification] ${fee_payer === 'customer' ? 'CUSTOMER' : 'COMPANY'} PAYS FEES — FALLBACK DISTRIBUTION:
+              - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(feePercentage * 100).toFixed(2)}% of non-tax portion)
+              - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency}`);
+          }
         } else {
-          // Normal distribution: fee on actual received, merchant gets the rest
-          const feePercentage = totalDeduction / Number(amountInUSD[0].amount);
-          adminAmountToSend = Number(totalAmountReceived) * feePercentage;
+          // ── LEGACY FALLBACK: No stored data, use simple percentage on full amount ──
+          // This handles older payments or edge cases where base_amount_usd wasn't stored
+          const simpleFeePercentage = receivedUSD > 0 ? totalDeduction / receivedUSD : 0;
+          adminAmountToSend = Number(totalAmountReceived) * simpleFeePercentage;
           userAmountToSend = Number(totalAmountReceived) - adminAmountToSend;
           
-          cronLogger.info(`[cryptoVerification] ${fee_payer === 'customer' ? 'CUSTOMER' : 'COMPANY'} PAYS FEES — DISTRIBUTION:
-            - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(feePercentage * 100).toFixed(2)}%)
-            - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - feePercentage) * 100).toFixed(2)}%)`);
+          cronLogger.info(`[cryptoVerification] ${fee_payer === 'customer' ? 'CUSTOMER' : 'COMPANY'} PAYS FEES — LEGACY DISTRIBUTION (no stored base):
+            - Admin (fees): ${adminAmountToSend.toFixed(8)} ${tempCurrency} (${(simpleFeePercentage * 100).toFixed(2)}%)
+            - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - simpleFeePercentage) * 100).toFixed(2)}%)`);
         }
 
         // ============================================
