@@ -13,7 +13,7 @@ import json
 from datetime import datetime
 
 # Target API base URL
-BASE_URL = "https://initial-setup-18.preview.emergentagent.com/api"
+BASE_URL = "https://initial-config-21.preview.emergentagent.com/api"
 
 def test_health_check():
     """Test GET /api/ - Should return 200 with operational status"""
