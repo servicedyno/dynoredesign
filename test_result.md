@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://getting-started-148.preview.emergentagent.com/api
+  - target_url: https://initial-setup-18.preview.emergentagent.com/api
   - test_endpoints:
     - GET /api/: Health check (should return 200)
     - GET /api/pay/network-fees: Core functionality test
@@ -19,7 +19,7 @@ backend:
     - FIX 4: TronEnergy - cache activation status after successful transfer + longer cache TTL
 
 frontend:
-  - target_url: https://getting-started-148.preview.emergentagent.com
+  - target_url: https://initial-setup-18.preview.emergentagent.com
   - not testing frontend at this time
 
 ## Testing Protocol
@@ -196,8 +196,8 @@ frontend:
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints for currency validation fix
 - test_results: MIXED RESULTS ⚠️
-  * Target URL https://getting-started-148.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
-  * Current URL https://getting-started-148.preview.emergentagent.com/api → ALL TESTS PASSED ✅
+  * Target URL https://initial-setup-18.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
+  * Current URL https://initial-setup-18.preview.emergentagent.com/api → ALL TESTS PASSED ✅
     - GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0)
     - GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains)
     - GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
@@ -228,7 +228,7 @@ frontend:
 ## Review Request Testing Results - 2026-03-25 07:32:07 UTC
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints after double SUN→TRX conversion bug fix
-- target_url: https://getting-started-148.preview.emergentagent.com
+- target_url: https://initial-setup-18.preview.emergentagent.com
 - bug_fix_context: Removed extra /1000000 division for TRX balances in 4 files (merchantPoolSweep.ts, paymentController.ts×2, adminController.ts) since tatumApi.getAddressBalance() already converts SUN to TRX
 - test_results: MOSTLY PASSED ✅ (3/4 endpoints working)
   * GET /api/status/health → HTTP 200 (Health status: healthy, timestamp: 2026-03-25T07:32:07.753Z, version: 1.0.0)
