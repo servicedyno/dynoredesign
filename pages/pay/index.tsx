@@ -349,6 +349,10 @@ const Payment = () => {
     try {
       const query_data = router.query.d
       
+      // Clear any stale token from previous payment sessions
+      // This prevents configured-currencies and other calls from using a wrong JWT
+      localStorage.removeItem('token')
+
       // Get customer's timezone for tax calculation
       const customerTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone
       

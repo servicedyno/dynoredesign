@@ -648,18 +648,29 @@ const CryptoTransfer = ({
         console.log("Using cached rates");
         rateData = prefetchedRates;
       } else {
-        // Fetch fresh rates
+        // Fetch fresh rates with silent auto-retry (up to 3 attempts)
         setLoadingStep('rates');
-        const rateResponse = await axiosBaseApi.post("/pay/getCurrencyRates", {
-          source: walletState?.currency,
-          amount: totalAmountWithTax,
-          currencyList: cryptoOptions.map((x) => x.value),
-          fixedDecimal: false,
-          fee_payer: feePayer,
-          tax_amount: taxAmount,
-        });
-
-        rateData = rateResponse?.data?.data;
+        const MAX_RATE_RETRIES = 3;
+        for (let attempt = 1; attempt <= MAX_RATE_RETRIES; attempt++) {
+          try {
+            const rateResponse = await axiosBaseApi.post("/pay/getCurrencyRates", {
+              source: walletState?.currency,
+              amount: totalAmountWithTax,
+              currencyList: cryptoOptions.map((x) => x.value),
+              fixedDecimal: false,
+              fee_payer: feePayer,
+              tax_amount: taxAmount,
+            });
+            rateData = rateResponse?.data?.data;
+            if (rateData && rateData.length > 0) break; // Success — exit retry loop
+          } catch (rateErr) {
+            console.warn(`[Crypto] Rate fetch attempt ${attempt}/${MAX_RATE_RETRIES} failed:`, rateErr);
+          }
+          // Brief delay before retry (500ms, 1000ms)
+          if (attempt < MAX_RATE_RETRIES) {
+            await new Promise(r => setTimeout(r, attempt * 500));
+          }
+        }
         
         // Update cache
         if (rateData) {
@@ -676,6 +687,14 @@ const CryptoTransfer = ({
       console.log("findRate for", baseCurrency, ":", findRate);
       console.log("total_amount_source:", findRate?.total_amount_source);
 
+      // Guard: If rate data is unavailable after retries, abort cleanly
+      if (!findRate || (!findRate.total_amount && !findRate.amount)) {
+        dispatch({ type: TOAST_SHOW, payload: { message: "Unable to fetch conversion rate. Please try again.", severity: "error" } });
+        setLoading(false);
+        setLoadingStep(null);
+        return;
+      }
+
       setCurrencyRates(rateData || undefined);
       setSelectedCurrency(findRate);
       setSelectedCrypto(cryptoValue);
@@ -685,7 +704,7 @@ const CryptoTransfer = ({
       
       const finalPayload = {
         currency: displayCurrency, // e.g., "USDT-TRC20"
-        amount: findRate?.total_amount || findRate?.amount, // use total_amount when customer pays fees
+        amount: findRate.total_amount || findRate.amount, // use total_amount when customer pays fees
         paymentType: paymentTypes.CRYPTO,
       };
 

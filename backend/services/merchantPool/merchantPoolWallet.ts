@@ -255,27 +255,54 @@ export const addAddressToMerchantPool = async (
     }
 
     // ──────────────────────────────────────────────────────────────
-    // STANDARD CHAINS: Generate individual address (existing logic)
+    // STANDARD CHAINS: Generate individual address (with retry)
     // ──────────────────────────────────────────────────────────────
-    const { xpub, mnemonic } = await getOrCreateMerchantWallet(userId, walletType);
-    
-    const derivationIndex = await getNextDerivationIndex(userId, walletType, transaction);
-    
-    const addressData = await tatumApi.generateUserAddress({
-      currency: walletType,
-      xpub,
-      mnemonic,
-      index: derivationIndex,
-    });
+    const MAX_TATUM_RETRIES = 3;
+    const RETRY_DELAY_MS = 1000;
 
-    if (!addressData || !addressData.address) {
-      throw new Error(`Failed to generate address for ${walletType} at index ${derivationIndex}`);
+    let xpub: string;
+    let mnemonic: string;
+    let derivationIndex: number;
+    let addressData: any;
+    let encryptedPrivateKey: string;
+
+    // Retry wrapper for transient Tatum API failures
+    for (let attempt = 1; attempt <= MAX_TATUM_RETRIES; attempt++) {
+      try {
+        const walletResult = await getOrCreateMerchantWallet(userId, walletType);
+        xpub = walletResult.xpub;
+        mnemonic = walletResult.mnemonic;
+
+        derivationIndex = await getNextDerivationIndex(userId, walletType, transaction);
+
+        addressData = await tatumApi.generateUserAddress({
+          currency: walletType,
+          xpub,
+          mnemonic,
+          index: derivationIndex,
+        });
+
+        if (!addressData || !addressData.address) {
+          throw new Error(`Failed to generate address for ${walletType} at index ${derivationIndex}`);
+        }
+
+        encryptedPrivateKey = await tatumApi.encryptSymmetric(
+          addressData.privateKey,
+          process.env.TEMP_KEY_ID
+        );
+
+        break; // Success — exit retry loop
+      } catch (retryErr) {
+        const errMsg = getErrorMessage(retryErr);
+        if (attempt < MAX_TATUM_RETRIES) {
+          cronLogger.warn(`[MerchantPool] Tatum API attempt ${attempt}/${MAX_TATUM_RETRIES} failed for ${walletType} (merchant ${userId}): ${errMsg}. Retrying in ${RETRY_DELAY_MS * attempt}ms...`);
+          await new Promise(r => setTimeout(r, RETRY_DELAY_MS * attempt));
+        } else {
+          cronLogger.error(`[MerchantPool] All ${MAX_TATUM_RETRIES} Tatum API attempts failed for ${walletType} (merchant ${userId}): ${errMsg}`);
+          throw retryErr;
+        }
+      }
     }
-
-    const encryptedPrivateKey = await tatumApi.encryptSymmetric(
-      addressData.privateKey,
-      process.env.TEMP_KEY_ID
-    );
 
     let subscriptionId = null;
     try {

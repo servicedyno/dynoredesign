@@ -894,6 +894,16 @@ const addPayment = async (req: express.Request, res: express.Response) => {
       if (typeof value === "object") {
         let finalRes;
         const items = await getRedisItem("customer-" + userData.ref);
+
+        // Guard: If Redis session expired or is missing, return clear error
+        if (!items || !items.adm_id) {
+          cronLogger.error(`[addPayment] Redis session missing or expired for ref: ${userData.ref}`);
+          return res.status(400).json({
+            success: false,
+            message: "Payment session expired. Please reload the page and try again.",
+          });
+        }
+
         if (value.paymentType === paymentTypes.CARD) {
           const { paymentRes, uniqueRef } = await cardPayment(value, userData);
           cronLogger.info(paymentRes);
