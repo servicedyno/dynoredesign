@@ -481,9 +481,13 @@ const CryptoTransfer = ({
         const taxAmount = Number(taxInfo?.amount || 0);
         const totalAmountWithTax = baseAmount + taxAmount;
         
+        // When customer pays fees, send base amount only — backend adds tax + fees
+        // When company pays fees, send tax-inclusive amount — backend returns raw conversion
+        const amountForRates = feePayer === 'customer' ? baseAmount : totalAmountWithTax;
+        
         const rateResponse = await axiosBaseApi.post("/pay/getCurrencyRates", {
           source: walletState?.currency,
-          amount: totalAmountWithTax,
+          amount: amountForRates,
           currencyList: cryptoOptions.map((x) => x.value),
           fixedDecimal: false,
           fee_payer: feePayer,
@@ -635,7 +639,11 @@ const CryptoTransfer = ({
       const taxAmount = Number(taxInfo?.amount || 0);
       const totalAmountWithTax = baseAmount + taxAmount;
       
-      console.log(`Crypto conversion: base=${baseAmount}, tax=${taxAmount}, total=${totalAmountWithTax}`);
+      // When customer pays fees, send base amount only — backend adds tax + fees to avoid double-counting
+      // When company pays fees, send tax-inclusive amount — backend returns raw conversion
+      const amountForRates = feePayer === 'customer' ? baseAmount : totalAmountWithTax;
+      
+      console.log(`Crypto conversion: base=${baseAmount}, tax=${taxAmount}, total=${totalAmountWithTax}, amountForRates=${amountForRates} (feePayer=${feePayer})`);
 
       let rateData: currencyData[] | null = null;
       
@@ -655,7 +663,7 @@ const CryptoTransfer = ({
           try {
             const rateResponse = await axiosBaseApi.post("/pay/getCurrencyRates", {
               source: walletState?.currency,
-              amount: totalAmountWithTax,
+              amount: amountForRates,
               currencyList: cryptoOptions.map((x) => x.value),
               fixedDecimal: false,
               fee_payer: feePayer,

@@ -5474,24 +5474,29 @@ const getCurrencyRates = async (
               const networkFeeUSD = Number(networkFee.feeInUSD) || 0;
               
               const totalFeesUSD = fixedFee + transactionFee + networkFeeUSD;
-              const taxAmountNum = Number(tax_amount) || 0;
+              const taxAmountRaw = Number(tax_amount) || 0;
+              // Convert tax from source currency to USD (tax_amount arrives in source currency)
+              const sourceToUSDRate = (amount > 0 && Math.abs(amountUSD - amount) > 0.01) ? (amountUSD / amount) : 1;
+              const taxAmountUSD = parseFloat((taxAmountRaw * sourceToUSDRate).toFixed(2));
               
               // Round all amounts to 2 decimal places for consistency
               const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
-              const roundedTotalAmountUSD = parseFloat((amountUSD + roundedTotalFeesUSD + taxAmountNum).toFixed(2));
+              // amountUSD is the base amount (frontend sends base only for customer-pays)
+              // Add tax (now in USD) + fees to get the grand total
+              const roundedTotalAmountUSD = parseFloat((amountUSD + roundedTotalFeesUSD + taxAmountUSD).toFixed(2));
               
               // Get the exchange rate and convert fees/tax to target currency
               const exchangeRate = Number(rate.transferRate) || 1;
               const convertedBaseAmount = Number(rate.amount) || 0;
               const convertedTotalFees = parseFloat((roundedTotalFeesUSD * exchangeRate).toFixed(2));
-              const convertedTaxAmount = parseFloat((taxAmountNum * exchangeRate).toFixed(2));
+              const convertedTaxAmount = parseFloat((taxAmountRaw * exchangeRate).toFixed(2)); // tax_amount is already in source, convert to target
               const convertedTotalAmount = parseFloat((roundedTotalAmountUSD * exchangeRate).toFixed(2));
               
               // Convert total back to source currency for total_amount_source
               const usdToSourceRate = amountUSD > 0 ? amount / amountUSD : 1;
               const totalAmountSourceCurrency = parseFloat((roundedTotalAmountUSD * usdToSourceRate).toFixed(2));
               
-              cronLogger.info(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=$${taxAmountNum.toFixed(2)} USD = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSourceCurrency.toFixed(2)} ${source}) = ${convertedTotalAmount} ${rate.currency}`);
+              cronLogger.info(`[getCurrencyRates] ${rate.currency} (fiat): base=${amount} ${source} ($${amountUSD.toFixed(2)} USD) = ${convertedBaseAmount} ${rate.currency}, tax=${taxAmountRaw} ${source} ($${taxAmountUSD.toFixed(2)} USD) = ${convertedTaxAmount} ${rate.currency}, fees=$${roundedTotalFeesUSD.toFixed(2)} USD = ${convertedTotalFees} ${rate.currency}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSourceCurrency.toFixed(2)} ${source}) = ${convertedTotalAmount} ${rate.currency}`);
               
               return {
                 ...rate,
@@ -5500,7 +5505,7 @@ const getCurrencyRates = async (
                 base_amount_usd: parseFloat(amountUSD.toFixed(2)), // Converted to USD
                 // Include tax in breakdown (converted to target currency)
                 tax_amount: convertedTaxAmount,
-                tax_amount_usd: parseFloat(taxAmountNum.toFixed(2)),
+                tax_amount_usd: taxAmountUSD,
                 // Simplified - only show total processing fee (converted to target currency)
                 processing_fee: convertedTotalFees,
                 processing_fee_usd: roundedTotalFeesUSD,
@@ -5544,8 +5549,13 @@ const getCurrencyRates = async (
             // Calculate totals including tax - round USD amounts to 2 decimals for consistency
             const totalFeesUSD = fixedFee + transactionFee + networkFeeUSD;
             const roundedTotalFeesUSD = parseFloat(totalFeesUSD.toFixed(2));
-            const taxAmountNum = Number(tax_amount) || 0;
-            const totalAmountUSD = amountUSD + roundedTotalFeesUSD + taxAmountNum;
+            const taxAmountRaw = Number(tax_amount) || 0;
+            // Convert tax from source currency to USD (tax_amount arrives in source currency)
+            const sourceToUSDRate = (amount > 0 && Math.abs(amountUSD - amount) > 0.01) ? (amountUSD / amount) : 1;
+            const taxAmountUSD = parseFloat((taxAmountRaw * sourceToUSDRate).toFixed(2));
+            // amountUSD is the base amount (frontend sends base only for customer-pays)
+            // Add tax (now in USD) + fees to get the grand total
+            const totalAmountUSD = amountUSD + roundedTotalFeesUSD + taxAmountUSD;
             const roundedTotalAmountUSD = parseFloat(totalAmountUSD.toFixed(2));
             const totalAmountCrypto = cryptoPrice > 0 ? roundedTotalAmountUSD / cryptoPrice : 0;
             
@@ -5554,18 +5564,18 @@ const getCurrencyRates = async (
             const usdToSourceRate = amountUSD > 0 ? amount / amountUSD : 1;
             const totalAmountSource = parseFloat((roundedTotalAmountUSD * usdToSourceRate).toFixed(2));
             const processingFeeSource = parseFloat((roundedTotalFeesUSD * usdToSourceRate).toFixed(2));
-            const taxAmountSource = parseFloat((taxAmountNum * usdToSourceRate).toFixed(2));
+            const taxAmountSource = parseFloat((taxAmountRaw * 1).toFixed(2)); // tax_amount is already in source currency
             
-            cronLogger.info(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=$${taxAmountNum.toFixed(2)}, fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSource.toFixed(2)} ${source})`);
+            cronLogger.info(`[getCurrencyRates] ${rate.currency}: base=${amount} ${source} ($${amountUSD.toFixed(2)} USD), tax=${taxAmountRaw} ${source} ($${taxAmountUSD.toFixed(2)} USD), fees=$${roundedTotalFeesUSD.toFixed(2)}, total=$${roundedTotalAmountUSD.toFixed(2)} USD (=${totalAmountSource.toFixed(2)} ${source})`);
             
             return {
               ...rate,
               fee_payer: 'customer',
               base_amount: Number(rate.amount),
               base_amount_usd: parseFloat(amountUSD.toFixed(2)),
-              // Include tax in breakdown (converted to source currency)
+              // Include tax in breakdown (in source currency as received)
               tax_amount: taxAmountSource,
-              tax_amount_usd: parseFloat(taxAmountNum.toFixed(2)),
+              tax_amount_usd: taxAmountUSD,
               // Simplified - only show total processing fee (converted to source currency)
               processing_fee: processingFeeSource,
               processing_fee_usd: roundedTotalFeesUSD,
