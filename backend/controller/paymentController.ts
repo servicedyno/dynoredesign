@@ -89,6 +89,7 @@ import {
 import * as merchantPoolService from "../services/merchantPoolService";
 import { callMerchantWebhook } from "../webhooks";
 import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
+import { recordTransactionVolume } from "../services/feeFreeService";
 import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
 import { createConversionRecord } from "../services/conversionService";
 import { stablecoinConversionModel } from "../models";
@@ -1141,13 +1142,18 @@ const addPayment = async (req: express.Request, res: express.Response) => {
           // Calculate fees using tier-based structure
           // Fee = 1.5% transaction fee + fixed fee (tier-based)
           try {
-            const { totalDeduction, fixedFee, transactionFee } = await calculateTransactionFees(
+            const { totalDeduction, fixedFee, transactionFee, feeFreeApplied } = await calculateTransactionFees(
               value.currency,
-              baseAmountUSD  // Fee calculation based on USD amount
+              baseAmountUSD,  // Fee calculation based on USD amount
+              Number(items.adm_id) || undefined  // Pass userId for fee-free discount
             );
             
             // Convert fee percentage to crypto
             const feePercentage = totalDeduction / baseAmountUSD;
+            
+            if (feeFreeApplied) {
+              cronLogger.info(`[addPayment] 🎉 Fee-free promotion applied for user ${items.adm_id}`);
+            }
             
             if (fee_payer === 'customer') {
               // Customer pays fees - fees are added on top, merchant gets full base + tax
@@ -1241,6 +1247,20 @@ const addPayment = async (req: express.Request, res: express.Response) => {
             - Merchant Amount: ${merchant_amount_crypto}
             - Fees: ${total_fees_crypto}
             - Tax: ${taxAmount} USD (${taxAmountCrypto} crypto)`);
+          
+          // FIX: Update merchant pool address expected_amount with correct crypto amount
+          // The initial reservation stored the base fiat amount (e.g., 10 USD) instead of crypto amount
+          if (paymentRes.temp_id && crypto_amount > 0) {
+            try {
+              await merchantTempAddressModel.update(
+                { expected_amount: crypto_amount },
+                { where: { temp_address_id: paymentRes.temp_id } }
+              );
+              cronLogger.info(`[addPayment] ✅ Updated pool address ${paymentRes.temp_id} expected_amount: ${crypto_amount} ${value.currency}`);
+            } catch (poolUpdateErr: any) {
+              cronLogger.warn(`[addPayment] Pool address expected_amount update failed (non-critical): ${poolUpdateErr.message}`);
+            }
+          }
           
           // PHASE 12.1: Store active_crypto_address (including destination_tag) in customer session
           // This is CRITICAL for verifyCryptoPayment to resolve tag-based chains (XRP/RLUSD)
@@ -1736,10 +1756,16 @@ const createCryptoPayment = async (
         
         // Calculate fees using tier-based structure: 1.5% + fixed
         // IMPORTANT: Use USD amount for fee tier selection (tiers are defined in USD)
-        const { totalDeduction, fixedFee, transactionFee } = await calculateTransactionFees(
+        const merchantUserId = items?.adm_id ? Number(items.adm_id) : undefined;
+        const { totalDeduction, fixedFee, transactionFee, feeFreeApplied } = await calculateTransactionFees(
           requestedCurrency,
-          baseAmountUSD  // Fee calculation based on USD amount (ensures correct tier)
+          baseAmountUSD,  // Fee calculation based on USD amount (ensures correct tier)
+          merchantUserId  // Pass userId for fee-free discount
         );
+        
+        if (feeFreeApplied) {
+          cronLogger.info(`[createCryptoPayment] 🎉 Fee-free promotion applied for user ${merchantUserId}`);
+        }
         
         // Fee percentage for crypto conversion (based on USD fee / USD amount)
         const feePercentage = totalDeduction / baseAmountUSD;
@@ -2758,7 +2784,7 @@ const Crypto = async (
     // If so, use that SAME address to keep consistency between the QR shown to merchant and the checkout
     let poolAddressResult;
     if (data.direct_pay_temp_id) {
-      cronLogger.info(`[Crypto] Direct Pay pre-reserved address found (temp_id: ${data.direct_pay_temp_id}), using it`);
+      cronLogger.info(`[Crypto] Checking Direct Pay pre-reserved address (temp_id: ${data.direct_pay_temp_id}, expected chain: ${currency})`);
       const preReservedAddr = await merchantTempAddressModel.findOne({
         where: {
           temp_address_id: data.direct_pay_temp_id,
@@ -4516,10 +4542,16 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         const storedTaxAmountUSD = parseFloat(tempData?.tax_amount_usd || '0');
         const feeCalcBasisUSD = storedBaseAmountUSD > 0 ? storedBaseAmountUSD : receivedUSD;
         
-        const { totalDeduction, minForwarding, fixedFee, transactionFee } = await calculateTransactionFees(
+        const verifyUserId = customerData?.adm_id ? Number(customerData.adm_id) : undefined;
+        const { totalDeduction, minForwarding, fixedFee, transactionFee, feeFreeApplied, feeFreeDiscount } = await calculateTransactionFees(
           tempCurrency,
-          feeCalcBasisUSD  // Use base amount for consistent fee tier selection
+          feeCalcBasisUSD,  // Use base amount for consistent fee tier selection
+          verifyUserId  // Pass userId for fee-free discount
         );
+        
+        if (feeFreeApplied) {
+          cronLogger.info(`[cryptoVerification] 🎉 Fee-free promotion applied for user ${verifyUserId}, discount: $${feeFreeDiscount?.toFixed(2)}`);
+        }
         
         // Fee percentage based on BASE amount (excludes tax)
         const feePercentage = feeCalcBasisUSD > 0 ? totalDeduction / feeCalcBasisUSD : 0;
@@ -5123,6 +5155,18 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         });
         await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
         await softDeleteRedisItem(cryptoKey, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
+
+        // FIX: Record transaction volume for fee-free promotion tracking
+        const feeFreeUserId = customerData?.adm_id ? Number(customerData.adm_id) : null;
+        const feeFreeAmountUsd = parseFloat(tempData?.base_amount_usd || '0') || receivedUSD;
+        if (feeFreeUserId && feeFreeAmountUsd > 0) {
+          try {
+            const feeFreeResult = await recordTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
+            cronLogger.info(`[cryptoVerification] ✅ Fee-free volume recorded: user ${feeFreeUserId}, $${feeFreeAmountUsd.toFixed(2)} USD. Remaining: $${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
+          } catch (feeFreeError: any) {
+            cronLogger.warn(`[cryptoVerification] Fee-free volume recording failed (non-critical): ${feeFreeError.message}`);
+          }
+        }
 
         if (webhook) {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
