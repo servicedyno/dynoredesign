@@ -168,7 +168,8 @@ const acquireLock = async (
   ttlSeconds: number = 30,
   maxRetries: number = 3,
   retryDelayMs: number = 100,
-  autoRenew: boolean = false
+  autoRenew: boolean = false,
+  silent: boolean = false
 ): Promise<boolean> => {
   const fullKey = `lock:${lockKey}`;
   const lockValue = `${process.pid}:${Date.now()}`;
@@ -182,7 +183,7 @@ const acquireLock = async (
       
       if (result === 'OK') {
         lockOwners.set(fullKey, lockValue);
-        cronLogger.info(`[Lock] Acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
+        if (!silent) cronLogger.info(`[Lock] Acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
         
         // Start heartbeat renewal at 50% of TTL
         if (autoRenew) {
@@ -195,12 +196,12 @@ const acquireLock = async (
                 arguments: [lockValue, String(ttlSeconds)],
               });
               if (extended === 1) {
-                cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
+                if (!silent) cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
               } else {
                 // Lock was lost (expired or stolen) — stop renewing
                 clearInterval(timer);
                 lockRenewTimers.delete(fullKey);
-                cronLogger.warn(`[Lock] Renewal failed (lost): ${lockKey}`);
+                if (!silent) cronLogger.warn(`[Lock] Renewal failed (lost): ${lockKey}`);
               }
             } catch {
               // Redis error — stop renewing to avoid noise
@@ -217,7 +218,7 @@ const acquireLock = async (
       if (attempt === 0) {
         const holder = await redisClient.get(fullKey);
         const ttl = await redisClient.ttl(fullKey);
-        cronLogger.info(`[Lock] ${lockKey} held by ${holder}, TTL: ${ttl}s (current PID: ${process.pid})`);
+        if (!silent) cronLogger.info(`[Lock] ${lockKey} held by ${holder}, TTL: ${ttl}s (current PID: ${process.pid})`);
 
         // BUG-5 FIX: Steal stale locks with expired TTL (negative or zero)
         // This happens when the previous holder crashed without releasing,
@@ -229,7 +230,7 @@ const acquireLock = async (
           const stealResult = await redisClient.set(fullKey, lockValue, { EX: ttlSeconds });
           if (stealResult === 'OK') {
             lockOwners.set(fullKey, lockValue);
-            cronLogger.info(`[Lock] Stolen & acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
+            if (!silent) cronLogger.info(`[Lock] Stolen & acquired: ${lockKey} (TTL: ${ttlSeconds}s, autoRenew: ${autoRenew})`);
             if (autoRenew) {
               const renewInterval = Math.floor(ttlSeconds * 500);
               const timer = setInterval(async () => {
@@ -239,7 +240,7 @@ const acquireLock = async (
                     arguments: [lockValue, String(ttlSeconds)],
                   });
                   if (extended === 1) {
-                    cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
+                    if (!silent) cronLogger.info(`[Lock] Renewed: ${lockKey} (+${ttlSeconds}s)`);
                   } else {
                     clearInterval(timer);
                     lockRenewTimers.delete(fullKey);
@@ -264,7 +265,7 @@ const acquireLock = async (
     }
   }
   
-  cronLogger.info(`[Lock] Failed to acquire after ${maxRetries} attempts: ${lockKey}`);
+  if (!silent) cronLogger.info(`[Lock] Failed to acquire after ${maxRetries} attempts: ${lockKey}`);
   return false;
 };
 
@@ -289,7 +290,7 @@ const EXTEND_LOCK_SCRIPT = `
 /**
  * Release a distributed lock (only if current process owns it)
  */
-const releaseLock = async (lockKey: string): Promise<void> => {
+const releaseLock = async (lockKey: string, silent: boolean = false): Promise<void> => {
   const fullKey = `lock:${lockKey}`;
   
   // Stop renewal timer first
@@ -307,18 +308,18 @@ const releaseLock = async (lockKey: string): Promise<void> => {
         arguments: [lockValue],
       });
       if (result === 1) {
-        cronLogger.info(`[Lock] Released: ${lockKey}`);
+        if (!silent) cronLogger.info(`[Lock] Released: ${lockKey}`);
       } else {
-        cronLogger.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
+        if (!silent) cronLogger.warn(`[Lock] Lock expired or owned by another process: ${lockKey}`);
       }
     } catch {
       await redisClient.del(fullKey).catch(() => {});
-      cronLogger.info(`[Lock] Released (fallback): ${lockKey}`);
+      if (!silent) cronLogger.info(`[Lock] Released (fallback): ${lockKey}`);
     }
     lockOwners.delete(fullKey);
   } else {
     await redisClient.del(fullKey).catch(() => {});
-    cronLogger.info(`[Lock] Released (no owner): ${lockKey}`);
+    if (!silent) cronLogger.info(`[Lock] Released (no owner): ${lockKey}`);
   }
 };
 
@@ -329,9 +330,10 @@ const releaseLock = async (lockKey: string): Promise<void> => {
 const withLock = async <T>(
   lockKey: string,
   fn: () => Promise<T>,
-  ttlSeconds: number = 30
+  ttlSeconds: number = 30,
+  silent: boolean = false
 ): Promise<{ success: boolean; result?: T; error?: string }> => {
-  const acquired = await acquireLock(lockKey, ttlSeconds, 3, 100, true);
+  const acquired = await acquireLock(lockKey, ttlSeconds, 3, 100, true, silent);
   
   if (!acquired) {
     return { success: false, error: 'Could not acquire lock' };
@@ -341,7 +343,7 @@ const withLock = async <T>(
     const result = await fn();
     return { success: true, result };
   } finally {
-    await releaseLock(lockKey);
+    await releaseLock(lockKey, silent);
   }
 };
 

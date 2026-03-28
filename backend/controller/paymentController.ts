@@ -12,7 +12,7 @@ import {
   successResponseHelper,
 } from "../helper";
 import { handleControllerError } from "../helper/controllerErrorHandler";
-import { apiLogger, cronLogger, webhookLogs } from "../utils/loggers";
+import { apiLogger, cronLogger, webhookLogs, log } from "../utils/loggers";
 import {
   deleteRedisItem,
   getRedisItem,
@@ -4690,6 +4690,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           - Is Merchant Pool: ${tempData.is_merchant_pool}
           - Auto-Convert: ${autoConvertEnabled ? 'YES' : 'NO'}
         `);
+        // Direct console.log backup — settlement distribution details are critical for audit
+        log(`[cryptoVerification] 💸 Settlement: merchant=${adminTransferResult.sendAmount} ${tempCurrency}, merchantTx=${adminTransferResult.transactionDetails?.txId || 'N/A'}, adminFee=${adminAmountToSend} ${tempCurrency}, gas=${adminTransferResult.gasFunded || 0}`);
 
         // Compute actual on-chain merchant amount (post-gas deductions) for webhook and records
         const actualMerchantAmount = adminTransferResult.sendAmount > 0
@@ -5153,6 +5155,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           status: toRedisStatus(PaymentState.PAYOUT_COMPLETE),
           completedAt: new Date().toISOString(),
         });
+        // Direct console.log — critical settlement milestone, must appear in Railway logs
+        log(`[cryptoVerification] ✅ PAYOUT_COMPLETE: addr=${address}, ref=${tempData.ref}, receivedUSD=$${receivedUSD?.toFixed(2) || 'N/A'}`);
         await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
         await softDeleteRedisItem(cryptoKey, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
 
@@ -5163,8 +5167,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           try {
             const feeFreeResult = await recordTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
             cronLogger.info(`[cryptoVerification] ✅ Fee-free volume recorded: user ${feeFreeUserId}, $${feeFreeAmountUsd.toFixed(2)} USD. Remaining: $${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
+            // Direct console.log backup — critical for Railway log visibility during high-load periods
+            log(`[cryptoVerification] 💰 Fee-free recorded: user=${feeFreeUserId}, amount=$${feeFreeAmountUsd.toFixed(2)}, remaining=$${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
           } catch (feeFreeError: any) {
             cronLogger.warn(`[cryptoVerification] Fee-free volume recording failed (non-critical): ${feeFreeError.message}`);
+            log(`[cryptoVerification] ⚠️ Fee-free recording FAILED: user=${feeFreeUserId}, err=${feeFreeError.message}`, "warn");
           }
         }
 

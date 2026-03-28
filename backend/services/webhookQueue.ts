@@ -13,6 +13,7 @@
 
 import { Queue, Worker, Job, QueueEvents } from "bullmq";
 import { webhookLogs } from "../utils/loggers";
+import { log } from "../utils/loggers";
 import { captureError } from "./errorMonitoringService";
 import { baseEmailTemplate, infoBox, dataRow, statusBadge, p } from "../utils/emailTemplate";
 
@@ -107,13 +108,17 @@ export function startWebhookWorker(
     "tatum-webhooks",
     async (job: Job<WebhookJobData>) => {
       webhookLogs.info(`[WebhookQueue] Processing job ${job.id} (attempt ${job.attemptsMade + 1}/${job.opts.attempts})`);
+      // Direct console.log backup — ensures Railway captures job lifecycle even during high-load
+      log(`[WebhookQueue] 🔄 Job START: ${job.id}, attempt ${job.attemptsMade + 1}/${job.opts.attempts}, tx=${job.data?.payload?.txId || 'unknown'}`);
       
       try {
         await processFunction(job.data);
         webhookLogs.info(`[WebhookQueue] Job ${job.id} completed successfully`);
+        log(`[WebhookQueue] ✅ Job DONE: ${job.id}, tx=${job.data?.payload?.txId || 'unknown'}`);
       } catch (error: unknown) {
         const err = error as Error;
         webhookLogs.error(`[WebhookQueue] Job ${job.id} failed: ${err.message}`);
+        log(`[WebhookQueue] ❌ Job FAIL: ${job.id}, tx=${job.data?.payload?.txId || 'unknown'}, err=${err.message}`, "error");
         throw error; // BullMQ handles retry
       }
     },

@@ -18,6 +18,7 @@
 
 import { getRedisItem, setRedisItem, setRedisTTL, acquireLock, releaseLock } from "../utils/redisInstance";
 import { webhookLogs } from "../utils/loggers";
+import { log } from "../utils/loggers";
 import { paymentController } from "../controller";
 import { sendPendingPaymentNotification } from "./pendingPaymentService";
 import { ADMIN_WALLETS, FEE_WALLETS, isTagBasedChain, getCryptoRedisKey, XRP_MASTER_ADDRESS } from "./merchantPool/merchantPoolConfig";
@@ -219,6 +220,9 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     txId: payload.txId,
     source: data.source,
   });
+  // Direct console.log backup — ensures Railway captures critical payment processing events
+  // even if Winston buffers during high-load periods (e.g., concurrent cron lock noise)
+  log(`[WebhookProcessor] 🔄 Processing: addr=${payload.address}, amount=${payload.amount}, asset=${payload.asset || (payload as any).currency}, tx=${payload.txId}`);
 
   // ── 1. Duplicate detection ────────────────────────────────────────────────
   const processedTxKey = `processed-tx-${payload.txId}`;
@@ -988,6 +992,7 @@ async function handleNewTransaction(
           return; // EXIT — no payment.settled webhook
         }
         webhookLogs.info("[WebhookProcessor] cryptoVerification completed successfully");
+        log(`[WebhookProcessor] ✅ cryptoVerification SUCCESS: addr=${address}, tx=${payload.txId}, amount=${finalReceivedAmount}`);
         lastError = null;
         break;
       } catch (retryError: unknown) {
@@ -1005,7 +1010,7 @@ async function handleNewTransaction(
           const baseWait = isGasError ? 15000 : 2000; // 15s base for gas errors vs 2s for others
           const waitTime = baseWait * Math.pow(2, attempt - 1);
           webhookLogs.warn(`[WebhookProcessor] Retry ${attempt}/${maxRetries}: ${err.message}, waiting ${waitTime}ms${isGasError ? " (gas-related, extended wait)" : ""}`);
-
+          log(`[WebhookProcessor] ⚠️ RETRY ${attempt}/${maxRetries}: tx=${payload.txId}, err=${err.message}, wait=${waitTime}ms${isGasError ? " (gas)" : ""}`, "warn");
           // Soft-enforce: processing → retrying (self-transition via legacy map)
           softValidate("processing", "retrying", paymentId, `crypto-verification-retry-${attempt}`);
 
@@ -1143,6 +1148,7 @@ async function handleNewTransaction(
   } catch (verifyError: unknown) {
     const err = verifyError as { message?: string };
     webhookLogs.error("[WebhookProcessor] cryptoVerification failed after retries:", verifyError);
+    log(`[WebhookProcessor] ❌ FAILED: addr=${address}, tx=${payload.txId}, err=${err.message}`, "error");
 
     // Soft-enforce: processing → failed (PROCESSING → FAILED)
     softValidate("processing", "failed", paymentId, "crypto-verification-failure");

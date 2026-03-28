@@ -744,7 +744,7 @@ export const replenishPreReservedPool = async (
       }
       
       return preReservedCount;
-    }, 30);
+    }, 30, true); // silent=true: suppress lock acquire/release logs for pre-reserve (high frequency)
     
     return lockResult.success ? (lockResult.result as number) : 0;
   } catch (err) {
