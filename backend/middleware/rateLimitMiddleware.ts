@@ -217,6 +217,44 @@ export const otpRateLimiter = createRateLimiter(
   })
 );
 
+/**
+ * Webhook rate limiter — more lenient than strictRateLimiter because blockchain
+ * providers can send bursts of webhooks (e.g., Tatum catching up after downtime).
+ * 200 requests per 5 minutes per IP.
+ */
+export const webhookRateLimiter = createRateLimiter(
+  (req) => {
+    const ip = req.ip ||
+               req.headers['x-forwarded-for'] as string ||
+               req.socket.remoteAddress ||
+               'unknown';
+    return `webhook:${ip}`;
+  },
+  async () => ({
+    windowMs: 5 * 60 * 1000,   // 5 minutes
+    maxRequests: 200,           // 200 webhook events per IP per 5 minutes
+  })
+);
+
+/**
+ * Payment rate limiter — applies to customer-facing payment endpoints
+ * (getData, addPayment, createCryptoPayment, getCurrencyRates).
+ * 30 requests per minute per customer token.
+ */
+export const paymentRateLimiter = createRateLimiter(
+  (req) => {
+    const ip = req.ip ||
+               req.headers['x-forwarded-for'] as string ||
+               req.socket.remoteAddress ||
+               'unknown';
+    return `payment:${ip}`;
+  },
+  async () => ({
+    windowMs: 60 * 1000,       // 1 minute
+    maxRequests: 30,            // 30 payment-related requests per IP per minute
+  })
+);
+
 export default {
   createRateLimiter,
   apiKeyRateLimiter,
@@ -225,4 +263,6 @@ export default {
   loginRateLimiter,
   moderateRateLimiter,
   otpRateLimiter,
+  webhookRateLimiter,
+  paymentRateLimiter,
 };

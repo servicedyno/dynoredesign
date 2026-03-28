@@ -434,7 +434,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
     });
 
     if (currency === "BCH") {
-      fromAddress.forEach(async (address) => {
+      for (const address of fromAddress) {
         const utxo = await blockchairApi.getBitcoinCashUTXO(address.address);
 
         utxo.sort((a, b) => b.value - a.value);
@@ -445,7 +445,7 @@ const estimateFees = async (req: express.Request, res: express.Response) => {
             tempAmount += utxo[i].value / 100000000;
           }
         }
-      });
+      }
     }
 
     // Get Fees for batch transactions

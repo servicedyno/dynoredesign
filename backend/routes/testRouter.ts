@@ -476,9 +476,9 @@ testRouter.post("/manual-transfer", authMiddleware, async (req, res) => {
 /**
  * POST /api/test/send-payment-link-email
  * Send a test payment link email to verify email formatting
- * No authentication required for testing
+ * Protected: Requires authentication
  */
-testRouter.post("/send-payment-link-email", async (req, res) => {
+testRouter.post("/send-payment-link-email", authMiddleware, async (req, res) => {
   try {
     const { email } = req.body;
     
@@ -571,9 +571,9 @@ testRouter.post("/trigger-referee-reminders", authMiddleware, async (_req, res) 
 /**
  * POST /api/test/send-referee-reminder
  * Send a test referee code reminder email
- * No authentication required for testing
+ * Protected: Requires authentication
  */
-testRouter.post("/send-referee-reminder", async (req, res) => {
+testRouter.post("/send-referee-reminder", authMiddleware, async (req, res) => {
   try {
     const { email, reminder_type = 'week1' } = req.body;
     
@@ -633,9 +633,9 @@ testRouter.post("/trigger-payment-link-reminders", authMiddleware, async (_req, 
 /**
  * POST /api/test/send-payment-link-reminder
  * Send a test payment link reminder email
- * No authentication required for testing
+ * Protected: Requires authentication
  */
-testRouter.post("/send-payment-link-reminder", async (req, res) => {
+testRouter.post("/send-payment-link-reminder", authMiddleware, async (req, res) => {
   try {
     const { email, reminder_type = 'reminder1', expires_in_hours = null } = req.body;
     
@@ -682,8 +682,9 @@ testRouter.post("/send-payment-link-reminder", async (req, res) => {
 /**
  * POST /api/test/send-payment-received-email
  * Send a test payment received email to verify new branded template
+ * Protected: Requires authentication
  */
-testRouter.post("/send-payment-received-email", async (req, res) => {
+testRouter.post("/send-payment-received-email", authMiddleware, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return errorResponseHelper(res, 400, "email is required");
@@ -711,8 +712,9 @@ testRouter.post("/send-payment-received-email", async (req, res) => {
 /**
  * POST /api/test/send-payment-pending-email
  * Send a test payment pending email to verify new branded template
+ * Protected: Requires authentication
  */
-testRouter.post("/send-payment-pending-email", async (req, res) => {
+testRouter.post("/send-payment-pending-email", authMiddleware, async (req, res) => {
   try {
     const { email } = req.body;
     if (!email) return errorResponseHelper(res, 400, "email is required");

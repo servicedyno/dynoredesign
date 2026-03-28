@@ -1,8 +1,10 @@
 import axios from "axios";
-const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
+const apiBaseUrl = process.env.NEXT_PUBLIC_BASE_URL || "";
+// Ensure trailing slash before appending "api/"
+const normalizedBase = apiBaseUrl.endsWith("/") ? apiBaseUrl : (apiBaseUrl ? apiBaseUrl + "/" : "");
 
 const adminBaseApi = axios.create({
-  baseURL: apiBaseUrl + "api/",
+  baseURL: normalizedBase + "api/",
   headers: {
     "Content-Type": "application/json",
   },

@@ -24,7 +24,7 @@ import {
 } from "../middleware";
 import emailVerifiedMiddleware from "../middleware/emailVerifiedMiddleware";
 // ITatumWebHook, IWebHook imports removed - not used
-import { strictRateLimiter } from "../middleware/rateLimitMiddleware";
+import { webhookRateLimiter } from "../middleware/rateLimitMiddleware";
 import apiRouter from "./apiRouter";
 import paymentRouter from "./paymentRouter";
 import {
@@ -63,6 +63,17 @@ const TATUM_KNOWN_IPS = new Set([
 const unsignedWebhookCounts = new Map<string, { count: number; resetAt: number }>();
 const UNSIGNED_RATE_LIMIT = 100; // max unsigned webhooks per IP per hour
 const UNSIGNED_RATE_WINDOW = 3600000; // 1 hour in ms
+const UNSIGNED_CLEANUP_INTERVAL = 600000; // Clean up stale entries every 10 minutes
+
+// Periodic cleanup to prevent memory leak from accumulating IPs
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of unsignedWebhookCounts) {
+    if (entry.resetAt <= now) {
+      unsignedWebhookCounts.delete(ip);
+    }
+  }
+}, UNSIGNED_CLEANUP_INTERVAL);
 
 const verifyTatumWebhookSource = (req: express.Request, res: express.Response, next: express.NextFunction) => {
   const secret = process.env.TATUM_WEBHOOK_SECRET;
@@ -75,13 +86,8 @@ const verifyTatumWebhookSource = (req: express.Request, res: express.Response, n
   if (!signature) {
     // Legacy subscription without HMAC — apply IP check and rate limiting
     const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
-    // FIX BUG-8: Check both exact match and prefix match for IP ranges
-    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp) || 
-      Array.from(TATUM_KNOWN_IPS).some(knownIp => 
-        knownIp.endsWith('.0') || knownIp.endsWith('.0.0') 
-          ? clientIp.startsWith(knownIp.replace(/\.0(\.0)?$/, '.'))
-          : false
-      );
+    // Check exact match only against known Tatum IPs (no loose prefix matching)
+    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp);
 
     // Rate-limit unsigned webhooks per IP
     const now = Date.now();
@@ -209,9 +215,9 @@ router.use("/events", eventsRouter); // SSE real-time events
 router.use("/admin/analytics", analyticsRouter); // Admin analytics (revenue, cohorts, funnels)
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
-router.post("/webhook", strictRateLimiter, flutterwaveWebHook);
-router.post("/failed_webhook", strictRateLimiter, flutterwaveWebHook);
-router.post("/tatum-webhook", strictRateLimiter, verifyTatumWebhookSource, tatumWebHook);
-router.post("/tatum-crypto-webhook", strictRateLimiter, verifyTatumWebhookSource, tatumCryptoWebHook);
+router.post("/webhook", webhookRateLimiter, flutterwaveWebHook);
+router.post("/failed_webhook", webhookRateLimiter, flutterwaveWebHook);
+router.post("/tatum-webhook", webhookRateLimiter, verifyTatumWebhookSource, tatumWebHook);
+router.post("/tatum-crypto-webhook", webhookRateLimiter, verifyTatumWebhookSource, tatumCryptoWebHook);
 
 export default router;

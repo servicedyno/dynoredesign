@@ -156,14 +156,20 @@ const RETRY_CONFIG = {
 /**
  * Convert crypto amount to USD
  * Used for displaying pending amounts in USD
+ * Returns NaN on conversion failure so callers can detect and handle it
  */
 const convertToUSD = async (amount: number, currency: string): Promise<number> => {
   try {
     if (!amount || amount <= 0) return 0;
-    return await convertToUSDUtil(currency, amount);
+    const result = await convertToUSDUtil(currency, amount);
+    if (result === undefined || result === null || isNaN(result)) {
+      cronLogger.error(`[convertToUSD] Conversion returned invalid value for ${amount} ${currency}: ${result}`);
+      return NaN;
+    }
+    return result;
   } catch (error) {
     cronLogger.error(`[convertToUSD] Failed to convert ${amount} ${currency} to USD:`, error);
-    return 0;
+    return NaN;
   }
 };
 
@@ -655,10 +661,11 @@ const getData = async (req: express.Request, res: express.Response) => {
     // Convert incomplete payment amount to USD if exists
     let incompletePaymentUSD = 0;
     if (item.incomplete_payment?.pending_amount && item.incomplete_payment?.currency) {
-      incompletePaymentUSD = await convertToUSD(
+      const converted = await convertToUSD(
         Number(item.incomplete_payment.pending_amount),
         item.incomplete_payment.currency
       );
+      incompletePaymentUSD = isNaN(converted) ? 0 : converted;
     }
     
     let payload;
@@ -4927,7 +4934,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             status: "successful",
             customer_id: customerData.customer_id ? Number(customerData.customer_id) : null,
             // Store USD value at time of receipt (historical value)
-            usd_value: await convertToUSD(Number(userAmountToSend), tempCurrency),
+            usd_value: (await convertToUSD(Number(userAmountToSend), tempCurrency)) || 0,
             // FIX: Populate crypto fields for complete transaction records
             // crypto_amount = total crypto the customer sent (before fees)
             // crypto_currency = the cryptocurrency type (ETH, BTC, LTC, etc.)
@@ -4972,7 +4979,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               crypto_currency: tempCurrency,
               transaction_fee: Number(adminAmountToSend),
               transaction_reference: allTxIds,
-              usd_value: await convertToUSD(Number(totalAmountReceived), tempCurrency),
+              usd_value: (await convertToUSD(Number(totalAmountReceived), tempCurrency)) || 0,
             };
             const updateResult = await userTransactionModel.update(
               zeroPayoutPayload,

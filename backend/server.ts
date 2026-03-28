@@ -187,7 +187,14 @@ app.use(helmet({
   },
   crossOriginEmbedderPolicy: false, // Required for Swagger UI assets
 }));
-app.options("*", cors());
+// Preflight handler — reuse the same CORS config so OPTIONS responses
+// respect the same origin whitelist as actual requests.
+app.options("*", cors({
+  origin: corsOriginHandler,
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key', 'X-Requested-With', 'Accept', 'Origin', 'X-Request-ID', 'x-csrf-token']
+}));
 
 // Bot & scanner protection — blocks WordPress/CMS vulnerability scanners early
 // Reduces log noise and saves middleware pipeline cycles
@@ -238,9 +245,8 @@ app.get("/api/csrf-token", generateCsrfToken); // CSRF token endpoint
 app.use("/api", router);
 app.use("/api/v1", router);
 
-// Diagnostics routes (for testing)
+// Diagnostics routes (admin-only — mounted at /api/diagnostics via K8s ingress)
 import diagnosticsRouter from "./routes/diagnosticsRouter";
-app.use("/diagnostics", diagnosticsRouter);
 app.use("/api/diagnostics", diagnosticsRouter);
 
 // Health check endpoint for Railway
@@ -382,8 +388,8 @@ app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: exp
   }
 });
 
-// Diagnostics: Trigger manual sweep for a specific temp address
-app.post("/diagnostics/trigger-sweep", authMiddleware, async (req: express.Request, res: express.Response) => {
+// Diagnostics: Trigger manual sweep for a specific temp address (admin-only)
+app.post("/diagnostics/trigger-sweep", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
   try {
     const { temp_address_id } = req.body;
     if (!temp_address_id) {
@@ -690,13 +696,23 @@ app.post("/diagnostics/clear-stale-reconciliation", adminAuthMiddleware, async (
 if (enableBackgroundJobs) {
 
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
-cron.schedule("0 */2 * * *", function () {
-  log("Cron: USDT check running", "info");
-  paymentController.checkingUSDT();
+cron.schedule("0 */2 * * *", async function () {
+  try {
+    log("Cron: USDT check running", "info");
+    await paymentController.checkingUSDT();
+  } catch (err) {
+    log(`Cron: checkingUSDT failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'checkingUSDT' });
+  }
 });
 
-cron.schedule("*/15 * * * *", function () {
-  paymentController.sweepNativeAdminFees();
+cron.schedule("*/15 * * * *", async function () {
+  try {
+    await paymentController.sweepNativeAdminFees();
+  } catch (err) {
+    log(`Cron: sweepNativeAdminFees failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'sweepNativeAdminFees' });
+  }
 });
 
 cron.schedule("*/30 * * * *", async () => {
@@ -709,13 +725,23 @@ cron.schedule("*/30 * * * *", async () => {
   }
 });
 
-cron.schedule("*/15 * * * *", function () {
-  paymentController.checkFeeBalance();
+cron.schedule("*/15 * * * *", async function () {
+  try {
+    await paymentController.checkFeeBalance();
+  } catch (err) {
+    log(`Cron: checkFeeBalance failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'checkFeeBalance' });
+  }
 });
 
-cron.schedule("0 */24 * * *", function () {
-  log("Cron: removeUnwantedSubscriptions running", "info");
-  paymentController.removeUnwantedSubscriptions();
+cron.schedule("0 0 * * *", async function () {
+  try {
+    log("Cron: removeUnwantedSubscriptions running", "info");
+    await paymentController.removeUnwantedSubscriptions();
+  } catch (err) {
+    log(`Cron: removeUnwantedSubscriptions failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'removeUnwantedSubscriptions' });
+  }
 });
 
 // ===========================================

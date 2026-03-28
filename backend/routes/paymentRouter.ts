@@ -6,6 +6,7 @@ import {
   customerAuthMiddleware,
   linkMiddleware,
 } from "../middleware";
+import { paymentRateLimiter } from "../middleware/rateLimitMiddleware";
 
 const paymentRouter = express.Router();
 
@@ -13,16 +14,18 @@ const paymentRouter = express.Router();
 // Moved from /wallet/encrypt-payload which was behind authMiddleware
 paymentRouter.post("/encrypt-payload", walletController.encryptPayload);
 
-paymentRouter.post("/getData", paymentController.getData);
+paymentRouter.post("/getData", paymentRateLimiter, paymentController.getData);
 
 paymentRouter.post(
   "/addPayment",
+  paymentRateLimiter,
   customerAuthMiddleware,
   paymentController.addPayment
 );
 
 paymentRouter.post(
   "/createCryptoPayment",
+  paymentRateLimiter,
   customerAuthMiddleware,
   paymentController.createCryptoPayment
 );
@@ -52,6 +55,7 @@ paymentRouter.post(
 );
 paymentRouter.post(
   "/getCurrencyRates",
+  paymentRateLimiter,
   customerAuthMiddleware,
   paymentController.getCurrencyRates
 );
