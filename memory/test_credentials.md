@@ -1,8 +1,8 @@
 # Test Credentials
 
 ## Admin
-- Email: Check tbl_admin in database
-- Password: Existing admin passwords (SHA-256 hashed) will be transparently migrated to bcrypt on next login
+- Email: moxxcompany@gmail.com
+- Password: Katiekendra123@
 
 ## Notes
 - Admin passwords have been migrated from SHA-256 to bcrypt with transparent migration
