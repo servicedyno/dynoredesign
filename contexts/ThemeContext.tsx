@@ -18,10 +18,21 @@ function getSystemPreference(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
+/**
+ * Read the theme that the blocking script in _document.tsx already applied.
+ * This ensures the first React render matches what the user already sees.
+ */
+function getInitialTheme(): ThemeMode {
+  if (typeof document !== 'undefined') {
+    const preset = document.documentElement.dataset.theme;
+    if (preset === 'light' || preset === 'dark') return preset;
+  }
+  return 'dark'; // SSR fallback
+}
+
 export const useThemeMode = () => {
   const context = useContext(ThemeContext);
   if (!context) {
-    // Return default values for SSR/SSG - won't throw during static generation
     return {
       mode: 'dark' as ThemeMode,
       toggleTheme: () => {},
@@ -32,20 +43,21 @@ export const useThemeMode = () => {
 };
 
 export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [mode, setMode] = useState<ThemeMode>('dark');
+  // Lazy initializer reads the data-theme attribute set by the blocking script
+  const [mode, setMode] = useState<ThemeMode>(getInitialTheme);
   const [mounted, setMounted] = useState(false);
 
   // Track whether the user has explicitly chosen a theme (manual toggle)
   const userOverrideRef = useRef(false);
 
-  // ── 1. On mount: localStorage > system preference > dark fallback ──
+  // ── 1. On mount: localStorage > system preference > blocking-script value ──
   useEffect(() => {
     setMounted(true);
     try {
       const savedMode = localStorage.getItem('theme-mode') as ThemeMode;
       if (savedMode && (savedMode === 'light' || savedMode === 'dark')) {
         setMode(savedMode);
-        userOverrideRef.current = true; // user previously chose this
+        userOverrideRef.current = true;
         return;
       }
     } catch (e) {
@@ -55,14 +67,21 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setMode(getSystemPreference());
   }, []);
 
-  // ── 2. Listen for real-time OS theme changes ──
+  // ── 2. Keep data-theme attribute in sync so CSS always matches ──
+  useEffect(() => {
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.theme = mode;
+      document.documentElement.style.colorScheme = mode;
+    }
+  }, [mode]);
+
+  // ── 3. Listen for real-time OS theme changes ──
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
     const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const handleChange = (e: MediaQueryListEvent) => {
-      // Only follow OS changes when the user hasn't manually overridden
       if (!userOverrideRef.current) {
         setMode(e.matches ? 'dark' : 'light');
       }
@@ -72,7 +91,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return () => mediaQuery.removeEventListener('change', handleChange);
   }, []);
 
-  // ── 3. Manual toggle (overrides system preference) ──
+  // ── 4. Manual toggle (overrides system preference) ──
   const toggleTheme = useCallback(() => {
     setMode((prevMode) => {
       const newMode = prevMode === 'light' ? 'dark' : 'light';
@@ -95,11 +114,12 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     [mode, toggleTheme]
   );
 
-  // During SSR / before hydration, just render children without provider
-  // This prevents flash - actual theme is applied client-side
+  // Before hydration, use the theme the blocking script already set
+  // so the first render matches what the user sees (no flash)
   if (!mounted) {
+    const presetMode = getInitialTheme();
     return (
-      <ThemeContext.Provider value={{ mode: 'dark', toggleTheme: () => {}, isDark: true }}>
+      <ThemeContext.Provider value={{ mode: presetMode, toggleTheme: () => {}, isDark: presetMode === 'dark' }}>
         {children}
       </ThemeContext.Provider>
     );

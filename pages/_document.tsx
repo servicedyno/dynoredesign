@@ -34,6 +34,28 @@ export default function Document() {
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </Head>
       <body>
+        {/* ── Blocking theme script: runs BEFORE React hydrates to prevent flash ── */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+(function(){
+  try {
+    var saved = localStorage.getItem('theme-mode');
+    var mode = (saved === 'light' || saved === 'dark')
+      ? saved
+      : (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+    document.documentElement.dataset.theme = mode;
+    document.documentElement.style.colorScheme = mode;
+    document.documentElement.style.backgroundColor = mode === 'light' ? '#F2F3F8' : '#0B0D17';
+  } catch(e) {
+    document.documentElement.dataset.theme = 'dark';
+    document.documentElement.style.colorScheme = 'dark';
+    document.documentElement.style.backgroundColor = '#0B0D17';
+  }
+})();
+`,
+          }}
+        />
         <Main />
         <NextScript />
       </body>

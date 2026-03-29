@@ -1,5 +1,15 @@
 /* Google Fonts moved to _document.tsx via <link> for non-blocking load */
 
+/* ── Instant theme background (set by blocking script in _document, before React) ── */
+html[data-theme="dark"] {
+  background-color: #0B0D17;
+  color-scheme: dark;
+}
+html[data-theme="light"] {
+  background-color: #F2F3F8;
+  color-scheme: light;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
