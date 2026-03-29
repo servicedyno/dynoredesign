@@ -72,6 +72,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (typeof document !== 'undefined') {
       document.documentElement.dataset.theme = mode;
       document.documentElement.style.colorScheme = mode;
+      // Clear inline bg so MUI/CSS takes over (blocking script bg was just for first paint)
+      document.documentElement.style.backgroundColor = '';
     }
   }, [mode]);
 
