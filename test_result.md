@@ -845,3 +845,113 @@ frontend:
   * Previous manual toggle issue (required reload) is now FIXED
   * No bugs or issues found
   * Ready for production use
+
+## API Documentation Page Testing - 2026-03-30 08:30:00 UTC
+- agent: testing
+- message: Completed comprehensive testing of updated API Documentation page at /documentation
+- target_url: https://58c7dfe4-a89f-41e7-8258-c2e534bcd52d.preview.emergentagent.com/documentation
+- test_results: ALL 8 TESTS PASSED ✅ (100% success rate)
+
+### TEST 1: PAGE LOADS CORRECTLY ✅
+  * Hero section "Dynopay API Reference" visible and correct
+  * Base URL box visible with correct URL: https://api.dynopay.com/api/user
+  * No console errors detected
+  * Page loads without blank screen or errors
+  * Screenshot: test1_page_top.png
+
+### TEST 2: PRODUCT CARDS PRESENT ✅
+  * All 4 product cards found and visible (4/4):
+    - ✅ Checkout Payments
+    - ✅ Direct Crypto API
+    - ✅ Customer Wallets
+    - ✅ Webhooks
+  * Screenshot: test2_product_cards.png
+
+### TEST 3: SIDEBAR NAVIGATION ✅
+  * All 12 sidebar sections verified (12/12):
+    - ✅ Overview
+    - ✅ Getting Started
+    - ✅ Authentication
+    - ✅ Customers
+    - ✅ Payments
+    - ✅ Wallets
+    - ✅ Transactions
+    - ✅ Currencies
+    - ✅ Admin API
+    - ✅ Webhooks (NEW)
+    - ✅ Rate Limits (NEW)
+    - ✅ Error Handling
+  * All sections properly displayed in left sidebar
+
+### TEST 4: SWAGGER LINK EXISTS ✅
+  * "Full API Reference (Swagger)" link found in Overview section
+  * Link correctly points to /api/docs
+  * Link is visible and clickable
+  * Screenshot: test4_swagger_link.png
+
+### TEST 5: WEBHOOKS SECTION CONTENT ✅
+  * All required components verified:
+    - ✅ Event Types table with 3 events (payment.pending, payment.confirmed, payment.underpaid)
+    - ✅ Webhook Payload JSON example present
+    - ✅ Webhook Headers table with X-DynoPay-Signature and other headers
+    - ✅ Signature Verification code example (JavaScript)
+    - ✅ Retry Policy info box (5 retries, 30 minutes, exponential backoff)
+    - ✅ Webhook URL Priority table (3 priority levels)
+  * Screenshot: test5_webhooks_section.png
+
+### TEST 6: RATE LIMITS SECTION ✅
+  * Rate Limits section heading found
+  * Rate limit table present with all categories:
+    - ✅ Payment creation: 30 requests / 1 minute
+    - ✅ General API: 100 requests / 1 minute
+    - ✅ Authentication (login): 10 requests / 15 minutes
+    - ✅ Webhook delivery: 200 requests / 5 minutes
+  * Info box with 429 status code explanation present
+  * Screenshot: test6_rate_limits.png
+
+### TEST 7: ADMIN ENDPOINTS SHOW CORRECT PATHS ✅
+  * Admin API section found with 2 endpoints
+  * Credit Customer Wallet endpoint verified:
+    - ✅ Shows CORRECT path: /api/admin/customers/:customerId/credit
+    - ✅ Does NOT show incorrect path: /api/user/admin/customers/:customerId/credit
+  * Debit Customer Wallet endpoint verified:
+    - ✅ Shows CORRECT path: /api/admin/customers/:customerId/debit
+  * Both admin endpoints properly display without /api/user prefix
+  * Screenshot: test7_admin_endpoint_retest.png
+
+### TEST 8: ERROR HANDLING SECTION ✅
+  * Error Handling section heading found
+  * Error table present with all status codes:
+    - ✅ 400 - Bad Request
+    - ✅ 401 - Unauthorized
+    - ✅ 403 - Forbidden
+    - ✅ 404 - Not Found
+    - ✅ 500 - Server Error
+  * JSON error format example present
+  * Screenshot: test8_error_handling.png
+
+### VERIFICATION STATUS: COMPLETE ✅
+  * All 8 review request tests passed successfully (100% success rate)
+  * No console errors detected during testing
+  * All new sections (Webhooks, Rate Limits) properly implemented
+  * Admin endpoint paths corrected (no /api/user/admin prefix)
+  * Page loads quickly and renders correctly
+  * All interactive elements (expandable endpoints, sidebar navigation) working correctly
+  * Documentation page is production-ready and fully functional
+
+### SCREENSHOTS CAPTURED:
+  * test1_page_top.png - Hero section and Base URL box
+  * test2_product_cards.png - All 4 product cards
+  * test4_swagger_link.png - Swagger link in Overview section
+  * test5_webhooks_section.png - Webhooks section with all components
+  * test6_rate_limits.png - Rate Limits section with table
+  * test7_admin_endpoint_retest.png - Admin endpoints with correct paths
+  * test8_error_handling.png - Error Handling section with status codes
+
+### CONCLUSION:
+  * API Documentation page update is working perfectly as designed
+  * All 8 review request requirements met successfully
+  * New Webhooks and Rate Limits sections fully implemented
+  * Admin endpoint paths corrected
+  * No bugs or issues found
+  * Ready for production use
