@@ -4616,6 +4616,20 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             - Merchant: ${userAmountToSend.toFixed(8)} ${tempCurrency} (${((1 - simpleFeePercentage) * 100).toFixed(2)}%)`);
         }
 
+        // ── DUST GUARD: Clamp sub-satoshi floating-point residuals to exactly 0 ──
+        // Ratio-based distribution can produce tiny non-zero admin fees (e.g., 5.4e-20)
+        // due to IEEE 754 floating-point imprecision when fee-free makes merchant = expected.
+        // 1e-8 = 1 satoshi (BTC) / 1 sun (TRX) — the smallest on-chain unit.
+        const DUST_THRESHOLD = 1e-8;
+        if (adminAmountToSend > 0 && adminAmountToSend < DUST_THRESHOLD) {
+          cronLogger.info(`[cryptoVerification] 🧹 Dust guard: Clamping admin fee ${adminAmountToSend} → 0 (below ${DUST_THRESHOLD} threshold)`);
+          adminAmountToSend = 0;
+          userAmountToSend = Number(totalAmountReceived);
+        }
+        if (userAmountToSend > Number(totalAmountReceived)) {
+          userAmountToSend = Number(totalAmountReceived);
+        }
+
         // ============================================
         // AUTO-STABLECOIN CONVERSION: Redirect to admin wallet if enabled
         // ============================================
@@ -4797,7 +4811,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // Send admin fee notification email
         try {
           const adminEmail = process.env.ADMIN_EMAIL;
-          if (adminEmail && adminAmountToSend > 0) {
+          if (adminEmail && adminAmountToSend > 1e-8) {
             // RACE CONDITION FIX: Check if admin fee email already sent for this transaction
             const adminFeeEmailKey = `admin-fee-email-${transactionId}`;
             const adminFeeEmailSent = await getRedisItem(adminFeeEmailKey);
@@ -5224,14 +5238,15 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             // ENHANCED: Merchant receives (net after fees AND gas deductions)
             merchant_amount: autoConvertEnabled ? originalUserAmount : actualMerchantAmount,
             // Pre-gas merchant amount (before blockchain fee deductions)
-            merchant_amount_before_gas: autoConvertEnabled ? originalUserAmount : userAmountToSend,
+            merchant_amount_before_gas: autoConvertEnabled ? Number(originalUserAmount.toFixed(8)) : Number(Number(userAmountToSend).toFixed(8)),
             
             // ENHANCED: Gas/blockchain fee breakdown
             blockchain_fee: adminTransferResult.blockchainFee || 0,
             blockchain_fee_currency: tempCurrency,
             
             // ENHANCED: Fee information — show actual fee, not fee+merchant when auto-converting
-            total_fee: autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend,
+            // Clamp sub-satoshi dust to 0 for clean webhook payload
+            total_fee: autoConvertEnabled ? Number((adminAmountToSend - originalUserAmount).toFixed(8)) : Number(Number(adminAmountToSend).toFixed(8)),
             total_fee_usd: Number(totalFeeUsd.toFixed(2)),
             fee_payer: tempData?.fee_payer || customerData?.fee_payer || 'company',
             
@@ -5372,7 +5387,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           
           // When auto-convert is ON, show the original merchant amount (before redirect to admin)
           // Merchant will receive USDT equivalent, not 0 ETH
-          const emailAmount = autoConvertEnabled ? originalUserAmount.toString() : userAmountToSend.toString();
+          const emailAmount = autoConvertEnabled ? originalUserAmount.toFixed(8) : Number(userAmountToSend).toFixed(8);
           const emailCurrency = autoConvertEnabled ? `${tempCurrency} (converting to ${autoConvertTargetCurrency})` : tempCurrency;
           
           await sendPaymentReceivedEmail(
@@ -7607,7 +7622,7 @@ const processIncompletePayments = async () => {
             // Send admin fee notification email for partial payment processing
             try {
               const adminEmail = process.env.ADMIN_EMAIL;
-              if (adminEmail && adminAmountToSend > 0) {
+              if (adminEmail && adminAmountToSend > 1e-8) {
                 const companyData = await companyModel.findOne({
                   where: { company_id: tempTx.company_id },
                 });
@@ -7749,7 +7764,7 @@ const processIncompletePayments = async () => {
             // Send admin fee notification email for expired incomplete payment
             try {
               const adminEmail = process.env.ADMIN_EMAIL;
-              if (adminEmail && adminAmountToSend > 0) {
+              if (adminEmail && adminAmountToSend > 1e-8) {
                 const companyData = await companyModel.findOne({
                   where: { company_id: tempTx.company_id },
                 });

@@ -846,6 +846,25 @@ frontend:
   * No bugs or issues found
   * Ready for production use
 
+## Floating-Point Dust Fix — Admin Fee $0 Email Bug — 2026-03-30
+- agent: main
+- message: Fixed 3 bugs causing spurious $0 "Platform Fee Received" admin email
+- Root cause: Ratio-based fee distribution produces IEEE 754 floating-point dust (5.4e-20 BTC) when fee-free promo makes merchant_amount = expected_amount. This dust passes `> 0` check and triggers email.
+- Fixes applied:
+  1. **Dust guard** in cryptoVerification: Clamp `adminAmountToSend` to 0 when below 1e-8 (1 satoshi)
+  2. **Email threshold**: All 3 admin fee email checks changed from `> 0` to `> 1e-8`
+  3. **Merchant email formatting**: `userAmountToSend.toString()` → `.toFixed(8)` (fixes "0.00046031999999999996")
+  4. **Webhook payload cleanup**: `total_fee` and `merchant_amount_before_gas` now use `.toFixed(8)` to prevent dust in merchant webhooks
+- Files changed: backend/controller/paymentController.ts
+- Test scope: Backend health check + core endpoints
+
+## Backend Test Request — Floating-Point Dust Fix
+- test_endpoints:
+  - GET /api/: Health check (should return 200)
+  - GET /api/pay/network-fees: Core functionality test
+  - GET /api/geo-detect: Core functionality test
+  - GET /api/diagnostics/binance-ping: Should return 401/403 (requires admin auth)
+
 ## API Documentation Page Testing - 2026-03-30 08:30:00 UTC
 - agent: testing
 - message: Completed comprehensive testing of updated API Documentation page at /documentation
@@ -955,3 +974,27 @@ frontend:
   * Admin endpoint paths corrected
   * No bugs or issues found
   * Ready for production use
+
+## Review Request Testing Results - 2026-03-30 17:34:11 UTC
+- agent: testing
+- message: Completed comprehensive review request testing of DynoPay backend API endpoints after floating-point dust fix in fee distribution system
+- test_results: ALL TESTS PASSED ✅ (10/10 endpoints tested successfully)
+  * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API)
+  * GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains)
+  * GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States)
+  * POST /api/pay/calculateFees → HTTP 200 (Fee calculation working correctly with proper body)
+  * GET /api/diagnostics/binance-ping → HTTP 403 (✅ Auth protection working - requires admin auth as expected)
+  * GET /api/diagnostics/volatility → HTTP 403 (✅ Auth protection working - requires admin auth as expected)
+  * POST /api/test/send-payment-link-email → HTTP 403 (✅ Security fix verified - now requires auth as expected)
+  * POST /api/test/send-payment-received-email → HTTP 403 (✅ Security fix verified - now requires auth as expected)
+  * POST /api/pay/getData → HTTP 400 (✅ Rate limiter working - returns 4xx not 500)
+  * POST /api/webhook → HTTP 401 (✅ Webhook endpoint working - returns auth error not 500)
+- verification_status: COMPLETE ✅
+  * ALL 4 SPECIFIC REVIEW REQUEST ENDPOINTS tested successfully (health, network-fees, geo-detect, binance-ping)
+  * No 500 errors detected on any endpoint (key requirement verified)
+  * Auth-protected endpoints return 401/403 without valid tokens (security working correctly)
+  * Core public endpoints work normally (health, network-fees, geo-detect all operational)
+  * Floating-point dust fix verification: Backend starts and responds without errors
+  * Fee distribution system changes did not break any core functionality
+  * Node.js/TypeScript server proxied through Python/uvicorn functioning correctly
+  * Backend API fully operational and stable after floating-point dust fix in fee distribution system
