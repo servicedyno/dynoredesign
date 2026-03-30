@@ -24,7 +24,7 @@ import json
 from datetime import datetime
 
 # Target API base URL
-BASE_URL = "https://getting-started-160.preview.emergentagent.com/api"
+BASE_URL = "https://get-started-50.preview.emergentagent.com/api"
 
 def test_specific_endpoints():
     """Test the exact endpoints specified in the review request"""
