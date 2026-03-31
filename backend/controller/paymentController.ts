@@ -3319,7 +3319,13 @@ const settleCryptoTransaction = async ({
       const isTRC20 = currency.includes("TRC20") || (String(currency) === "TRX" && !!contractAddress);
       const MAX_TRANSFER_ATTEMPTS = isTRC20 ? 3 : 1; // Extra retries for TRC20 energy issues
       const MAX_GAS_PER_PAYMENT_TRX = 30; // Cap: max 30 TRX total gas per payment to prevent wallet drain
-      let totalGasFundedTRX = 0;
+      // ── FIX: Track initial SmartGas funding in the gas cap ──
+      // Without this, the initial ~18.7 TRX funding is not counted, and the cap only applies
+      // to retry re-fundings, allowing up to 30 + 18.7 = ~49 TRX total per payment
+      let totalGasFundedTRX = gasFundingResult.funded ? Number(gasFundingResult.amount || 0) : 0;
+      if (totalGasFundedTRX > 0) {
+        cronLogger.info(`[settleCryptoTransaction] 📊 Gas cap tracking: Initial SmartGas = ${totalGasFundedTRX} TRX (cap: ${MAX_GAS_PER_PAYMENT_TRX} TRX)`);
+      }
       
       for (let transferAttempt = 1; transferAttempt <= MAX_TRANSFER_ATTEMPTS; transferAttempt++) {
         try {
@@ -3658,8 +3664,18 @@ const settleCryptoTransaction = async ({
             
             try {
               if (isTRC20Recovery) {
+                // ── FIX: Apply global gas cap to recovery retries too ──
+                // Prevents fee wallet drain when all settlement attempts fail with OUT_OF_ENERGY
+                if (totalGasFundedTRX >= MAX_GAS_PER_PAYMENT_TRX) {
+                  cronLogger.error(`[settleCryptoTransaction] ❌ Gas cap reached during recovery (${totalGasFundedTRX} TRX funded, cap: ${MAX_GAS_PER_PAYMENT_TRX} TRX). Stopping recovery to prevent fee wallet drain.`);
+                  break;
+                }
+                
                 // Re-fund gas with energy-aware estimation
-                cronLogger.info(`[settleCryptoTransaction] 🔋 Recovery: Re-funding TRX gas for ${fromAddress}...`);
+                cronLogger.info(`[settleCryptoTransaction] 🔋 Recovery: Re-funding TRX gas for ${fromAddress} (total gas funded: ${totalGasFundedTRX}/${MAX_GAS_PER_PAYMENT_TRX} TRX)...`);
+                const recoveryDynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+                totalGasFundedTRX += recoveryDynamicFee.fast;
+                
                 const refundResult = await merchantPoolService.fundGasIfNeeded(
                   { dataValues: { wallet_address: fromAddress }, update: async () => {} },
                   currency,
@@ -3724,7 +3740,7 @@ const settleCryptoTransaction = async ({
           
           if (!recovered) {
             // All recovery attempts failed — throw to prevent false payout_complete
-            throw new Error(`TRON merchant transfer EXECUTION FAILED (contractResult=${confirmResult.contractResult}). TX ${txHash} was included in block ${confirmResult.blockNumber} but tokens did NOT move. ${MAX_RECOVERY_RETRIES} recovery attempts failed. Funds are still on temp address ${fromAddress}. Manual recovery required via /diagnostics/recover-stuck-payment.`);
+            throw new Error(`TRON merchant transfer EXECUTION FAILED (contractResult=${confirmResult.contractResult}). TX ${txHash} was included in block ${confirmResult.blockNumber} but tokens did NOT move. ${MAX_RECOVERY_RETRIES} recovery attempts failed. Total gas burned: ${totalGasFundedTRX} TRX. Funds are still on temp address ${fromAddress}. Manual recovery required via /diagnostics/recover-stuck-payment.`);
           }
         } else if (!confirmResult.confirmed) {
           cronLogger.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
@@ -4380,6 +4396,14 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
       // Store merchant pool flag in tempData for later use (as string for Redis compatibility)
       tempData.is_merchant_pool = String(isMerchantPoolAddress);
 
+      // ── FIX: Propagate real payment_id to settlement for idempotency ──
+      // Merchant pool addresses store payment_id as current_payment_id.
+      // Without this, settleCryptoTransaction falls back to `unknown-${Date.now()}`
+      // which breaks idempotency checks and causes duplicate settlements.
+      if (!tempAddressData.payment_id) {
+        tempAddressData.payment_id = tempAddressData.current_payment_id || tempData?.payment_id || null;
+      }
+
       const isFullPayment = Number(receivedAmount) >= Number(tempData?.amount);
       const isPartialPayment = Number(receivedAmount) < Number(tempData?.amount) && !webhook;
 
@@ -4679,6 +4703,54 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           } else {
             cronLogger.warn(`[AutoConvert] ⚠️ No admin wallet for ${tempCurrency}, falling back to normal settlement`);
             autoConvertEnabled = false;
+          }
+        }
+
+        // ── FIX: Pre-check TRX fee wallet balance for TRC20 settlements ──
+        // Prevents burning TRX on OUT_OF_ENERGY failures when fee wallet is too low
+        const isTRC20Currency = tempCurrency.includes("TRC20");
+        if (isTRC20Currency) {
+          try {
+            const { getAccountResources, calculateDynamicTRC20Fee } = require("../services/tronEnergyService");
+            const poolAddress = tempAddressData.wallet_address || tempAddressData.address;
+            const poolResources = await getAccountResources(poolAddress);
+            const dynamicFee = await calculateDynamicTRC20Fee(poolAddress);
+            const requiredTRX = dynamicFee.fast * 1.5; // 50% safety buffer
+            
+            // Check pool address TRX balance (from TronGrid)
+            const poolTRXBalance = poolResources.availableBandwidth >= 0 ? 0 : 0; // fallback
+            
+            // Check fee wallet TRX balance via Tatum
+            const feeWalletAddress = getAdminWalletAddress("TRX");
+            if (feeWalletAddress) {
+              const feeWalletCheck = await tatumApi.getBalance("TRX", feeWalletAddress).catch(() => null);
+              const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
+              
+              if (feeWalletBalance < requiredTRX && poolResources.availableEnergy < 65000) {
+                cronLogger.error(`[cryptoVerification] ❌ TRX FEE WALLET TOO LOW for USDT-TRC20 settlement! Balance: ${feeWalletBalance} TRX, Required: ~${requiredTRX.toFixed(1)} TRX. Deferring settlement to prevent gas drain. Payment ${tempAddressData.payment_id || 'unknown'} on ${poolAddress} needs manual TRX top-up.`);
+                // Don't throw — mark as deferred and let the cron retry later when TRX is topped up
+                const { journalStateTransition } = require("../services/paymentReliability");
+                await journalStateTransition({
+                  paymentId: tempAddressData.payment_id || `deferred-${Date.now()}`,
+                  txId: transactionId,
+                  address: poolAddress,
+                  currency: tempCurrency,
+                  event: 'settlement_deferred_low_gas',
+                  fromState: 'processing',
+                  toState: 'gas_pending',
+                  amount: Number(totalAmountReceived),
+                  metadata: { feeWalletBalance, requiredTRX, reason: 'TRX fee wallet too low' },
+                });
+                // Continue to the email/webhook section without settlement
+                // The cron will pick this up later
+                throw new Error(`DEFERRED: TRX fee wallet too low (${feeWalletBalance} TRX < ${requiredTRX.toFixed(1)} TRX needed). Will retry when topped up.`);
+              }
+            }
+          } catch (preCheckError: any) {
+            if (preCheckError.message?.startsWith('DEFERRED:')) {
+              throw preCheckError; // Re-throw deferred error
+            }
+            cronLogger.warn(`[cryptoVerification] ⚠️ TRX pre-check failed (non-blocking): ${preCheckError.message}`);
           }
         }
 

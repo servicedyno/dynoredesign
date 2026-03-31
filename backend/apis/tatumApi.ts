@@ -1568,6 +1568,22 @@ const assetToOtherAddress = async ({
         process.env.TRX_CONTRACT
       );
       optimalFeeLimit = feeLimitResult.feeLimit;
+      
+      // ── FIX: Align feeLimit with SmartGas estimation to prevent OUT_OF_ENERGY ──
+      // SmartGas always funds for NEW_RECIPIENT (130k energy) as a safety margin,
+      // but calculateOptimalFeeLimit may estimate for EXISTING_RECIPIENT (65k).
+      // If the isNewRecipient check is wrong (cache miss, timing), the feeLimit
+      // will be too low causing OUT_OF_ENERGY while TRX was already sent.
+      // Minimum feeLimit = SmartGas dynamic fee to ensure consistency.
+      try {
+        const { calculateDynamicTRC20Fee } = require("../services/tronEnergyService");
+        const smartGasEstimate = await calculateDynamicTRC20Fee(fromAddress);
+        if (optimalFeeLimit < smartGasEstimate.fast) {
+          cronLogger.info(`[assetToOtherAddress] 🔒 Aligning feeLimit: ${optimalFeeLimit} TRX → ${smartGasEstimate.fast} TRX (SmartGas estimate). Prevents OUT_OF_ENERGY mismatch.`);
+          optimalFeeLimit = Math.min(smartGasEstimate.fast, 30); // Cap at 30 TRX max
+        }
+      } catch (_alignErr) { /* Non-critical, proceed with original feeLimit */ }
+      
       logCostSavings("assetToOtherAddress", 50, optimalFeeLimit, {
         energyDeficit: feeLimitResult.energyDeficit,
         isNewRecipient: feeLimitResult.isNewRecipient,
