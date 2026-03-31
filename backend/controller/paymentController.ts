@@ -3173,6 +3173,13 @@ const settleCryptoTransaction = async ({
       };
     }
 
+    // === Gas cap tracking (declare at function scope for recovery block access) ===
+    const MAX_GAS_PER_PAYMENT_TRX = 30; // Cap: max 30 TRX total gas per payment to prevent wallet drain
+    // ── FIX: Track initial SmartGas funding in the gas cap ──
+    // Without this, the initial ~18.7 TRX funding is not counted, and the cap only applies
+    // to retry re-fundings, allowing up to 30 + 18.7 = ~49 TRX total per payment
+    let totalGasFundedTRX = 0; // Will be initialized after SmartGas funding
+
     // Calculate fees for merchant transfer
     if (currency === "USDT-TRC20" || currency === "USDT-ERC20" || currency === "USDC-ERC20" || currency === "RLUSD" || currency === "RLUSD-ERC20" || currency === "USDT-POLYGON") {
       // Token transfers (handled separately)
@@ -3314,18 +3321,16 @@ const settleCryptoTransaction = async ({
       }
       // === End SmartGas ===
 
+      // Initialize gas cap tracking with SmartGas amount
+      totalGasFundedTRX = gasFundingResult.funded ? Number(gasFundingResult.amount || 0) : 0;
+      if (totalGasFundedTRX > 0) {
+        cronLogger.info(`[settleCryptoTransaction] 📊 Gas cap tracking: Initial SmartGas = ${totalGasFundedTRX} TRX (cap: ${MAX_GAS_PER_PAYMENT_TRX} TRX)`);
+      }
+
       // Retry merchant transfer for token transfers
       // Enhanced with OUT_OF_ENERGY recovery for TRON TRC20 transfers
       const isTRC20 = currency.includes("TRC20") || (String(currency) === "TRX" && !!contractAddress);
       const MAX_TRANSFER_ATTEMPTS = isTRC20 ? 3 : 1; // Extra retries for TRC20 energy issues
-      const MAX_GAS_PER_PAYMENT_TRX = 30; // Cap: max 30 TRX total gas per payment to prevent wallet drain
-      // ── FIX: Track initial SmartGas funding in the gas cap ──
-      // Without this, the initial ~18.7 TRX funding is not counted, and the cap only applies
-      // to retry re-fundings, allowing up to 30 + 18.7 = ~49 TRX total per payment
-      let totalGasFundedTRX = gasFundingResult.funded ? Number(gasFundingResult.amount || 0) : 0;
-      if (totalGasFundedTRX > 0) {
-        cronLogger.info(`[settleCryptoTransaction] 📊 Gas cap tracking: Initial SmartGas = ${totalGasFundedTRX} TRX (cap: ${MAX_GAS_PER_PAYMENT_TRX} TRX)`);
-      }
       
       for (let transferAttempt = 1; transferAttempt <= MAX_TRANSFER_ATTEMPTS; transferAttempt++) {
         try {
@@ -4723,7 +4728,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             // Check fee wallet TRX balance via Tatum
             const feeWalletAddress = getAdminWalletAddress("TRX");
             if (feeWalletAddress) {
-              const feeWalletCheck = await tatumApi.getBalance("TRX", feeWalletAddress).catch(() => null);
+              const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX").catch(() => null);
               const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
               
               if (feeWalletBalance < requiredTRX && poolResources.availableEnergy < 65000) {
