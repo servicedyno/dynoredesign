@@ -4711,8 +4711,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           }
         }
 
-        // ── FIX: Pre-check TRX fee wallet balance for TRC20 settlements ──
-        // Prevents burning TRX on OUT_OF_ENERGY failures when fee wallet is too low
+        // ── FIX: Advisory pre-check only - Let SmartGas attempt funding ──
+        // SmartGas will automatically fund TRX from fee wallet if needed
         const isTRC20Currency = tempCurrency.includes("TRC20");
         if (isTRC20Currency) {
           try {
@@ -4725,30 +4725,35 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             // Check pool address TRX balance (from TronGrid)
             const poolTRXBalance = poolResources.availableBandwidth >= 0 ? 0 : 0; // fallback
             
-            // Check fee wallet TRX balance via Tatum
+            // Check fee wallet TRX balance via Tatum (advisory only)
             const feeWalletAddress = getAdminWalletAddress("TRX");
             if (feeWalletAddress) {
               const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX").catch(() => null);
               const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
               
               if (feeWalletBalance < requiredTRX && poolResources.availableEnergy < 65000) {
-                cronLogger.error(`[cryptoVerification] ❌ TRX FEE WALLET TOO LOW for USDT-TRC20 settlement! Balance: ${feeWalletBalance} TRX, Required: ~${requiredTRX.toFixed(1)} TRX. Deferring settlement to prevent gas drain. Payment ${tempAddressData.payment_id || 'unknown'} on ${poolAddress} needs manual TRX top-up.`);
-                // Don't throw — mark as deferred and let the cron retry later when TRX is topped up
-                const { journalStateTransition } = require("../services/paymentReliability");
-                await journalStateTransition({
-                  paymentId: tempAddressData.payment_id || `deferred-${Date.now()}`,
-                  txId: transactionId,
-                  address: poolAddress,
-                  currency: tempCurrency,
-                  event: 'settlement_deferred_low_gas',
-                  fromState: 'processing',
-                  toState: 'gas_pending',
-                  amount: Number(totalAmountReceived),
-                  metadata: { feeWalletBalance, requiredTRX, reason: 'TRX fee wallet too low' },
-                });
-                // Continue to the email/webhook section without settlement
-                // The cron will pick this up later
-                throw new Error(`DEFERRED: TRX fee wallet too low (${feeWalletBalance} TRX < ${requiredTRX.toFixed(1)} TRX needed). Will retry when topped up.`);
+                // WARNING ONLY - Let SmartGas attempt to fund
+                cronLogger.warn(`[cryptoVerification] ⚠️ TRX fee wallet low for USDT-TRC20 settlement. Balance: ${feeWalletBalance} TRX, Estimated: ~${requiredTRX.toFixed(1)} TRX. SmartGas will attempt funding. Payment: ${tempAddressData.payment_id || 'unknown'}`);
+                
+                // Only abort if fee wallet is CRITICALLY low (< 5 TRX) AND no energy
+                if (feeWalletBalance < 5 && poolResources.availableEnergy < 65000) {
+                  cronLogger.error(`[cryptoVerification] ❌ CRITICAL: Fee wallet nearly empty (${feeWalletBalance} TRX < 5 TRX). Deferring. Payment ${tempAddressData.payment_id || 'unknown'} needs urgent top-up.`);
+                  const { journalStateTransition } = require("../services/paymentReliability");
+                  await journalStateTransition({
+                    paymentId: tempAddressData.payment_id || `deferred-${Date.now()}`,
+                    txId: transactionId,
+                    address: poolAddress,
+                    currency: tempCurrency,
+                    event: 'settlement_deferred_critical_low_gas',
+                    fromState: 'processing',
+                    toState: 'gas_pending',
+                    amount: Number(totalAmountReceived),
+                    metadata: { feeWalletBalance, requiredTRX, reason: 'Fee wallet critically low' },
+                  });
+                  throw new Error(`DEFERRED: Fee wallet critically low (${feeWalletBalance} TRX < 5 TRX). Needs urgent top-up.`);
+                }
+              } else if (feeWalletBalance >= requiredTRX) {
+                cronLogger.info(`[cryptoVerification] ✅ Fee wallet sufficient: ${feeWalletBalance} TRX >= ${requiredTRX.toFixed(1)} TRX`);
               }
             }
           } catch (preCheckError: any) {

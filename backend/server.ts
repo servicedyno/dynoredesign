@@ -1131,6 +1131,17 @@ const startServer = async () => {
     // Start error monitoring (sends admin digest every 15 min when errors exist)
     startErrorMonitoring();
 
+    // Start fee wallet monitoring (checks TRX balance every 30min)
+    if (enableBackgroundJobs) {
+      import("./services/feeWalletMonitor")
+        .then(({ startFeeWalletMonitoring }) => {
+          startFeeWalletMonitoring(30);
+          log("✅ Fee wallet monitoring started", "info");
+        })
+        .catch((err) => log(`⚠️ Fee wallet monitoring failed: ${err}`, 'warn'));
+    }
+
+
     // Migrate stale webhook URLs from previous deployments (runs once on startup)
     // SAFETY: Only on production — dev instances would overwrite production webhook URLs
     if (enableBackgroundJobs) {
