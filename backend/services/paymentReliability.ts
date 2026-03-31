@@ -12,7 +12,7 @@
 
 import PaymentJournal from "../models/paymentJournalModel";
 import { cronLogger, webhookLogs } from "../utils/loggers";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, deleteRedisItem } from "../utils/redisInstance";
 import { captureError } from "./errorMonitoringService";
 import { getQueueHealth } from "./webhookQueue";
 
@@ -61,6 +61,8 @@ export async function checkSettlementIdempotency(
       cronLogger.warn(
         `[SettlementIdempotency] ⚠️ Stale in-progress marker for ${paymentId} (${Math.round(elapsed / 1000)}s). Allowing retry.`
       );
+      // Delete stale marker so atomic claim below can succeed
+      await deleteRedisItem(redisKey);
     }
   }
 
@@ -91,6 +93,18 @@ export async function checkSettlementIdempotency(
   } catch (dbErr) {
     // DB check failed — log but don't block (Redis check passed)
     cronLogger.warn(`[SettlementIdempotency] DB check failed for ${paymentId}: ${(dbErr as Error).message}`);
+  }
+
+  // ── FIX: Atomic claim via SETNX to prevent TOCTOU race ──────────────────
+  // With BullMQ concurrency=5, multiple webhook workers can pass the checks above
+  // simultaneously. Use Redis NX (set-if-not-exists) for atomic mutual exclusion.
+  const { acquireLock } = require("../utils/redisInstance");
+  const claimed = await acquireLock(`settlement-claim-${paymentId}`, 600, 1, 0, false, true);
+  if (!claimed) {
+    cronLogger.warn(
+      `[SettlementIdempotency] ⏳ Atomic claim failed for ${paymentId} — another worker won the race. Blocking duplicate.`
+    );
+    return { alreadySettled: true, existingTxId: null };
   }
 
   return { alreadySettled: false, existingTxId: null };
