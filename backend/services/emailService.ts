@@ -2581,6 +2581,66 @@ export const sendSubscriptionPaymentFailedEmail = async (
 };
 
 // ============================================================
+// SECTION 12B: ADMIN — NEW USER REGISTRATION NOTIFICATION
+// ============================================================
+
+/**
+ * Send notification to admin when a new user registers.
+ * Informational only — user is active immediately.
+ */
+export const sendNewUserAdminNotification = async (userData: {
+  name?: string | null;
+  email?: string | null;
+  mobile?: string | null;
+  login_type: string;
+  user_id?: number;
+  company_name?: string | null;
+}) => {
+  try {
+    const adminEmail = process.env.ADMIN_EMAIL;
+    if (!adminEmail) {
+      apiLogger.warn("[Email] No ADMIN_EMAIL configured — skipping new user admin notification");
+      return;
+    }
+
+    const displayName = userData.name || "N/A";
+    const contactInfo = userData.email || userData.mobile || "N/A";
+    const registrationMethod = userData.login_type || "Unknown";
+    const userId = userData.user_id || "N/A";
+    const companyName = userData.company_name || "Not yet provided";
+    const registrationTime = new Date().toLocaleString("en-US", {
+      dateStyle: "medium",
+      timeStyle: "short",
+      timeZone: "UTC",
+    }) + " UTC";
+
+    const subject = `New Merchant Registration — ${displayName} (${registrationMethod})`;
+
+    const content = `${p(`A new merchant has registered on DynoPay.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Name', displayName)}
+        ${dataRow('Contact', contactInfo)}
+        ${dataRow('Registration Method', registrationMethod)}
+        ${dataRow('User ID', String(userId))}
+        ${dataRow('Company', companyName)}
+        ${dataRow('Registered At', registrationTime)}
+        ${dataRow('Fee-Free Balance', '$500.00 (trial)', true)}
+      </table>
+    `, '#3b82f6')}
+    ${p(`The account is now <strong>active</strong>. The merchant can begin setting up their payment integration immediately.`)}
+    ${p(`You can review this account in the admin dashboard.`, `color: #6b7280; font-size: 13px;`)}`;
+
+    const html = baseEmailTemplate("New Merchant Registration", content);
+    await mailTransporter({ to: adminEmail, name: "DynoPay Admin", subject, body: html });
+    apiLogger.info(`[Email] New user admin notification sent for ${contactInfo} (${registrationMethod})`);
+  } catch (e) {
+    // Non-blocking — don't fail registration if email fails
+    apiLogger.error("[Email] Admin new user notification error:", e);
+  }
+};
+
+// ============================================================
 // SECTION 13: DEFAULT EXPORT
 // ============================================================
 
@@ -2653,4 +2713,6 @@ export default {
   sendSubscriptionCreatedEmail,
   sendSubscriptionCancelledEmail,
   sendSubscriptionPaymentFailedEmail,
+  // Admin notifications
+  sendNewUserAdminNotification,
 };

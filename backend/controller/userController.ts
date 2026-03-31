@@ -138,6 +138,12 @@ const registerUser = async (req: express.Request, res: express.Response) => {
 
       // Welcome email is deferred until after OTP verification (see verifyEmail)
 
+      // Notify admin of new user registration (non-blocking)
+      emailService.sendNewUserAdminNotification({
+        name, email: email.toLowerCase(), login_type: "Email",
+        user_id: createdUser.dataValues.user_id,
+      }).catch(err => userLogger.error("Admin notification error:", err));
+
       // Generate email verification OTP and send it
       const verifyOtp = Math.floor(100000 + Math.random() * 900000).toString();
       const verifyKey = `email-verify:${createdUser.dataValues.user_id}`;
@@ -311,6 +317,12 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
     const resData = await getAccessToken(createdUser.dataValues.user_id);
     
     userLogger.info(`New user registered via phone: ${mobile}`);
+
+    // Notify admin of new user registration (non-blocking)
+    emailService.sendNewUserAdminNotification({
+      name, mobile, login_type: "SMS",
+      user_id: createdUser.dataValues.user_id,
+    }).catch(err => userLogger.error("Admin notification error:", err));
     
     successResponseHelper(res, 200, "Registration successful!", resData);
     
@@ -1093,6 +1105,12 @@ const connectSocial = async (req: express.Request, res: express.Response) => {
         }
       }
 
+      // Notify admin of new user registration (non-blocking)
+      emailService.sendNewUserAdminNotification({
+        name, email, login_type: provider.toUpperCase(),
+        user_id: createdUser.dataValues.user_id,
+      }).catch(err => userLogger.error("Admin notification error:", err));
+
       successResponseHelper(res, 200, "Registered Successful!", resData);
     }
   } catch (e) {
@@ -1213,6 +1231,12 @@ const facebookSignIn = async (req: express.Request, res: express.Response) => {
     }
 
     userLogger.info(`New user registered via Facebook: ${facebookId}`);
+
+    // Notify admin of new user registration (non-blocking)
+    emailService.sendNewUserAdminNotification({
+      name: name || "Facebook User", email: email ? email.toLowerCase() : null,
+      login_type: "Facebook", user_id: createdUser.dataValues.user_id,
+    }).catch(err => userLogger.error("Admin notification error:", err));
 
     return successResponseHelper(res, 200, "Registration Successful!", resData);
 
@@ -1519,6 +1543,12 @@ const googleSignIn = async (req: express.Request, res: express.Response) => {
     }
 
     userLogger.info(`New user registered via Google: ${email}`);
+
+    // Notify admin of new user registration (non-blocking)
+    emailService.sendNewUserAdminNotification({
+      name: name || email.split("@")[0], email: email.toLowerCase(),
+      login_type: "Google", user_id: createdUser.dataValues.user_id,
+    }).catch(err => userLogger.error("Admin notification error:", err));
 
     return successResponseHelper(res, 200, "Registration Successful!", resData);
 
