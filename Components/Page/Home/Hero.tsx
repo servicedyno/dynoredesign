@@ -78,6 +78,54 @@ const HeroSection = () => {
             {t("heroTrust")}
           </Typography>
         </Box>
+
+        {/* Fee-free promotion badge */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            mt: 1.5,
+          }}
+        >
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 0.8,
+              px: 2,
+              py: 0.8,
+              borderRadius: "20px",
+              border: `1px solid ${isDark ? "rgba(16,185,129,0.3)" : "rgba(16,185,129,0.25)"}`,
+              bgcolor: isDark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.06)",
+              transition: "all 0.3s ease",
+              "&:hover": {
+                bgcolor: isDark ? "rgba(16,185,129,0.12)" : "rgba(16,185,129,0.1)",
+                transform: "translateY(-1px)",
+              },
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: "13px",
+                lineHeight: 1,
+              }}
+            >
+              🎉
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: "13px",
+                fontFamily: "OutfitMedium",
+                fontWeight: 500,
+                color: "#10B981",
+                lineHeight: 1,
+              }}
+            >
+              {t("heroFeeFree")}
+            </Typography>
+          </Box>
+        </Box>
       </TopSection>
 
       {/* 3-Step Flow Visual */}

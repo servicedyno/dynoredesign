@@ -54,6 +54,108 @@ const FeeSection = () => {
         sx={{ maxWidth: "100%" }}
       />
 
+      {/* $500 Fee-Free Promotion Banner */}
+      <Box
+        sx={{
+          maxWidth: 720,
+          mx: "auto",
+          mb: isMobile ? 4 : 5,
+          mt: isMobile ? 4 : 6,
+          position: "relative",
+          borderRadius: "20px",
+          overflow: "hidden",
+          border: `1px solid ${isDark ? "rgba(16,185,129,0.25)" : "rgba(16,185,129,0.2)"}`,
+          bgcolor: isDark ? "rgba(16,185,129,0.04)" : "rgba(16,185,129,0.03)",
+          p: isMobile ? 3 : 4,
+          transition: "all 0.4s ease",
+          transform: isVisible ? "translateY(0)" : "translateY(15px)",
+          opacity: isVisible ? 1 : 0,
+          transitionDelay: "300ms",
+        }}
+      >
+        {/* Glow accent */}
+        <Box
+          sx={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            right: 0,
+            height: "3px",
+            background: "linear-gradient(90deg, #10B981, #34D399, #10B981)",
+            borderRadius: "20px 20px 0 0",
+          }}
+        />
+
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: isMobile ? "column" : "row",
+            alignItems: isMobile ? "flex-start" : "center",
+            gap: isMobile ? 2 : 3,
+          }}
+        >
+          {/* Gift icon */}
+          <Box
+            sx={{
+              width: 56,
+              height: 56,
+              minWidth: 56,
+              borderRadius: "16px",
+              background: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              fontSize: "28px",
+              boxShadow: `0 8px 24px ${isDark ? "rgba(16,185,129,0.2)" : "rgba(16,185,129,0.15)"}`,
+            }}
+          >
+            🎁
+          </Box>
+
+          {/* Text content */}
+          <Box sx={{ flex: 1 }}>
+            <Typography
+              sx={{
+                fontSize: isMobile ? "18px" : "20px",
+                fontFamily: "OutfitSemiBold",
+                fontWeight: 700,
+                color: theme.palette.text.primary,
+                lineHeight: 1.3,
+                mb: 0.5,
+              }}
+            >
+              {t("feeFreeBannerTitle")}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: "14px",
+                fontFamily: "OutfitRegular",
+                color: theme.palette.text.secondary,
+                lineHeight: 1.5,
+              }}
+            >
+              {t("feeFreeBannerDescription")}
+            </Typography>
+          </Box>
+
+          {/* CTA */}
+          <Box sx={{ flexShrink: 0 }}>
+            <HomeButton
+              variant="primary"
+              label={t("feeFreeBannerCta")}
+              navigateTo="/auth/register"
+              sx={{
+                background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                "&:hover": {
+                  background: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+                },
+                whiteSpace: "nowrap",
+              }}
+            />
+          </Box>
+        </Box>
+      </Box>
+
       {/* Fee Comparison */}
       <Box
         sx={{

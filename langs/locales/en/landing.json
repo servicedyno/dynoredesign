@@ -10,6 +10,7 @@
   "heroHighlight": "Get Paid in Stablecoins.",
   "heroSubtitle": "Protect your revenue from market swings with instant conversion to USDT.",
   "heroTrust": "Trusted by 1,000+ businesses worldwide",
+  "heroFeeFree": "First $500 fee-free for new merchants",
   "startAcceptingCrypto": "Start Accepting Crypto",
   "learnMore": "Learn More",
   "heroStep1": "Customer Pays",
@@ -97,7 +98,7 @@
   "feeComparisonPaypal": "PayPal",
   "feeComparisonStripe": "Stripe",
   "finalCtaTitle": "Ready to accept crypto?",
-  "finalCtaSubtitle": "Start in minutes. No credit card required.",
+  "finalCtaSubtitle": "Start in minutes. No credit card required. Your first $500 is fee-free.",
   "finalCtaChat": "Chat with us",
   "finalCtaDocs": "View Documentation"
 }
