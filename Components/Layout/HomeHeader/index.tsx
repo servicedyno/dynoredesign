@@ -33,9 +33,9 @@ import {
 
 /* ================= TYPES ================= */
 
-type SectionId = "how-it-works" | "features" | "use-cases";
+type SectionId = "features" | "fee-calculator";
 
-type TranslationKey = "howItWorks" | "features" | "useCases" | "documentation" | "headerFees" | "blog";
+type TranslationKey = "features" | "headerFees" | "documentation" | "blog";
 
 interface HeaderItem {
   translationKey: TranslationKey;
@@ -50,9 +50,7 @@ const HEADER_OFFSET_PX = 100;
 const SCROLL_THRESHOLD_PX = 10;
 
 const HEADER_ITEMS: readonly HeaderItem[] = [
-  { translationKey: "howItWorks", sectionId: "how-it-works", path: "/" },
   { translationKey: "features", sectionId: "features", path: "/" },
-  { translationKey: "useCases", sectionId: "use-cases", path: "/" },
   { translationKey: "headerFees", path: "/fees", external: false },
   { translationKey: "documentation", path: "/documentation", external: false },
   { translationKey: "blog", path: "/blog", external: false },

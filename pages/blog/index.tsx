@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import { blogPosts } from "@/utils/blogData";
 import useIsMobile from "@/hooks/useIsMobile";
-import HomeHeader from "@/Components/Layout/HomeHeader";
+// HomeHeader is rendered by HomeLayout in _app.tsx
 
 const categoryColors: Record<string, string> = {
   "Integration Guide": "#0004FF",
@@ -36,7 +36,7 @@ const BlogPage = () => {
         <link rel="canonical" href="https://dynopay.com/blog" />
       </Head>
 
-      <HomeHeader />
+      {/* HomeHeader is rendered by HomeLayout */}
 
       <Box
         sx={{
@@ -66,7 +66,7 @@ const BlogPage = () => {
             <Typography
               sx={{
                 fontSize: "12px",
-                fontFamily: "UrbanistSemibold",
+                fontFamily: "OutfitSemiBold",
                 fontWeight: 600,
                 color: theme.palette.primary.main,
                 textTransform: "uppercase",
@@ -79,7 +79,7 @@ const BlogPage = () => {
           <Typography
             sx={{
               fontSize: isMobile ? "32px" : "48px",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               fontWeight: 700,
               color: theme.palette.text.primary,
               lineHeight: 1.15,
@@ -94,7 +94,7 @@ const BlogPage = () => {
           <Typography
             sx={{
               fontSize: isMobile ? "15px" : "18px",
-              fontFamily: "UrbanistMedium",
+              fontFamily: "OutfitMedium",
               color: theme.palette.text.secondary,
               maxWidth: 600,
               mx: "auto",
@@ -146,7 +146,7 @@ const BlogPage = () => {
                       <Typography
                         sx={{
                           fontSize: "11px",
-                          fontFamily: "UrbanistSemibold",
+                          fontFamily: "OutfitSemiBold",
                           fontWeight: 600,
                           color: catColor,
                           textTransform: "uppercase",
@@ -159,7 +159,7 @@ const BlogPage = () => {
                     <Typography
                       sx={{
                         fontSize: "12px",
-                        fontFamily: "UrbanistMedium",
+                        fontFamily: "OutfitMedium",
                         color: theme.palette.text.secondary,
                       }}
                     >
@@ -171,7 +171,7 @@ const BlogPage = () => {
                   <Typography
                     sx={{
                       fontSize: isMobile ? "18px" : "22px",
-                      fontFamily: "UrbanistSemibold",
+                      fontFamily: "OutfitSemiBold",
                       fontWeight: 600,
                       color: theme.palette.text.primary,
                       lineHeight: 1.3,
@@ -185,7 +185,7 @@ const BlogPage = () => {
                   <Typography
                     sx={{
                       fontSize: isMobile ? "13px" : "14px",
-                      fontFamily: "UrbanistMedium",
+                      fontFamily: "OutfitMedium",
                       color: theme.palette.text.secondary,
                       lineHeight: 1.6,
                       mb: 3,
@@ -208,7 +208,7 @@ const BlogPage = () => {
                           alignItems: "center",
                           justifyContent: "center",
                           fontSize: "13px",
-                          fontFamily: "UrbanistSemibold",
+                          fontFamily: "OutfitSemiBold",
                           color: catColor,
                         }}
                       >
@@ -218,7 +218,7 @@ const BlogPage = () => {
                         <Typography
                           sx={{
                             fontSize: "12px",
-                            fontFamily: "UrbanistSemibold",
+                            fontFamily: "OutfitSemiBold",
                             color: theme.palette.text.primary,
                             lineHeight: 1.2,
                           }}
@@ -228,7 +228,7 @@ const BlogPage = () => {
                         <Typography
                           sx={{
                             fontSize: "11px",
-                            fontFamily: "UrbanistMedium",
+                            fontFamily: "OutfitMedium",
                             color: theme.palette.text.secondary,
                           }}
                         >
@@ -243,7 +243,7 @@ const BlogPage = () => {
                     <Typography
                       sx={{
                         fontSize: "13px",
-                        fontFamily: "UrbanistSemibold",
+                        fontFamily: "OutfitSemiBold",
                         color: theme.palette.primary.main,
                         display: "flex",
                         alignItems: "center",

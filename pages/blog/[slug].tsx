@@ -4,7 +4,7 @@ import { useRouter } from "next/router";
 import Head from "next/head";
 import { getBlogPost, blogPosts } from "@/utils/blogData";
 import useIsMobile from "@/hooks/useIsMobile";
-import HomeHeader from "@/Components/Layout/HomeHeader";
+// HomeHeader is rendered by HomeLayout in _app.tsx
 import type { GetStaticPaths, GetStaticProps } from "next";
 import { sanitizeHtml } from "@/utils/sanitizeHtml";
 
@@ -29,9 +29,8 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
   if (!post) {
     return (
       <>
-        <HomeHeader />
         <Box sx={{ pt: 20, textAlign: "center", minHeight: "100vh" }}>
-          <Typography variant="h4" sx={{ fontFamily: "UrbanistSemibold", color: theme.palette.text.primary }}>
+          <Typography variant="h4" sx={{ fontFamily: "OutfitSemiBold", color: theme.palette.text.primary }}>
             Post not found
           </Typography>
           <Typography
@@ -40,7 +39,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
               mt: 2,
               cursor: "pointer",
               color: theme.palette.primary.main,
-              fontFamily: "UrbanistMedium",
+              fontFamily: "OutfitMedium",
               "&:hover": { textDecoration: "underline" },
             }}
           >
@@ -100,7 +99,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
       <Typography
         sx={{
           fontSize: "13px",
-          fontFamily: "UrbanistSemibold",
+          fontFamily: "OutfitSemiBold",
           color: theme.palette.text.secondary,
           mr: 0.5,
         }}
@@ -167,7 +166,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
                 width: "100%",
                 borderCollapse: "collapse",
                 fontSize: isMobile ? "13px" : "14px",
-                fontFamily: "UrbanistMedium",
+                fontFamily: "OutfitMedium",
               }}
             >
               <thead>
@@ -282,7 +281,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             key={`h2-${i}`}
             sx={{
               fontSize: isMobile ? "22px" : "28px",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               fontWeight: 700,
               color: theme.palette.text.primary,
               mt: 5,
@@ -301,7 +300,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             key={`h3-${i}`}
             sx={{
               fontSize: isMobile ? "18px" : "22px",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               fontWeight: 600,
               color: theme.palette.text.primary,
               mt: 4,
@@ -333,7 +332,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: isMobile ? "14px" : "16px",
-                fontFamily: "UrbanistMedium",
+                fontFamily: "OutfitMedium",
                 color: theme.palette.text.secondary,
                 lineHeight: 1.7,
               }}
@@ -357,7 +356,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: "14px",
-                fontFamily: "UrbanistSemibold",
+                fontFamily: "OutfitSemiBold",
                 color: theme.palette.primary.main,
                 minWidth: 20,
               }}
@@ -367,7 +366,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: isMobile ? "14px" : "16px",
-                fontFamily: "UrbanistMedium",
+                fontFamily: "OutfitMedium",
                 color: theme.palette.text.secondary,
                 lineHeight: 1.7,
               }}
@@ -389,7 +388,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           key={`p-${i}`}
           sx={{
             fontSize: isMobile ? "14px" : "16px",
-            fontFamily: "UrbanistMedium",
+            fontFamily: "OutfitMedium",
             color: theme.palette.text.secondary,
             lineHeight: 1.8,
             mb: 2,
@@ -421,7 +420,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
         <link rel="canonical" href={`https://dynopay.com/blog/${post.slug}`} />
       </Head>
 
-      <HomeHeader />
+      {/* HomeHeader is rendered by HomeLayout */}
 
       <Box
         sx={{
@@ -439,7 +438,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           sx={{
             cursor: "pointer",
             fontSize: "14px",
-            fontFamily: "UrbanistSemibold",
+            fontFamily: "OutfitSemiBold",
             color: theme.palette.primary.main,
             mb: 4,
             display: "inline-flex",
@@ -465,7 +464,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: "11px",
-                fontFamily: "UrbanistSemibold",
+                fontFamily: "OutfitSemiBold",
                 fontWeight: 600,
                 color: catColor,
                 textTransform: "uppercase",
@@ -478,7 +477,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           <Typography
             sx={{
               fontSize: "12px",
-              fontFamily: "UrbanistMedium",
+              fontFamily: "OutfitMedium",
               color: theme.palette.text.secondary,
             }}
           >
@@ -487,7 +486,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           <Typography
             sx={{
               fontSize: "12px",
-              fontFamily: "UrbanistMedium",
+              fontFamily: "OutfitMedium",
               color: theme.palette.text.secondary,
             }}
           >
@@ -503,7 +502,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
         <Typography
           sx={{
             fontSize: isMobile ? "28px" : "42px",
-            fontFamily: "UrbanistSemibold",
+            fontFamily: "OutfitSemiBold",
             fontWeight: 700,
             color: theme.palette.text.primary,
             lineHeight: 1.2,
@@ -525,7 +524,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
               alignItems: "center",
               justifyContent: "center",
               fontSize: "15px",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               color: catColor,
             }}
           >
@@ -535,7 +534,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: "14px",
-                fontFamily: "UrbanistSemibold",
+                fontFamily: "OutfitSemiBold",
                 color: theme.palette.text.primary,
                 lineHeight: 1.3,
               }}
@@ -545,7 +544,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
             <Typography
               sx={{
                 fontSize: "12px",
-                fontFamily: "UrbanistMedium",
+                fontFamily: "OutfitMedium",
                 color: theme.palette.text.secondary,
               }}
             >
@@ -585,7 +584,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           <Typography
             sx={{
               fontSize: isMobile ? "20px" : "24px",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               fontWeight: 700,
               color: theme.palette.text.primary,
               mb: 1.5,
@@ -596,7 +595,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
           <Typography
             sx={{
               fontSize: "15px",
-              fontFamily: "UrbanistMedium",
+              fontFamily: "OutfitMedium",
               color: theme.palette.text.secondary,
               mb: 3,
             }}
@@ -614,7 +613,7 @@ const BlogPostPage = ({ slug }: BlogPostPageProps) => {
               bgcolor: theme.palette.primary.main,
               color: "#fff",
               textDecoration: "none",
-              fontFamily: "UrbanistSemibold",
+              fontFamily: "OutfitSemiBold",
               fontSize: "15px",
               fontWeight: 600,
               transition: "all 0.2s ease",
