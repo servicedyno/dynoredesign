@@ -1,264 +1,206 @@
 import HomeButton from "@/Components/Layout/HomeButton";
 import HomeSectionTitle from "@/Components/UI/SectionTitle";
-import { useDevice } from "@/hooks/useDevice";
 import useIsMobile from "@/hooks/useIsMobile";
-import Image from "next/image";
-import { memo, useMemo } from "react";
+import { Box, Typography, useTheme } from "@mui/material";
+import { memo } from "react";
 import { useTranslation } from "react-i18next";
-
-/* Tiny shimmer placeholder — used for SVG assets that don't support auto-blur */
-const SHIMMER_BLUR =
-  "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjMWExYTJlIi8+PHJlY3Qgd2lkdGg9IjEwMCUiIGhlaWdodD0iMTAwJSIgZmlsbD0idXJsKCNnKSIgb3BhY2l0eT0iMC4zIi8+PGRlZnM+PGxpbmVhckdyYWRpZW50IGlkPSJnIiB4MT0iMCUiIHkxPSIwJSIgeDI9IjEwMCUiIHkyPSIxMDAlIj48c3RvcCBvZmZzZXQ9IjAlIiBzdG9wLWNvbG9yPSIjMjIyMjQ0Ii8+PHN0b3Agb2Zmc2V0PSI1MCUiIHN0b3AtY29sb3I9IiMzMzMzNTUiLz48c3RvcCBvZmZzZXQ9IjEwMCUiIHN0b3AtY29sb3I9IiMyMjIyNDQiLz48L2xpbmVhckdyYWRpZW50PjwvZGVmcz48L3N2Zz4=";
-import {
-  BitcoinFloat,
-  ButtonsRow,
-  DashboardDesktopBox,
-  DashboardDesktopStage,
-  DashboardMobileBox,
-  DesktopShowcase,
-  EthereumFloat,
-  LitecoinDesktopFloat,
-  LitecoinMobileFloat,
-  MobilePaymentBox,
-  MobileSection,
-  MobileWalletBox,
-  PaymentCard,
-  Root,
-  TitleArea,
-  TopSection,
-  WalletCard,
-} from "./styled";
-
-import BitcoinBg_png from "@/assets/Images/home/Bitcoin-bg.png";
-import Dashboard_png from "@/assets/Images/home/Dashboard.png";
-import EthereumBg_png from "@/assets/Images/home/Ethereum-bg.png";
-import LitecoinBg_png from "@/assets/Images/home/Litecoin-bg.png";
-import Payment_png from "@/assets/Images/home/Payment-Container.png";
-import Wallet_png from "@/assets/Images/home/Wallet.png";
-
-import BitcoinBg_svg from "@/assets/Images/home/Bitcoin-bg.svg";
-import Dashboard_svg from "@/assets/Images/home/Dashboard.svg";
-import EthereumBg_svg from "@/assets/Images/home/Ethereum-bg.svg";
-import LitecoinBg_svg from "@/assets/Images/home/Litecoin-bg.svg";
-import Payment_svg from "@/assets/Images/home/Payment-Container.svg";
-import Wallet_svg from "@/assets/Images/home/Wallet.svg";
-
-type DeviceOS = "ios" | "android" | "web";
-type DeviceBrowser = "safari" | "chrome" | "firefox" | "edge" | "other";
-
-type LandingTranslationKey =
-  | "heroBadge"
-  | "heroTitle"
-  | "heroHighlight"
-  | "heroSubtitle"
-  | "startAcceptingCrypto"
-  | "learnMore";
+import { ButtonsRow, Root, TopSection } from "./styled";
 
 const HeroSection = () => {
   const isMobile = useIsMobile("md");
-  const { os, browser } = useDevice() as {
-    os: DeviceOS;
-    browser: DeviceBrowser;
-  };
   const { t } = useTranslation("landing");
+  const theme = useTheme();
+  const isDark = theme.palette.mode === "dark";
 
-  const tLanding = (key: LandingTranslationKey): string => {
-    const value = t(key, { ns: "landing" });
-    return typeof value === "string" ? value : String(value);
-  };
-
-  const isSafariLike = useMemo<boolean>(
-    () => os === "ios" || browser === "safari",
-    [os, browser],
-  );
-
-  const assets = useMemo(
-    () => ({
-      dashboard: isSafariLike ? Dashboard_png : Dashboard_svg,
-      wallet: isSafariLike ? Wallet_png : Wallet_svg,
-      payment: isSafariLike ? Payment_png : Payment_svg,
-      bitcoinBg: isSafariLike ? BitcoinBg_png : BitcoinBg_svg,
-      ethereumBg: isSafariLike ? EthereumBg_png : EthereumBg_svg,
-      litecoinBg: isSafariLike ? LitecoinBg_png : LitecoinBg_svg,
-    }),
-    [isSafariLike],
-  );
-
-  const isIOS = os === "ios";
+  const steps = [
+    {
+      icon: "₿",
+      gradient: "linear-gradient(135deg, #F7931A 0%, #FF9500 100%)",
+      title: t("heroStep1"),
+      sub: t("heroStep1Sub"),
+    },
+    {
+      icon: "⚡",
+      gradient: "linear-gradient(135deg, #7C3AED 0%, #A855F7 100%)",
+      title: t("heroStep2"),
+      sub: t("heroStep2Sub"),
+    },
+    {
+      icon: "$",
+      gradient: "linear-gradient(135deg, #10B981 0%, #34D399 100%)",
+      title: t("heroStep3"),
+      sub: t("heroStep3Sub"),
+    },
+  ];
 
   return (
     <Root>
       <TopSection>
-        <TitleArea>
-          <HomeSectionTitle
-            type="large"
-            headingAs="h1"
-            badgeText={tLanding("heroBadge")}
-            title={tLanding("heroTitle")}
-            highlightText={tLanding("heroHighlight")}
-            subtitle={tLanding("heroSubtitle")}
-          />
-
-          <BitcoinFloat>
-            <Image
-              src={assets.bitcoinBg}
-              alt="background"
-              fill
-              sizes="80px"
-              className="bitcoinImg"
-              draggable={false}
-              priority
-              placeholder="blur"
-              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            />
-          </BitcoinFloat>
-
-          <EthereumFloat>
-            <Image
-              src={assets.ethereumBg}
-              alt="background"
-              fill
-              sizes="80px"
-              className="ethereumImg"
-              draggable={false}
-              priority
-              placeholder="blur"
-              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            />
-          </EthereumFloat>
-        </TitleArea>
+        <HomeSectionTitle
+          type="large"
+          headingAs="h1"
+          badgeText={t("heroBadge")}
+          title={t("heroTitle")}
+          highlightText={t("heroHighlight")}
+          subtitle={t("heroSubtitle")}
+        />
 
         <ButtonsRow>
-          <HomeButton
-            variant="primary"
-            label={tLanding("startAcceptingCrypto")}
-          />
+          <HomeButton variant="primary" label={t("startAcceptingCrypto")} />
         </ButtonsRow>
+
+        {/* Trust micro-copy */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+            mt: 2,
+            opacity: 0.7,
+          }}
+        >
+          <Box
+            sx={{
+              width: 6,
+              height: 6,
+              borderRadius: "50%",
+              bgcolor: "#10B981",
+            }}
+          />
+          <Typography
+            sx={{
+              fontSize: "13px",
+              fontFamily: "OutfitRegular",
+              color: theme.palette.text.secondary,
+            }}
+          >
+            {t("heroTrust")}
+          </Typography>
+        </Box>
       </TopSection>
 
-      <DesktopShowcase>
-        <DashboardDesktopStage>
-          <DashboardDesktopBox>
-            <LitecoinDesktopFloat>
-              <Image
-                src={assets.litecoinBg}
-                alt="Bitcoin Background"
-                fill
-                sizes="60px"
-                className="litecoinDesktopImg"
-                draggable={false}
-                priority
-                placeholder="blur"
-                blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-              />
-            </LitecoinDesktopFloat>
+      {/* 3-Step Flow Visual */}
+      <Box
+        sx={{
+          mt: isMobile ? 5 : 8,
+          mb: isMobile ? 3 : 6,
+          display: "flex",
+          flexDirection: isMobile ? "column" : "row",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: isMobile ? 3 : 2,
+          position: "relative",
+        }}
+      >
+        {steps.map((step, idx) => (
+          <Box
+            key={step.title}
+            sx={{
+              display: "flex",
+              flexDirection: isMobile ? "row" : "column",
+              alignItems: "center",
+              gap: isMobile ? 2.5 : 1.5,
+              flex: isMobile ? undefined : 1,
+              maxWidth: isMobile ? "100%" : 280,
+              width: isMobile ? "100%" : undefined,
+            }}
+          >
+            {/* Arrow between steps (desktop) */}
+            {idx > 0 && !isMobile && (
+              <Box
+                sx={{
+                  position: "absolute",
+                  top: "28px",
+                  left: `calc(${(idx * 100) / 3}% + ${idx === 1 ? "2%" : "2%"})`,
+                  transform: "translateX(-50%)",
+                  color: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)",
+                  fontSize: "28px",
+                  fontWeight: 300,
+                  userSelect: "none",
+                  display: "flex",
+                  alignItems: "center",
+                }}
+              >
+                →
+              </Box>
+            )}
 
-            <Image
-              src={assets.dashboard}
-              alt="Dashboard Container"
-              fill
-              sizes="(max-width: 768px) 100vw, 900px"
-              className="dashboardDesktopImg"
-              priority
-              quality={85}
-              placeholder="blur"
-              blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-              draggable={false}
-            />
-          </DashboardDesktopBox>
-        </DashboardDesktopStage>
+            {/* Icon circle */}
+            <Box
+              sx={{
+                width: 56,
+                height: 56,
+                minWidth: 56,
+                borderRadius: "16px",
+                background: step.gradient,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                fontSize: "24px",
+                color: "#fff",
+                fontWeight: 700,
+                boxShadow: `0 8px 24px ${isDark ? "rgba(0,0,0,0.3)" : "rgba(0,0,0,0.1)"}`,
+                transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                "&:hover": {
+                  transform: "scale(1.08) translateY(-2px)",
+                  boxShadow: `0 12px 32px ${isDark ? "rgba(0,0,0,0.4)" : "rgba(0,0,0,0.15)"}`,
+                },
+              }}
+            >
+              {step.icon}
+            </Box>
 
-        <WalletCard>
-          <Image
-            src={assets.wallet}
-            alt="Wallet Container"
-            fill
-            sizes="(max-width: 768px) 280px, 320px"
-            className={isIOS ? "walletImgIOS" : "walletImg"}
-            quality={80}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            draggable={false}
-          />
-        </WalletCard>
+            {/* Text */}
+            <Box
+              sx={{
+                textAlign: isMobile ? "left" : "center",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: isMobile ? "16px" : "17px",
+                  fontFamily: "OutfitMedium",
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                  lineHeight: 1.3,
+                }}
+              >
+                {step.title}
+              </Typography>
+              <Typography
+                sx={{
+                  fontSize: "13px",
+                  fontFamily: "OutfitRegular",
+                  color: theme.palette.text.secondary,
+                  mt: 0.3,
+                  lineHeight: 1.4,
+                }}
+              >
+                {step.sub}
+              </Typography>
+            </Box>
 
-        <PaymentCard>
-          <Image
-            src={assets.payment}
-            alt="Payment Container"
-            fill
-            sizes="(max-width: 768px) 280px, 350px"
-            className={isIOS ? "paymentImgIOS" : "paymentImg"}
-            quality={80}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            draggable={false}
-          />
-        </PaymentCard>
-      </DesktopShowcase>
-
-      <MobileSection>
-        <MobileWalletBox>
-          <Image
-            src={assets.wallet}
-            alt="Wallet Container"
-            fill
-            sizes="280px"
-            className={isIOS ? "walletMobileImgIOS" : "walletMobileImg"}
-            quality={80}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            draggable={false}
-          />
-        </MobileWalletBox>
-
-        <MobilePaymentBox>
-          <Image
-            src={assets.payment}
-            alt="Payment Container"
-            fill
-            sizes="280px"
-            className={isIOS ? "paymentMobileImgIOS" : "paymentMobileImg"}
-            quality={80}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-            draggable={false}
-          />
-        </MobilePaymentBox>
-
-        <LitecoinMobileFloat>
-          <Image
-            src={assets.litecoinBg}
-            alt="Dashboard Mobile"
-            fill
-            sizes="60px"
-            className={isIOS ? "litecoinMobileImgIOS" : "litecoinMobileImg"}
-            draggable={false}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-          />
-        </LitecoinMobileFloat>
-
-        <DashboardMobileBox>
-          <Image
-            src={assets.dashboard}
-            alt="Dashboard Mobile"
-            fill
-            sizes="(max-width: 768px) 100vw, 900px"
-            className={isIOS ? "dashboardMobileImgIOS" : "dashboardMobileImg"}
-            draggable={false}
-            quality={85}
-            priority
-            placeholder="blur"
-            blurDataURL={isSafariLike ? undefined : SHIMMER_BLUR}
-          />
-        </DashboardMobileBox>
-      </MobileSection>
+            {/* Arrow between steps (mobile) */}
+            {idx < steps.length - 1 && isMobile && (
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  width: "100%",
+                  color: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.12)",
+                  fontSize: "20px",
+                  transform: "rotate(90deg)",
+                  mt: -1,
+                  mb: -1,
+                }}
+              >
+                →
+              </Box>
+            )}
+          </Box>
+        ))}
+      </Box>
     </Root>
   );
 };
