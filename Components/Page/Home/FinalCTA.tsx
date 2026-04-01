@@ -107,44 +107,7 @@ const FinalCTA: React.FC = () => {
             zIndex: 1,
           }}
         >
-          <HomeButton variant="primary" label={t("startAcceptingCrypto")} />
-        </Box>
-
-        {/* Fee-free badge in CTA */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            mb: 3,
-            position: "relative",
-            zIndex: 1,
-          }}
-        >
-          <Box
-            sx={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 0.8,
-              px: 2,
-              py: 0.7,
-              borderRadius: "20px",
-              border: `1px solid ${isDark ? "rgba(16,185,129,0.3)" : "rgba(16,185,129,0.25)"}`,
-              bgcolor: isDark ? "rgba(16,185,129,0.08)" : "rgba(16,185,129,0.06)",
-            }}
-          >
-            <Typography sx={{ fontSize: "13px", lineHeight: 1 }}>🎉</Typography>
-            <Typography
-              sx={{
-                fontSize: "13px",
-                fontFamily: "OutfitMedium",
-                fontWeight: 500,
-                color: "#10B981",
-                lineHeight: 1,
-              }}
-            >
-              First $500 fee-free for new merchants
-            </Typography>
-          </Box>
+          <HomeButton variant="primary" label={t("startAcceptingCrypto")} navigateTo="/auth/register" />
         </Box>
 
         <Box

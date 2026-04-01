@@ -7,7 +7,7 @@ import HomeButton from "@/Components/Layout/HomeButton";
 import FeeCalculator from "@/Components/UI/FeeCalculator";
 
 const competitors = [
-  { name: "DynoPay", fee: "1.5%", extra: "", highlight: true },
+  { name: "DynoPay", fee: "1.5%", extra: "First $500 free", highlight: true },
   { name: "PayPal", fee: "2.9%", extra: "+ $0.30", highlight: false },
   { name: "Stripe", fee: "2.9%", extra: "+ $0.30", highlight: false },
 ];
@@ -117,8 +117,8 @@ const FeeSection = () => {
             <Typography
               sx={{
                 fontSize: isMobile ? "18px" : "20px",
-                fontFamily: "OutfitSemiBold",
-                fontWeight: 700,
+                fontFamily: "OutfitBold",
+                fontWeight: 800,
                 color: theme.palette.text.primary,
                 lineHeight: 1.3,
                 mb: 0.5,
@@ -240,7 +240,8 @@ const FeeSection = () => {
                 sx={{
                   fontSize: "12px",
                   fontFamily: "OutfitRegular",
-                  color: theme.palette.text.secondary,
+                  color: c.highlight ? "#10B981" : theme.palette.text.secondary,
+                  fontWeight: c.highlight ? 500 : 400,
                   mt: 0.3,
                 }}
               >
@@ -254,6 +255,34 @@ const FeeSection = () => {
       {/* Calculator */}
       <Box sx={{ maxWidth: 720, mx: "auto" }}>
         <FeeCalculator compact />
+
+        {/* Fee-free note below calculator */}
+        <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 1,
+            mt: 2,
+            px: 2,
+            py: 1.2,
+            borderRadius: "12px",
+            bgcolor: isDark ? "rgba(16,185,129,0.06)" : "rgba(16,185,129,0.04)",
+            border: `1px solid ${isDark ? "rgba(16,185,129,0.15)" : "rgba(16,185,129,0.12)"}`,
+          }}
+        >
+          <Typography sx={{ fontSize: "14px", lineHeight: 1 }}>✨</Typography>
+          <Typography
+            sx={{
+              fontSize: "13px",
+              fontFamily: "OutfitMedium",
+              color: "#10B981",
+              lineHeight: 1.4,
+            }}
+          >
+            {t("feeCalcFeeFreeNote")}
+          </Typography>
+        </Box>
       </Box>
 
       <Box sx={{ display: "flex", justifyContent: "center", mt: 4 }}>

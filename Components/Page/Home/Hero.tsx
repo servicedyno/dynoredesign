@@ -46,7 +46,7 @@ const HeroSection = () => {
         />
 
         <ButtonsRow>
-          <HomeButton variant="primary" label={t("startAcceptingCrypto")} />
+          <HomeButton variant="primary" label={t("startAcceptingCrypto")} navigateTo="/auth/register" />
         </ButtonsRow>
 
         {/* Trust micro-copy */}
@@ -208,8 +208,8 @@ const HeroSection = () => {
               <Typography
                 sx={{
                   fontSize: isMobile ? "16px" : "17px",
-                  fontFamily: "OutfitMedium",
-                  fontWeight: 600,
+                  fontFamily: "OutfitSemiBold",
+                  fontWeight: 700,
                   color: theme.palette.text.primary,
                   lineHeight: 1.3,
                 }}
