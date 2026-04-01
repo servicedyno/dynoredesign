@@ -16,7 +16,7 @@ import ShieldOutlinedIcon from "@mui/icons-material/ShieldOutlined";
 import WarningAmberIcon from "@mui/icons-material/WarningAmber";
 import NotificationsActiveIcon from "@mui/icons-material/NotificationsActive";
 import SpeedIcon from "@mui/icons-material/Speed";
-import OpenInNewIcon from "@mui/icons-material/OpenInNew";
+// OpenInNewIcon import removed (no longer used)
 import ContentCopyIcon from "@mui/icons-material/ContentCopy";
 import CheckIcon from "@mui/icons-material/Check";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
@@ -964,39 +964,6 @@ const DocumentationPage = () => {
                     Most integrations only need two API calls: <strong>Create Customer</strong> → <strong>Create Payment</strong>. The customer pays in crypto, and funds are forwarded instantly to your wallet.
                   </Typography>
                 </InfoBox>
-                <Box sx={{ mt: 2.5, display: "flex", alignItems: "center", gap: 1.5, flexWrap: "wrap" }}>
-                  <Box
-                    component="a"
-                    href="/api/docs"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    sx={{
-                      display: "inline-flex",
-                      alignItems: "center",
-                      gap: 0.75,
-                      px: 2,
-                      py: 1,
-                      borderRadius: "10px",
-                      border: `1px solid ${dk ? "#2A2D42" : "#E7E8EF"}`,
-                      background: dk ? "#141625" : "#FFFFFF",
-                      color: dk ? "#A5B4FC" : "#0004FF",
-                      fontSize: 13,
-                      fontFamily: "OutfitMedium",
-                      textDecoration: "none",
-                      transition: "all 0.15s",
-                      "&:hover": {
-                        borderColor: dk ? "#6A7BFF" : "#0004FF",
-                        background: dk ? "rgba(106,123,255,0.06)" : "#F5F7FF",
-                      },
-                    }}
-                  >
-                    <OpenInNewIcon sx={{ fontSize: 16 }} />
-                    Full API Reference (Swagger)
-                  </Box>
-                  <Typography sx={{ fontSize: 12, fontFamily: "OutfitRegular", color: "text.secondary" }}>
-                    — 227 endpoints with interactive testing
-                  </Typography>
-                </Box>
               </Box>
 
               {/* Getting Started */}
