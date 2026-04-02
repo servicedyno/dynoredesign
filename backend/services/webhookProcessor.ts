@@ -332,6 +332,10 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
       payment_id: items.payment_id,
       company_id: items.company_id || queryCompanyId,
       hasTxId: !!items.txId,
+      status: items.status || 'unknown',
+      webhook_url: items.webhook_url || '(not set)',
+      callback_url: items.callback_url || '(not set)',
+      link_id: items.link_id || null,
     });
 
     // ── ASSET VALIDATION: Reject spam/scam tokens ───────────────────────────
