@@ -1207,3 +1207,13 @@ frontend:
   * No 500 errors detected on any tested endpoint
   * Backend API fully operational after TRC20 gas cost optimization changes
   * TRC20 gas cost optimization successfully implemented and verified
+
+
+## Bug Fix: Fee-Free Reconciliation Undercounting Volume — 2026-04-02
+- agent: main
+- message: Fixed reconciliation query that was summing crypto amounts instead of USD values
+- Root cause: `feeFreeReconciliation.ts` used `SUM(t.base_amount)` but `base_amount` stores CRYPTO amounts (e.g. 0.004 ETH) for crypto transactions, not USD. Only stablecoin payments (USDT/USDC ≈ 1:1 USD) contributed meaningfully. ETH/BTC/LTC payments added near-zero to the sum.
+- Example: User 4 showed $1,922.52 cumulative volume (mostly stablecoins) but actual USD volume is significantly higher when ETH/BTC payments are properly valued.
+- Fix: Changed `SUM(t.base_amount)` → `SUM(COALESCE(NULLIF(t.usd_value, 0), t.base_amount))` — uses `usd_value` (USD at time of receipt, populated during crypto settlement) when available, falls back to `base_amount` for fiat/card transactions.
+- Files changed: backend/services/feeFreeReconciliation.ts
+- Test scope: Backend health check + TypeScript compilation (tsc --noEmit passes clean)
