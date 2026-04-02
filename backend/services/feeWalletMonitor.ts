@@ -3,11 +3,6 @@
  * 
  * Monitors TRX fee wallet balance and alerts when low
  * Prevents SmartGas failures due to insufficient fee wallet balance
- * 
- * FIX (2026-04-02): Now reads the TRX fee wallet address from the DATABASE
- * (tbl_admin_fee_wallet where wallet_type='TRX') — the same source SmartGas uses.
- * Previously checked process.env.TRX_FEE_WALLET which was a DIFFERENT wallet,
- * causing the monitor to report "HEALTHY" while the actual gas wallet was nearly empty.
  */
 
 import tatumApi from "../apis/tatumApi";
@@ -15,34 +10,8 @@ import { cronLogger } from "../utils/loggers";
 import { dynoPayGreetingTemplate } from "./emailService";
 import mailTransporter from "../utils/mailTransporter";
 
-// Fallback only — DB address takes priority (see getActualFeeWalletAddress below)
-const ENV_FEE_WALLET_ADDRESS = process.env.TRX_FEE_WALLET || "";
+const FEE_WALLET_ADDRESS = process.env.TRX_FEE_WALLET || "";
 const ALERT_EMAIL = process.env.ADMIN_EMAIL || process.env.BREVO_SENDER_EMAIL || "admin@dynopay.com";
-
-/**
- * Get the ACTUAL TRX fee wallet address from the database (same as SmartGas uses).
- * Falls back to process.env.TRX_FEE_WALLET if DB lookup fails.
- */
-async function getActualFeeWalletAddress(): Promise<string> {
-  try {
-    const { adminFeeModel } = await import("../models");
-    const feeWallet = await adminFeeModel.findOne({
-      where: { wallet_type: "TRX" },
-      attributes: ["wallet_address"],
-    });
-    if (feeWallet?.dataValues?.wallet_address) {
-      const dbAddress = feeWallet.dataValues.wallet_address;
-      // Log if DB address differs from env var — this was the root cause of the monitoring gap
-      if (ENV_FEE_WALLET_ADDRESS && dbAddress !== ENV_FEE_WALLET_ADDRESS) {
-        cronLogger.warn(`[FeeWalletMonitor] ⚠️ DB fee wallet (${dbAddress.substring(0, 10)}...) differs from env TRX_FEE_WALLET (${ENV_FEE_WALLET_ADDRESS.substring(0, 10)}...). Using DB address (same as SmartGas).`);
-      }
-      return dbAddress;
-    }
-  } catch (err: any) {
-    cronLogger.warn(`[FeeWalletMonitor] DB lookup failed, falling back to env var: ${err.message}`);
-  }
-  return ENV_FEE_WALLET_ADDRESS;
-}
 
 // Alert thresholds
 const CRITICAL_THRESHOLD = 50; // TRX
@@ -64,11 +33,8 @@ const ALERT_COOLDOWN_MS = 3600000; // 1 hour - don't spam alerts
  */
 export async function checkFeeWalletBalance(): Promise<WalletStatus> {
   try {
-    // FIX: Read the fee wallet address from the DATABASE (same source as SmartGas)
-    const FEE_WALLET_ADDRESS = await getActualFeeWalletAddress();
-    
     if (!FEE_WALLET_ADDRESS) {
-      cronLogger.warn('[FeeWalletMonitor] No TRX fee wallet found in DB or env — skipping check');
+      cronLogger.warn('[FeeWalletMonitor] TRX_FEE_WALLET not configured - skipping check');
       return {
         balance: 0,
         status: 'empty',
@@ -76,7 +42,7 @@ export async function checkFeeWalletBalance(): Promise<WalletStatus> {
       };
     }
 
-    // Get current balance from the SAME wallet SmartGas actually funds from
+    // Get current balance
     const balanceResult = await tatumApi.getAddressBalance(FEE_WALLET_ADDRESS, 'TRX').catch(() => null);
     const balance = Number(balanceResult?.balance || 0);
 
@@ -168,9 +134,6 @@ function shouldSendAlert(currentStatus: WalletStatus): boolean {
  */
 async function sendAlert(status: WalletStatus): Promise<void> {
   const { balance, status: statusLevel } = status;
-  
-  // FIX: Get the actual fee wallet address from DB for the alert email
-  const FEE_WALLET_ADDRESS = await getActualFeeWalletAddress();
 
   const subject = {
     empty: '🚨 URGENT: TRX Fee Wallet Empty!',

@@ -4726,19 +4726,11 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             const poolTRXBalance = poolResources.availableBandwidth >= 0 ? 0 : 0; // fallback
             
             // Check fee wallet TRX balance via Tatum (advisory only)
-            // FIX (2026-04-02): Use the ACTUAL fee wallet from DB (same as SmartGas),
-            // not getAdminWalletAddress("TRX") which returns the admin COLLECTION wallet.
-            let feeWalletAddress: string | null = null;
-            try {
-              const feeWalletRecord = await adminFeeModel.findOne({
-                where: { wallet_type: "TRX" },
-                attributes: ["wallet_address"],
-              });
-              feeWalletAddress = feeWalletRecord?.dataValues?.wallet_address || process.env.TRX_FEE_WALLET || null;
-            } catch (dbErr: any) {
-              cronLogger.warn(`[cryptoVerification] DB fee wallet lookup failed, using env fallback: ${dbErr.message}`);
-              feeWalletAddress = process.env.TRX_FEE_WALLET || null;
-            }
+            // FIX (2026-04-02): Use process.env.TRX_FEE_WALLET (the actual gas fee wallet),
+            // NOT getAdminWalletAddress("TRX") which returns process.env.TRX — the admin
+            // COLLECTION wallet (4.48 TRX) instead of the gas wallet (115+ TRX).
+            // This mismatch caused false DEFERRED settlements when the gas wallet was fine.
+            const feeWalletAddress = process.env.TRX_FEE_WALLET || null;
             if (feeWalletAddress) {
               const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX").catch(() => null);
               const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
