@@ -4988,19 +4988,16 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             pendingSweep
           );
           
-          // FIX (2026-04-02): Reclaim excess gas from pool address back to fee wallet.
-          // After settlement, pool addresses often have ~20 TRX leftover gas that was
-          // funded by SmartGas but never burned. This reclaims it for future use.
-          if (!pendingSweep && TOKEN_CHAINS.includes(tempCurrency)) {
-            const poolAddr = tempAddressData.wallet_address || address;
-            merchantPoolService.reclaimExcessGas(poolAddr, tempCurrency).then((reclaimResult) => {
-              if (reclaimResult.reclaimed) {
-                cronLogger.info(`[GasReclaim] ♻️ Reclaimed ${reclaimResult.amount.toFixed(4)} gas from ${poolAddr.substring(0, 12)}... (TX: ${reclaimResult.txId})`);
-              }
-            }).catch((err: unknown) => {
-              cronLogger.warn(`[GasReclaim] ⚠️ Reclaim failed (non-critical): ${err instanceof Error ? err.message : err}`);
-            });
-          }
+          // NOTE (2026-04-02): Per-settlement reclaimExcessGas REMOVED.
+          // Leftover gas (TRX/ETH) from SmartGas funding stays in the temp address.
+          // This is optimal because:
+          //   1. The admin fee sweep (sweepPoolAddress) also needs gas — leftover from
+          //      merchant transfer is reused, reducing the sweep's fundGasIfNeeded deficit.
+          //   2. If the address is reused for another payment, SmartGas accounts for
+          //      existing balance and only funds the deficit.
+          //   3. Eliminates a wasteful fund→reclaim→re-fund cycle (saves 1 TX per payment).
+          // For periodic cleanup of idle addresses with accumulated gas, use the bulk
+          // recovery endpoint: POST /diagnostics/recover-excess-trx
           
           // Record pool transaction for audit
           // Use actualMerchantAmount (computed above) — the actual post-gas on-chain amount
