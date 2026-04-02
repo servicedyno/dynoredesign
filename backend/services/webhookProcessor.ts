@@ -457,10 +457,16 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     }
 
     // ── 6b. Failed payment recovery ──────────────────────────────────────────
-    // When a previous attempt set txId but failed settlement (e.g., UTXO fee mismatch),
-    // allow re-processing instead of treating as duplicate. The txId exists in Redis but
-    // the payment never completed — BullMQ retries and reconciliation must be able to retry.
-    const isFailedPayment = currentParsedState === PaymentState.FAILED
+    // When a previous attempt set txId but failed settlement (e.g., UTXO fee mismatch,
+    // balance NaN, gas_pending, or crash during processing), allow re-processing instead
+    // of treating as duplicate. The txId exists in Redis but the payment never completed —
+    // BullMQ retries and reconciliation must be able to retry.
+    const isRecoverableState = currentParsedState === PaymentState.FAILED
+      || currentParsedState === PaymentState.DETECTED
+      || currentParsedState === PaymentState.PROCESSING
+      || String(items.status) === 'gas_pending'
+      || String(items.status) === 'permanently_failed';
+    const isFailedPayment = isRecoverableState
       && !!items.txId
       && items.txId === payload.txId;
 
@@ -511,7 +517,8 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
     const effectiveIsCompletionPayment = String(items.incomplete) === "true" && items.txId !== payload.txId;
     const effectiveParsedState = parseState(items.status);
 
-    const isStaleProcessing = effectiveParsedState === PaymentState.PROCESSING
+    const isStaleProcessing = (effectiveParsedState === PaymentState.PROCESSING
+        || effectiveParsedState === PaymentState.DETECTED)
       && !!items.txId
       && items.lastAttempt
       && (Date.now() - new Date(items.lastAttempt as string).getTime()) > 60000;
