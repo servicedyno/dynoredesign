@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://initial-setup-19.preview.emergentagent.com/api
+  - target_url: https://setup-wizard-141.preview.emergentagent.com/api
   - test_endpoints:
     - GET /api/: Health check (should return 200)
     - GET /api/pay/network-fees: Core functionality test
@@ -36,7 +36,7 @@ backend:
     - FIX: Cron expression "0 */24 * * *" → "0 0 * * *"
 
 frontend:
-  - target_url: https://initial-setup-19.preview.emergentagent.com
+  - target_url: https://setup-wizard-141.preview.emergentagent.com
   - test_pages:
     - / (Landing/Home page)
     - /auth/login (Login page)
@@ -289,8 +289,8 @@ frontend:
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints for currency validation fix
 - test_results: MIXED RESULTS ⚠️
-  * Target URL https://initial-setup-19.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
-  * Current URL https://initial-setup-19.preview.emergentagent.com/api → ALL TESTS PASSED ✅
+  * Target URL https://setup-wizard-141.preview.emergentagent.com/api → HTTP 404 (Service not available at this URL)
+  * Current URL https://setup-wizard-141.preview.emergentagent.com/api → ALL TESTS PASSED ✅
     - GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0)
     - GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully for all supported chains)
     - GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
@@ -321,7 +321,7 @@ frontend:
 ## Review Request Testing Results - 2026-03-25 07:32:07 UTC
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints after double SUN→TRX conversion bug fix
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - bug_fix_context: Removed extra /1000000 division for TRX balances in 4 files (merchantPoolSweep.ts, paymentController.ts×2, adminController.ts) since tatumApi.getAddressBalance() already converts SUN to TRX
 - test_results: MOSTLY PASSED ✅ (3/4 endpoints working)
   * GET /api/status/health → HTTP 200 (Health status: healthy, timestamp: 2026-03-25T07:32:07.753Z, version: 1.0.0)
@@ -551,7 +551,7 @@ frontend:
 ## Comprehensive Frontend Testing Results - 2026-03-28 12:18:00 UTC
 - agent: testing
 - message: Completed comprehensive frontend testing of ALL 35 pages as requested in review
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - test_scope: Full frontend page load testing, UI element verification, console error monitoring, redirect behavior validation
 - test_results: ALL 35 PAGES PASSED ✅ (100% success rate)
 
@@ -666,7 +666,7 @@ frontend:
 ## Theme System Preference Detection Testing - 2026-03-29 18:30:21 UTC
 - agent: testing
 - message: Completed comprehensive testing of automatic dark/light mode system preference detection feature
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - feature_context: ThemeContext (/app/contexts/ThemeContext.tsx) updated to detect OS dark/light preference via window.matchMedia('(prefers-color-scheme: dark)'), use system preference as default when no localStorage override exists, and listen for real-time OS theme changes
 - test_results: ALL TESTS PASSED ✅ (3/3 test scenarios successful)
 
@@ -734,7 +734,7 @@ frontend:
 ## FOUC (Flash of Unstyled Content) Elimination Testing - 2026-03-29 19:00:47 UTC
 - agent: testing
 - message: Completed comprehensive FOUC elimination testing for light mode system preference
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - issue_found_and_fixed: Initial implementation was missing inline backgroundColor in blocking script, causing transparent background during early page load
 - fix_applied: Added `document.documentElement.style.backgroundColor` to blocking script in /app/pages/_document.tsx
 - test_results: 3/4 TESTS PASSED ✅ (1 minor issue)
@@ -813,7 +813,7 @@ frontend:
 ## Theme Flash Fix Re-Validation - 2026-03-29 19:03:54 UTC
 - agent: testing
 - message: Completed quick validation of theme flash fix with 3 specific checks as requested
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - test_results: ALL 3 CHECKS PASSED ✅ (100% success rate)
 
 ### CHECK 1: LIGHT MODE - NO FLASH ✅
@@ -900,7 +900,7 @@ frontend:
 ## API Documentation Page Testing - 2026-03-30 08:30:00 UTC
 - agent: testing
 - message: Completed comprehensive testing of updated API Documentation page at /documentation
-- target_url: https://initial-setup-19.preview.emergentagent.com/documentation
+- target_url: https://setup-wizard-141.preview.emergentagent.com/documentation
 - test_results: ALL 8 TESTS PASSED ✅ (100% success rate)
 
 ### TEST 1: PAGE LOADS CORRECTLY ✅
@@ -1010,7 +1010,7 @@ frontend:
 ## Review Request Testing Results - 2026-03-31 04:33:23 UTC
 - agent: testing
 - message: Completed review request testing of DynoPay backend API endpoints after critical settlement bug fixes (TRX drain, OUT_OF_ENERGY, payment ID propagation)
-- target_url: https://initial-setup-19.preview.emergentagent.com
+- target_url: https://setup-wizard-141.preview.emergentagent.com
 - bug_fix_context: Settlement bug fixes applied - TRX drain fix, OUT_OF_ENERGY fix, payment ID propagation fix
 - test_results: ALL TESTS PASSED ✅ (4/4 specific endpoints from review request)
   * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API)
