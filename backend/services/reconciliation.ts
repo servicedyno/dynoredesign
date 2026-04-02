@@ -252,7 +252,7 @@ async function reconcileFailedStatePayments(): Promise<number> {
   let skippedRecent = 0;
   const maxAgeMs = 7 * 24 * 60 * 60 * 1000; // Recover failures up to 7 days old
   const MIN_AGE_MS = 5 * 60 * 1000; // Skip failures < 5 min old (likely being processed already)
-  const MAX_RETRY_COUNT = 3; // Don't re-queue if already retried this many times
+  const MAX_RETRY_COUNT = 5; // Allow more retries after root cause fixes (was 3)
 
   let cursor = 0;
   do {
@@ -267,11 +267,28 @@ async function reconcileFailedStatePayments(): Promise<number> {
         const data = JSON.parse(rawData);
         const parsedStatus = parseState(data.status);
 
-        // Only target payments in FAILED state that have a txId (were partially processed)
-        // Skip permanently_failed payments (they've exhausted all recovery options)
+        // Target payments that have a txId but never settled:
+        // FAILED (explicit failure), DETECTED/PROCESSING (stuck mid-flow),
+        // gas_pending (deferred due to energy), permanently_failed (may be recoverable after root cause fix)
         if (!data.txId) continue;
-        if (parsedStatus !== PaymentState.FAILED) continue;
-        if (data.status === "permanently_failed") { skippedPermanent++; continue; }
+        const isRecoverableStatus = parsedStatus === PaymentState.FAILED
+          || parsedStatus === PaymentState.DETECTED
+          || parsedStatus === PaymentState.PROCESSING
+          || data.status === 'gas_pending';
+        if (!isRecoverableStatus && data.status !== "permanently_failed") continue;
+        if (data.status === "permanently_failed") {
+          // Allow one more retry for permanently_failed payments whose root cause
+          // may have been fixed (e.g., trc20[0] balance bug). Reset retry count.
+          const pfReason = data.permanentFailReason || "";
+          const pfAge = data.permanentlyFailedAt ? Date.now() - new Date(data.permanentlyFailedAt).getTime() : 0;
+          // Only retry if permanently failed > 5 min ago (avoid tight loops) and < 7 days
+          if (pfAge < 300000 || pfAge > 7 * 86400000) {
+            skippedPermanent++;
+            continue;
+          }
+          // Reset for one more attempt
+          webhookLogs.info(`[Reconciliation] Strategy 4: Retrying permanently_failed payment (reason=${pfReason}, age=${Math.round(pfAge / 60000)}min)`);
+        }
 
         // Skip if already retried too many times
         const retryCount = parseInt(data.retryCount || "0") || 0;
