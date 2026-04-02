@@ -52,6 +52,7 @@ export {
 // Sweep operations
 export {
   fundGasIfNeeded,
+  reclaimExcessGas,
   sweepPoolAddress,
   sweepByThreshold,
   sweepByTime,

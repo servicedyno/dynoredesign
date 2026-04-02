@@ -24,7 +24,7 @@ import json
 from datetime import datetime
 
 # Target API base URL - Updated for TRC20 gas cost optimization review
-BASE_URL = "https://b5ba8fa2-4a8d-43cf-95ee-a37af729f1a3.preview.emergentagent.com/api"
+BASE_URL = "https://first-steps-122.preview.emergentagent.com/api"
 
 def test_review_request_endpoints():
     """Test the specific endpoints mentioned in the TRC20 gas cost optimization review request"""
