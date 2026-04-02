@@ -5282,145 +5282,17 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // so that fee-free volume is always tracked even when settlement fails/defers.
 
         if (webhook) {
-          // FIXED: Use callMerchantWebhook instead of legacy callWebHook
-          // callMerchantWebhook properly looks up webhook_url from payment_link or company
-          const { company_id, customer_id } = customerPayload;
-          
-          // ENHANCED WEBHOOK: Calculate fee in USD for merchant transparency
-          let totalFeeUsd = 0;
-          try {
-            const feeInUsd = await currencyConvert({
-              sourceCurrency: tempCurrency,
-              currency: [customerData?.base_currency || "USD"],
-              amount: adminAmountToSend,
-              fixedDecimal: false,
-            });
-            totalFeeUsd = Number(feeInUsd[0]?.amount || 0);
-          } catch (feeConvertError) {
-            cronLogger.warn("[cryptoVerification] Fee USD conversion failed:", feeConvertError.message);
-          }
-          
-          // Build enhanced webhook payload with all relevant fields for developers
-          // Determine payment type based on whether link_id exists
-          const linkId = customerData?.link_id || tempData?.link_id || null;
-          const paymentType = linkId ? 'payment_link' : 'direct_api';
-          
-          // FIX: Use the original payment link's transaction_id as payment_id (consistent with pending webhook)
-          // customerPayload.id is a new UUID for the internal transaction record — NOT the payment link reference
-          const webhookPaymentId = tempData?.payment_id || tempData?.unique_tx_id || customerData?.transaction_id || customerPayload.id;
-          
-          const enhancedWebhookPayload: Record<string, unknown> = {
-            // Core payment info
-            event: "payment.settled",
-            payment_type: paymentType,
-            payment_id: webhookPaymentId,
-            transaction_reference: transactionId,
-            status: "successful",
-            payment_status: "confirmed",
-            
-            // Amount received (crypto) — use actual on-chain merchant amount (post-gas deductions)
-            // actualMerchantAmount reflects what was ACTUALLY transferred on-chain after gas deductions
-            amount: autoConvertEnabled ? originalUserAmount : actualMerchantAmount,
-            currency: tempCurrency,
-            
-            // Original payment request (fiat)
-            base_amount: customerData?.base_amount,
-            base_currency: customerData?.base_currency,
-            
-            // ENHANCED: Merchant receives (net after fees AND gas deductions)
-            merchant_amount: autoConvertEnabled ? originalUserAmount : actualMerchantAmount,
-            // Pre-gas merchant amount (before blockchain fee deductions)
-            merchant_amount_before_gas: autoConvertEnabled ? Number(originalUserAmount.toFixed(8)) : Number(Number(userAmountToSend).toFixed(8)),
-            
-            // ENHANCED: Gas/blockchain fee breakdown
-            blockchain_fee: adminTransferResult.blockchainFee || 0,
-            blockchain_fee_currency: tempCurrency,
-            
-            // ENHANCED: Fee information — show actual fee, not fee+merchant when auto-converting
-            // Clamp sub-satoshi dust to 0 for clean webhook payload
-            total_fee: autoConvertEnabled ? Number((adminAmountToSend - originalUserAmount).toFixed(8)) : Number(Number(adminAmountToSend).toFixed(8)),
-            total_fee_usd: Number(totalFeeUsd.toFixed(2)),
-            fee_payer: tempData?.fee_payer || customerData?.fee_payer || 'company',
-            
-            // Auto-conversion info (if applicable)
-            ...(autoConvertEnabled ? {
-              auto_convert: true,
-              converting_to: autoConvertTargetCurrency,
-              settlement_chain: autoConvertSettlementChain,
-              merchant_crypto_pending_conversion: originalUserAmount,
-            } : {}),
-            
-            // ENHANCED: Customer & payment link details
-            customer_name: customerData?.customer_name || tempData?.customer_name || null,
-            customer_email: customerData?.email || tempData?.email || null,
-            description: customerData?.description || tempData?.description || null,
-            link_id: linkId,
-            
-            // ENHANCED: Tax information (if applicable)
-            tax_info: (tempData?.tax_enabled === "true" || tempData?.tax_enabled === true) ? {
-              tax_amount_usd: Number(tempData?.tax_amount_usd || 0),
-              tax_amount_crypto: Number(tempData?.tax_amount_crypto || 0),
-              tax_rate: Number(tempData?.tax_rate || 0),
-              tax_country_code: tempData?.tax_country_code || null,
-            } : null,
-            
-            // ENHANCED: Overpayment detection (if applicable)
-            overpayment: tempAmount > 0 ? {
-              amount_crypto: tempAmount,
-              amount_usd: Number(newAmount[0]?.amount || 0),
-            } : null,
-            
-            // ENHANCED: Underpayment detection (if applicable)
-            underpayment: (() => {
-              const origExpected = Number(tempData?.originalExpectedAmount || tempData?.amount || 0);
-              const totalRcvd = Number(totalAmountReceived);
-              if (origExpected > 0 && totalRcvd < origExpected) {
-                return {
-                  shortfall_crypto: Number((origExpected - totalRcvd).toFixed(8)),
-                  shortfall_percent: Number(((origExpected - totalRcvd) / origExpected * 100).toFixed(2)),
-                  original_expected: origExpected,
-                  accepted_reason: linkId ? 'minor_underpayment_within_threshold' : 'direct_api_immediate_settlement',
-                };
-              }
-              return null;
-            })(),
-            
-            // Metadata & timestamp
-            meta_data: customerData?.meta_data ? JSON.parse(customerData.meta_data) : null,
-            created_at: new Date().toISOString(),
-            completed_at: new Date().toISOString(),
-          };
-          
-          try {
-            // BUG-1 FIX: Use Redis dedup flag to prevent duplicate payment.settled webhooks.
-            // Both cryptoVerification and webhookProcessor used to send this webhook independently.
-            const confirmedWebhookKey = `confirmed-webhook-sent-${webhookPaymentId || transactionId}`;
-            const alreadySentConfirmed = await getRedisItem(confirmedWebhookKey);
-            
-            if (alreadySentConfirmed && alreadySentConfirmed.sent) {
-              cronLogger.info(`[cryptoVerification] payment.settled webhook already sent for ${webhookPaymentId || transactionId}, skipping duplicate`);
-            } else {
-              // Set flag BEFORE sending to prevent race conditions
-              await setRedisItem(confirmedWebhookKey, { sent: true, sentAt: new Date().toISOString(), source: "cryptoVerification" });
-              await setRedisTTL(confirmedWebhookKey, 86400); // 24 hour TTL
-              
-              const webhookResult = await callMerchantWebhook(customerData, enhancedWebhookPayload);
-              if (webhookResult.success) {
-                cronLogger.info("[cryptoVerification] ✅ Merchant webhook sent successfully");
-              } else {
-                cronLogger.error(`[cryptoVerification] ❌ Merchant webhook failed: ${webhookResult.error}`);
-                if (webhookResult.url) {
-                  cronLogger.error(`[cryptoVerification] Failed URL: ${webhookResult.url}`);
-                }
-                // Clear flag so webhookProcessor can retry
-                await setRedisItem(confirmedWebhookKey, { sent: false });
-              }
-            }
-            cronLogger.info(`[cryptoVerification] Webhook payload: merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, fee_payer=${enhancedWebhookPayload.fee_payer}${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
-          } catch (webhookError) {
-            cronLogger.error("[cryptoVerification] Merchant webhook failed:", webhookError.message);
-            // Don't fail the transaction if webhook fails
-          }
+          // FIX (2026-04-02): Removed redundant payment.settled webhook.
+          // Merchant already receives payment.confirmed from webhookProcessor.ts when
+          // crypto is confirmed on-chain (before settlement). Sending payment.settled
+          // AGAIN after internal settlement is redundant — merchant doesn't need to know
+          // about internal wallet-to-wallet transfers.
+          // The settlement details (outgoing TX, fees, gas) are logged internally only.
+          cronLogger.info(`[cryptoVerification] Settlement complete — skipping payment.settled webhook (merchant already notified via payment.confirmed). ` +
+            `merchant_amount=${autoConvertEnabled ? originalUserAmount : userAmountToSend}, ` +
+            `total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, ` +
+            `fee_payer=${tempData?.fee_payer || customerData?.fee_payer || 'company'}` +
+            `${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
         } else {
           let resData;
           if (customerData?.redirect_uri) {

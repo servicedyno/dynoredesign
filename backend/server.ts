@@ -1167,6 +1167,12 @@ const startServer = async () => {
     // ── Run startup reconciliation (catch missed webhooks during downtime) ────
     // SAFETY: Only on production — dev instances shouldn't re-queue production payments
     if (enableBackgroundJobs) {
+
+    // ── Fee-free balance reconciliation (corrects users with $500+ volume) ────
+    import("./services/feeFreeReconciliation")
+      .then(({ reconcileFeeFreeBalances }) => reconcileFeeFreeBalances())
+      .catch(err => log(`⚠️ Fee-free reconciliation failed: ${(err as Error).message}`, 'warn'));
+
     runStartupReconciliation()
       .then(stats => {
         const total = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments + stats.bullmqFailedJobs + stats.tatumMissed;
