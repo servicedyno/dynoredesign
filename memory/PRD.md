@@ -33,7 +33,7 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 ## Prioritized Backlog
 
 ### P1 — Upcoming
-- **TRX Hot Wallet:** Investigate why gas wallet depletes, add monitoring/alerts
+- **TRX Hot Wallet:** ~~Investigate why gas wallet depletes, add monitoring/alerts~~ FIXED (2026-04-02): FeeWalletMonitor now checks the correct DB wallet
 - **Merchant Webhook 404:** Debug and fix failing webhook at `lockbaypaymentfixing-production.up.railway.app/webhook/dynopay`
 
 ### P2 — Future
