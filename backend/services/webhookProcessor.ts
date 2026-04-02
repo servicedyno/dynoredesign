@@ -16,7 +16,7 @@
  * - Merchant webhook delivery
  */
 
-import { getRedisItem, setRedisItem, setRedisTTL, acquireLock, releaseLock } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, acquireLock, releaseLock, deleteRedisItem } from "../utils/redisInstance";
 import { webhookLogs } from "../utils/loggers";
 import { log } from "../utils/loggers";
 import { paymentController } from "../controller";
@@ -130,7 +130,17 @@ function validateWebhookAsset(
     };
   }
 
-  // 2. Unknown asset — not in our supported list
+  // 2. Reverse lookup: asset might be an internal DynoPay currency name (e.g., "USDT-TRC20")
+  //    This happens when reconciliation re-queues using the internal currency format.
+  for (const [tatumAsset, currencies] of Object.entries(TATUM_ASSET_TO_CURRENCY)) {
+    if (currencies.includes(assetUpper) || currencies.includes(webhookAsset)) {
+      if (assetUpper === expectedCurrency.toUpperCase() || currencies.includes(expectedCurrency)) {
+        return { valid: true, isGasFunding: false };
+      }
+    }
+  }
+
+  // 3. Unknown asset — not in our supported list
   //    This catches spam/scam tokens like "ha138com", random TRC10 airdrops, etc.
   return {
     valid: false,
@@ -225,11 +235,20 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
   log(`[WebhookProcessor] 🔄 Processing: addr=${payload.address}, amount=${payload.amount}, asset=${payload.asset || (payload as any).currency}, tx=${payload.txId}`);
 
   // ── 1. Duplicate detection ────────────────────────────────────────────────
+  // Skip dedup for reconciliation source — these are explicitly re-queued failed
+  // payments that NEED re-processing. The dedup key may have been set during a
+  // previous attempt that "completed" without actually settling.
   const processedTxKey = `processed-tx-${payload.txId}`;
-  const alreadyProcessed = await getRedisItem(processedTxKey);
-  if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
-    webhookLogs.info("[WebhookProcessor] Transaction already processed, skipping:", payload.txId);
-    return;
+  if (payload.source !== 'reconciliation') {
+    const alreadyProcessed = await getRedisItem(processedTxKey);
+    if (alreadyProcessed && Object.keys(alreadyProcessed).length > 0) {
+      webhookLogs.info("[WebhookProcessor] Transaction already processed, skipping:", payload.txId);
+      return;
+    }
+  } else {
+    // Clear stale dedup key so settlement can proceed
+    await deleteRedisItem(processedTxKey);
+    webhookLogs.info("[WebhookProcessor] Reconciliation source — cleared dedup key for retry:", payload.txId);
   }
 
   // ── 2. Atomic lock to prevent race conditions ─────────────────────────────
