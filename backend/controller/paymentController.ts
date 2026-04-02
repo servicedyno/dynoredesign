@@ -3225,19 +3225,23 @@ const settleCryptoTransaction = async ({
 
       // Deduct gas cost from merchant's token payout (consistent with UTXO/native chains)
       // TWO gas costs: (1) merchant transfer gas + (2) estimated sweep gas for admin fee collection
-      // OPTIMIZATION: When admin wallet = merchant wallet (same-wallet mode), skip sweep gas
-      // because the sweep transfers admin fees to the same destination — unnecessary cost to merchant
+      // OPTIMIZATIONS:
+      //   - Same-wallet mode: skip sweep gas (admin fees go to same wallet as merchant)
+      //   - Fee-free (receivedAmount=0): skip sweep gas (no admin fee to sweep)
       // Gas is in native currency (ETH/TRX/XRP/POL), so convert to USD equivalent for stablecoin deduction
+      const noAdminFeeToSweep = !receivedAmount || receivedAmount <= 0;
       let merchantTransferGasUSD = 0;
       let estimatedSweepGasUSD = 0;
       try {
         const networkFee = await getBlockchainNetworkFee(currency);
         merchantTransferGasUSD = Number(networkFee.feeInUSD) || 0;
-        // Skip sweep gas when admin=merchant wallet (same-wallet mode)
-        // In same-wallet mode, the sweep sends admin fees to the same wallet that receives merchant transfer
+        // Skip sweep gas when: (a) admin=merchant wallet, or (b) no admin fee to sweep (fee-free)
         if (isSameWallet) {
           estimatedSweepGasUSD = 0;
           cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Same-wallet mode — sweep gas SKIPPED (admin=merchant wallet). Transfer gas only ≈ $${merchantTransferGasUSD.toFixed(4)}`);
+        } else if (noAdminFeeToSweep) {
+          estimatedSweepGasUSD = 0;
+          cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Fee-free — sweep gas SKIPPED (no admin fee to sweep). Transfer gas only ≈ $${merchantTransferGasUSD.toFixed(4)}`);
         } else {
           // Sweep is same type of token transfer on same chain → same gas estimate
           estimatedSweepGasUSD = merchantTransferGasUSD;
@@ -3250,11 +3254,12 @@ const settleCryptoTransaction = async ({
           const nativePrices: Record<string, number> = { ETH: 2300, TRX: 0.25, XRP: 2.5, POLYGON: 0.5 };
           const nativePrice = nativePrices[wallet_type] || 1;
           merchantTransferGasUSD = rawFee * nativePrice;
-          estimatedSweepGasUSD = merchantTransferGasUSD; // Same chain, same tx type
-          cronLogger.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas: ${rawFee} ${wallet_type} × $${nativePrice} = $${merchantTransferGasUSD.toFixed(4)} per tx (×2 for transfer + sweep)`);
+          // Only charge sweep gas if there's admin fee to sweep
+          estimatedSweepGasUSD = (isSameWallet || noAdminFeeToSweep) ? 0 : merchantTransferGasUSD;
+          cronLogger.warn(`[settleCryptoTransaction] Token ${currency}: Fallback gas: ${rawFee} ${wallet_type} × $${nativePrice} = $${merchantTransferGasUSD.toFixed(4)} per tx${estimatedSweepGasUSD > 0 ? ' (×2 for transfer + sweep)' : ' (transfer only, no sweep needed)'}`);
         } catch {
           merchantTransferGasUSD = rawFee;
-          estimatedSweepGasUSD = rawFee;
+          estimatedSweepGasUSD = (isSameWallet || noAdminFeeToSweep) ? 0 : rawFee;
           cronLogger.warn(`[settleCryptoTransaction] Token ${currency}: Using raw native fee ${rawFee} as token deduction (price lookup failed)`);
         }
       }
@@ -3507,6 +3512,42 @@ const settleCryptoTransaction = async ({
           merchantSendAmount = combinedAmount;
 
           cronLogger.info(`[settleCryptoTransaction] ✅ UTXO same-wallet TX sent: ${combinedAmount} ${currency} → ${userAddress} (fee: ${sameWalletFee}, utxoIndex: ${resolvedUtxoIndex})`);
+        } else if (adminSats <= 0) {
+          // Fee-free mode: admin fee is 0 — single output to merchant only
+          // A 0-value UTXO output violates dust limits (e.g., BTC min 546 sats)
+          // So we create a merchant-only output and give all non-fee funds to merchant
+          const feeFreeAmount = totalInputSats - feeSats;
+          const feeFreeSendAmount = Number((feeFreeAmount / 1e8).toFixed(8));
+
+          merchantTransactionDetails = await withRetry(
+            () => tatumApi.assetToOtherAddress({
+              currency,
+              fromAddress: fromAddress,
+              toAddress: userAddress,
+              privateKey: privateKey,
+              amount: feeFreeSendAmount,
+              fee: String(exactFeeResolved),
+              fromUTXO: [
+                {
+                  txHash: transactionId,
+                  index: resolvedUtxoIndex,
+                  privateKey: privateKey,
+                },
+              ],
+              toUTXO: [
+                {
+                  address: userAddress,
+                  value: feeFreeSendAmount,
+                },
+              ],
+            }),
+            `UTXO fee-free merchant transfer (${currency})`
+          );
+
+          totalBlockchainFee = exactFeeResolved;
+          merchantSendAmount = feeFreeSendAmount;
+
+          cronLogger.info(`[settleCryptoTransaction] UTXO chain ${currency}: Fee-free single output — merchant gets ${feeFreeSendAmount} (fee: ${exactFeeResolved}, utxoIndex: ${resolvedUtxoIndex})`);
         } else {
           // Normal mode: Two outputs (merchant + admin) to different addresses
           merchantTransactionDetails = await withRetry(
@@ -3549,6 +3590,9 @@ const settleCryptoTransaction = async ({
         // TWO gas costs deducted from merchant:
         //   (1) Merchant transfer gas — gas to send merchant their crypto
         //   (2) Estimated sweep gas — gas for later admin fee sweep from temp address
+        // OPTIMIZATIONS:
+        //   - Same-wallet mode: skip sweep gas (admin fees go to same wallet)
+        //   - Fee-free (receivedAmount=0): skip sweep gas (no admin fee to sweep)
         // This prevents: sweep gas eroding the admin fee (reducing platform revenue)
         fees = await tatumApi.feeEstimation(
           currency,
@@ -3560,8 +3604,9 @@ const settleCryptoTransaction = async ({
         // Use `fast` tier for gas deduction — this is the actual gas cost the transaction will incur.
         const merchantTransferGas = Number(fees?.fast ?? fees?.slow ?? 0);
         // Sweep gas estimate: same chain, same type of native transfer → approximately same gas
-        // OPTIMIZATION: Skip sweep gas in same-wallet mode (admin=merchant wallet)
-        const estimatedSweepGas = isSameWallet ? 0 : merchantTransferGas;
+        // Skip sweep gas when: (a) same-wallet mode, or (b) no admin fee to sweep (fee-free)
+        const skipSweepGas = isSameWallet || !receivedAmount || receivedAmount <= 0;
+        const estimatedSweepGas = skipSweepGas ? 0 : merchantTransferGas;
         const totalGasDeduction = merchantTransferGas + estimatedSweepGas;
 
         // Deduct both gas costs from merchant payout — merchant pays for gas (consistent with UTXO)
@@ -3571,7 +3616,8 @@ const settleCryptoTransaction = async ({
           throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
         }
 
-        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas}${isSameWallet ? ' [sweep gas SKIPPED — same-wallet]' : ` + sweep gas ${estimatedSweepGas}`} = ${totalGasDeduction} deducted from merchant)`);
+        const sweepGasReason = isSameWallet ? 'same-wallet' : (!receivedAmount || receivedAmount <= 0) ? 'fee-free (no admin fee)' : '';
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas}${skipSweepGas ? ` [sweep gas SKIPPED — ${sweepGasReason}]` : ` + sweep gas ${estimatedSweepGas}`} = ${totalGasDeduction} deducted from merchant)`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
@@ -3588,7 +3634,7 @@ const settleCryptoTransaction = async ({
         );
 
         totalBlockchainFee = totalGasDeduction;
-        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: totalBlockchainFee = ${totalBlockchainFee} (includes sweep gas estimate)`);
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: totalBlockchainFee = ${totalBlockchainFee}${estimatedSweepGas > 0 ? ' (includes sweep gas estimate)' : ' (transfer only, no sweep gas)'}`);
       }
     }
 
