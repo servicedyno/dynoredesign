@@ -406,6 +406,12 @@ const processAddress = async (addr: any, result: {
             throw balanceError;
           }
           balance = parseFloat(balanceResult?.balance || '0');
+          // NaN guard: if balance parsing fails (e.g., API returned unexpected format),
+          // log a warning instead of silently treating as "no balance"
+          if (!Number.isFinite(balance)) {
+            cronLogger.warn(`[MerchantPool] ⚠️ ${walletAddress} - balance parsed as NaN for ${walletType}, raw: ${JSON.stringify(balanceResult?.balance)}. Skipping (potential API issue).`);
+            return;
+          }
         }
 
         if (balance <= 0) {
@@ -465,7 +471,7 @@ const processAddress = async (addr: any, result: {
           // NOTE: "permanently_failed" can be caused by gas race conditions (eth.tx.preparation)
           //   where gas funding TX was in-flight during settlement. By now, gas should be on-chain.
           //   The pool monitor runs every 5 min — plenty of time for ETH gas to confirm.
-          const isFailedRecoverable = redisData?.status === 'failed' || redisData?.status === 'permanently_failed';
+          const isFailedRecoverable = redisData?.status === 'failed' || redisData?.status === 'permanently_failed' || redisData?.status === 'gas_pending';
           if (isFailedRecoverable) {
             const savedTxId = redisData.txId;
             const savedReceivedAmount = parseFloat(redisData.receivedAmount || '0');
@@ -1079,6 +1085,11 @@ export const detectOrphanPayments = async (): Promise<{
             throw balanceError;
           }
           balance = parseFloat(balanceResult?.balance || '0');
+          // NaN guard for orphan detection
+          if (!Number.isFinite(balance)) {
+            cronLogger.warn(`[OrphanDetect] ⚠️ ${walletAddress} - balance parsed as NaN for ${walletType}, raw: ${JSON.stringify(balanceResult?.balance)}. Skipping.`);
+            continue;
+          }
         }
 
         if (balance <= 0) {

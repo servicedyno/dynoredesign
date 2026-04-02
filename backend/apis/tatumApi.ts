@@ -2226,13 +2226,32 @@ const getAddressBalance = async (address: string, currency: string) => {
   } else if (currency === "USDT-TRC20") {
     try {
       const tempRes = await tatumSdk.blockchain.tron.tronGetAccount(address);
-      if (tempRes && tempRes?.trc20) {
-        if (tempRes.trc20.length > 0) {
-          cronLogger.info(`[getAddressBalance] TRC20 tokens found: ${tempRes.trc20.length} entries`);
+      if (tempRes && tempRes?.trc20 && Array.isArray(tempRes.trc20)) {
+        // FIX: Iterate through ALL trc20 entries to find the USDT contract.
+        // Previously hardcoded trc20[0] which broke when spam/airdrop tokens
+        // appeared before USDT in the array (extremely common on TRON).
+        // This caused getAddressBalance to return NaN, blinding the monitoring
+        // cron from detecting received USDT payments.
+        const usdtContract = process.env.TRX_CONTRACT;
+        let usdtBalance = 0;
+        let foundAt = -1;
+        for (let i = 0; i < tempRes.trc20.length; i++) {
+          const tokenEntry = tempRes.trc20[i];
+          if (tokenEntry && usdtContract && tokenEntry[usdtContract] !== undefined) {
+            usdtBalance = Number(tokenEntry[usdtContract]) / 1000000;
+            foundAt = i;
+            break;
+          }
         }
-        res = {
-          balance: Number(tempRes.trc20[0]?.[process.env.TRX_CONTRACT]) / 1000000,
-        };
+        // NaN guard: if parsing failed for any reason, default to 0
+        if (!Number.isFinite(usdtBalance)) {
+          cronLogger.warn(`[getAddressBalance] USDT-TRC20 balance parsed as NaN for ${address}, defaulting to 0. Contract: ${usdtContract}, trc20 entries: ${tempRes.trc20.length}`);
+          usdtBalance = 0;
+        }
+        if (tempRes.trc20.length > 0) {
+          cronLogger.info(`[getAddressBalance] TRC20 tokens found: ${tempRes.trc20.length} entries, USDT at index: ${foundAt}, balance: ${usdtBalance}`);
+        }
+        res = { balance: usdtBalance.toString() };
       } else {
         res = { balance: '0' };
       }
