@@ -4726,7 +4726,19 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             const poolTRXBalance = poolResources.availableBandwidth >= 0 ? 0 : 0; // fallback
             
             // Check fee wallet TRX balance via Tatum (advisory only)
-            const feeWalletAddress = getAdminWalletAddress("TRX");
+            // FIX (2026-04-02): Use the ACTUAL fee wallet from DB (same as SmartGas),
+            // not getAdminWalletAddress("TRX") which returns the admin COLLECTION wallet.
+            let feeWalletAddress: string | null = null;
+            try {
+              const feeWalletRecord = await adminFeeModel.findOne({
+                where: { wallet_type: "TRX" },
+                attributes: ["wallet_address"],
+              });
+              feeWalletAddress = feeWalletRecord?.dataValues?.wallet_address || process.env.TRX_FEE_WALLET || null;
+            } catch (dbErr: any) {
+              cronLogger.warn(`[cryptoVerification] DB fee wallet lookup failed, using env fallback: ${dbErr.message}`);
+              feeWalletAddress = process.env.TRX_FEE_WALLET || null;
+            }
             if (feeWalletAddress) {
               const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX").catch(() => null);
               const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
@@ -4761,6 +4773,24 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
               throw preCheckError; // Re-throw deferred error
             }
             cronLogger.warn(`[cryptoVerification] ⚠️ TRX pre-check failed (non-blocking): ${preCheckError.message}`);
+          }
+        }
+
+        // FIX (2026-04-02): Record fee-free volume BEFORE settlement, not after.
+        // Previously at line ~5260 (after settlement success), so when settlement failed/deferred,
+        // the function exited before reaching recordTransactionVolume → balance never decremented
+        // → system still thought user was a new merchant with $0 volume.
+        // Now recording at payment confirmation time (crypto received) regardless of settlement outcome.
+        const feeFreeUserId = customerData?.adm_id ? Number(customerData.adm_id) : null;
+        const feeFreeAmountUsd = parseFloat(tempData?.base_amount_usd || '0') || receivedUSD;
+        if (feeFreeUserId && feeFreeAmountUsd > 0) {
+          try {
+            const feeFreeResult = await recordTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
+            cronLogger.info(`[cryptoVerification] ✅ Fee-free volume recorded (pre-settlement): user ${feeFreeUserId}, $${feeFreeAmountUsd.toFixed(2)} USD. Remaining: $${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
+            log(`[cryptoVerification] 💰 Fee-free recorded (pre-settlement): user=${feeFreeUserId}, amount=$${feeFreeAmountUsd.toFixed(2)}, remaining=$${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
+          } catch (feeFreeError: any) {
+            cronLogger.warn(`[cryptoVerification] Fee-free volume recording failed (non-critical): ${feeFreeError.message}`);
+            log(`[cryptoVerification] ⚠️ Fee-free recording FAILED: user=${feeFreeUserId}, err=${feeFreeError.message}`, "warn");
           }
         }
 
@@ -5256,20 +5286,8 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         await softDeleteRedisItem(tempData.ref, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
         await softDeleteRedisItem(cryptoKey, PAYMENT_TIMING.REDIS_SOFT_DELETE_TTL_SECONDS); // 30 minutes TTL
 
-        // FIX: Record transaction volume for fee-free promotion tracking
-        const feeFreeUserId = customerData?.adm_id ? Number(customerData.adm_id) : null;
-        const feeFreeAmountUsd = parseFloat(tempData?.base_amount_usd || '0') || receivedUSD;
-        if (feeFreeUserId && feeFreeAmountUsd > 0) {
-          try {
-            const feeFreeResult = await recordTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
-            cronLogger.info(`[cryptoVerification] ✅ Fee-free volume recorded: user ${feeFreeUserId}, $${feeFreeAmountUsd.toFixed(2)} USD. Remaining: $${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
-            // Direct console.log backup — critical for Railway log visibility during high-load periods
-            log(`[cryptoVerification] 💰 Fee-free recorded: user=${feeFreeUserId}, amount=$${feeFreeAmountUsd.toFixed(2)}, remaining=$${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
-          } catch (feeFreeError: any) {
-            cronLogger.warn(`[cryptoVerification] Fee-free volume recording failed (non-critical): ${feeFreeError.message}`);
-            log(`[cryptoVerification] ⚠️ Fee-free recording FAILED: user=${feeFreeUserId}, err=${feeFreeError.message}`, "warn");
-          }
-        }
+        // NOTE: recordTransactionVolume has been MOVED to BEFORE settlement (line ~4784)
+        // so that fee-free volume is always tracked even when settlement fails/defers.
 
         if (webhook) {
           // FIXED: Use callMerchantWebhook instead of legacy callWebHook
