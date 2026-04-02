@@ -92,7 +92,7 @@ import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/mer
 import { recordTransactionVolume } from "../services/feeFreeService";
 import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
 import { createConversionRecord } from "../services/conversionService";
-import { stablecoinConversionModel } from "../models";
+import { stablecoinConversionModel, TOKEN_CHAINS } from "../models";
 import { PaymentState, parseState, toRedisStatus, toExternalStatus, isTerminal } from "../services/paymentStateMachine";
 import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 
@@ -4987,6 +4987,20 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             adminTransferResult.blockchainFee || 0,
             pendingSweep
           );
+          
+          // FIX (2026-04-02): Reclaim excess gas from pool address back to fee wallet.
+          // After settlement, pool addresses often have ~20 TRX leftover gas that was
+          // funded by SmartGas but never burned. This reclaims it for future use.
+          if (!pendingSweep && TOKEN_CHAINS.includes(tempCurrency)) {
+            const poolAddr = tempAddressData.wallet_address || address;
+            merchantPoolService.reclaimExcessGas(poolAddr, tempCurrency).then((reclaimResult) => {
+              if (reclaimResult.reclaimed) {
+                cronLogger.info(`[GasReclaim] ♻️ Reclaimed ${reclaimResult.amount.toFixed(4)} gas from ${poolAddr.substring(0, 12)}... (TX: ${reclaimResult.txId})`);
+              }
+            }).catch((err: unknown) => {
+              cronLogger.warn(`[GasReclaim] ⚠️ Reclaim failed (non-critical): ${err instanceof Error ? err.message : err}`);
+            });
+          }
           
           // Record pool transaction for audit
           // Use actualMerchantAmount (computed above) — the actual post-gas on-chain amount

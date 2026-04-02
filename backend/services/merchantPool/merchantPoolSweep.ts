@@ -128,9 +128,14 @@ export const fundGasIfNeeded = async (
         // tatumApi.feeEstimation() which returns stale/underestimated values.
         // This prevents OUT_OF_ENERGY failures on TRON.
         if (gasToken === "TRX" && TOKEN_CHAINS.includes(walletType) && walletType.includes("TRC20")) {
-          const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+          // FIX (2026-04-02): Pass recipient address and token contract for activation-aware estimation.
+          // Activated recipients need 65k energy (not 130k), saving ~50% on gas funding.
+          const trc20Contract = walletType === 'USDT-TRC20'
+            ? (process.env.TRX_CONTRACT || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')
+            : undefined;
+          const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, recipientAddress, trc20Contract);
           estimatedGas = dynamicFee.fast;
-          cronLogger.info(`[SmartGas] 🔋 TRC20 energy-aware gas: ${estimatedGas} TRX (energy: ${dynamicFee.energyNeeded} needed, ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
+          cronLogger.info(`[SmartGas] 🔋 TRC20 energy-aware gas: ${estimatedGas} TRX (energy: ${dynamicFee.energyNeeded} needed [${dynamicFee.isNewRecipient ? 'NEW' : 'ACTIVATED'}], ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
         } else {
           let contractAddress: string | undefined;
           if (walletType === 'USDT-ERC20') {
@@ -257,6 +262,100 @@ export const fundGasIfNeeded = async (
     const message = getErrorMessage(error);
     cronLogger.error(`[SmartGas] ❌ Gas funding failed:`, message);
     return { funded: false, amount: 0, reason: `Error: ${message}` };
+  }
+};
+
+/**
+ * Reclaim excess gas (TRX/ETH) from a pool address back to the fee wallet.
+ * Called after settlement completes — the pool address often has leftover gas
+ * that wasn't burned by the on-chain transaction.
+ * 
+ * FIX (2026-04-02): Previously, excess gas was stranded on pool addresses forever.
+ * Now we sweep it back to the fee wallet to reduce operational costs.
+ */
+export const reclaimExcessGas = async (
+  poolAddress: string,
+  walletType: string,
+  minReclaimThreshold?: number
+): Promise<{ reclaimed: boolean; amount: number; txId?: string }> => {
+  const gasToken = GAS_TOKEN_MAPPING[walletType];
+  if (!gasToken) {
+    return { reclaimed: false, amount: 0 };
+  }
+
+  const feeWalletAddress = FEE_WALLETS[gasToken];
+  if (!feeWalletAddress) {
+    return { reclaimed: false, amount: 0 };
+  }
+
+  // Default thresholds: only reclaim if there's meaningful excess
+  const threshold = minReclaimThreshold ?? (gasToken === "TRX" ? 2 : gasToken === "ETH" ? 0.0005 : 0.01);
+
+  try {
+    const balanceResult = await tatumApi.getAddressBalance(poolAddress, gasToken).catch(() => null);
+    const currentBalance = Number(balanceResult?.balance ?? 0);
+
+    if (currentBalance <= threshold) {
+      cronLogger.info(`[GasReclaim] ${poolAddress.substring(0, 12)}... has ${currentBalance.toFixed(4)} ${gasToken} — below threshold (${threshold}), skipping`);
+      return { reclaimed: false, amount: 0 };
+    }
+
+    // Leave a small dust amount to keep the address activated
+    const dustReserve = gasToken === "TRX" ? 1.1 : gasToken === "ETH" ? 0.0001 : 0.001;
+    const reclaimAmount = Math.floor((currentBalance - dustReserve) * 1e6) / 1e6; // Floor to 6 decimals
+
+    if (reclaimAmount <= 0) {
+      return { reclaimed: false, amount: 0 };
+    }
+
+    // Get the private key for the pool address from DB
+    const { merchantTempAddressModel } = await import("../../models");
+    const poolRecord = await merchantTempAddressModel.findOne({
+      where: { wallet_address: poolAddress },
+    });
+
+    if (!poolRecord?.dataValues?.privateKey) {
+      cronLogger.warn(`[GasReclaim] No private key found for ${poolAddress.substring(0, 12)}...`);
+      return { reclaimed: false, amount: 0 };
+    }
+
+    const privateKey = await tatumApi.decryptSymmetric(
+      poolRecord.dataValues.privateKey,
+      process.env.TEMP_KEY_ID
+    );
+
+    cronLogger.info(`[GasReclaim] ♻️ Reclaiming ${reclaimAmount.toFixed(4)} ${gasToken} from ${poolAddress.substring(0, 12)}... → fee wallet`);
+
+    let txId: string | undefined;
+
+    if (isDirectEvmSupported(gasToken)) {
+      const evmResult = await directEvmSweep({
+        fromAddress: poolAddress,
+        toAddress: feeWalletAddress,
+        privateKey,
+        walletType: gasToken,
+        amount: reclaimAmount,
+      });
+      txId = evmResult.txHash;
+    } else {
+      const txResult = await tatumApi.assetToOtherAddress({
+        currency: gasToken,
+        fromAddress: poolAddress,
+        toAddress: feeWalletAddress,
+        privateKey,
+        amount: reclaimAmount,
+        fee: null,
+      });
+      txId = txResult?.txId;
+    }
+
+    cronLogger.info(`[GasReclaim] ✅ Reclaimed ${reclaimAmount.toFixed(4)} ${gasToken} (TX: ${txId})`);
+    return { reclaimed: true, amount: reclaimAmount, txId };
+
+  } catch (error) {
+    const message = getErrorMessage(error);
+    cronLogger.warn(`[GasReclaim] ⚠️ Reclaim failed for ${poolAddress.substring(0, 12)}...: ${message}`);
+    return { reclaimed: false, amount: 0 };
   }
 };
 

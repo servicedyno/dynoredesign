@@ -404,10 +404,17 @@ export const calculateOptimalFeeLimit = async (
 /**
  * Calculate the TRX amount needed for a TRC20 transfer (for SmartGas funding).
  * Returns the estimated TRX cost considering available Energy.
+ * 
+ * FIX (2026-04-02): Now recipient-aware — checks if the merchant wallet already
+ * holds the token (65k energy) vs new recipient (130k energy). Previously always
+ * assumed NEW_RECIPIENT (130k), causing 2x overfunding.
+ * Buffer reduced from 40% to 20% (SmartGas adds its own buffer on top).
  */
 export const calculateDynamicTRC20Fee = async (
-  senderAddress?: string
-): Promise<{ fast: number; energyPrice: number; energyNeeded: number; energyAvailable: number }> => {
+  senderAddress?: string,
+  recipientAddress?: string,
+  tokenContractAddress?: string
+): Promise<{ fast: number; energyPrice: number; energyNeeded: number; energyAvailable: number; isNewRecipient: boolean }> => {
   const networkParams = await getTronNetworkParams();
 
   let availableEnergy = 0;
@@ -420,9 +427,24 @@ export const calculateDynamicTRC20Fee = async (
     }
   }
 
-  // Use NEW_RECIPIENT energy (130k) as the safe default since activation checks can fail
-  // This prevents OUT_OF_ENERGY failures — excess TRX stays in the address for future use
-  const energyNeeded = TRC20_ENERGY.NEW_RECIPIENT;
+  // FIX: Check recipient activation to use correct energy estimate
+  // Activated recipients (already hold the token) need 65k energy vs 130k for new
+  let isNewRecipient = true; // Safe default: assume new (130k)
+  if (recipientAddress && tokenContractAddress) {
+    try {
+      const activated = await isRecipientActivatedForToken(recipientAddress, tokenContractAddress);
+      isNewRecipient = !activated;
+      cronLogger.info(
+        `[TronEnergy] 🔍 Recipient ${recipientAddress.substring(0, 10)}... activation: ${activated ? 'ACTIVATED (65k energy)' : 'NEW (130k energy)'}`
+      );
+    } catch (_e) {
+      cronLogger.warn(`[TronEnergy] ⚠️ Recipient activation check failed, assuming NEW (130k energy)`);
+    }
+  }
+
+  const energyNeeded = isNewRecipient
+    ? TRC20_ENERGY.NEW_RECIPIENT   // 130,000
+    : TRC20_ENERGY.EXISTING_RECIPIENT; // 65,000
   const energyDeficit = Math.max(0, energyNeeded - availableEnergy);
 
   // Cost in TRX
@@ -432,12 +454,13 @@ export const calculateDynamicTRC20Fee = async (
   const bandwidthCostTRX = (TRC20_BANDWIDTH * networkParams.bandwidthPriceSun) / 1_000_000;
   const totalCostTRX = energyCostTRX + bandwidthCostTRX;
 
-  // Round up with 40% buffer (increased from 15% to prevent OUT_OF_ENERGY), min 1 TRX
-  const fastFee = Math.max(Math.ceil(totalCostTRX * 1.40 * 10) / 10, 1);
+  // FIX: Reduced buffer from 40% to 20%. SmartGas adds its own 20% buffer on top.
+  // Combined ~44% buffer is sufficient (was 110% before).
+  const fastFee = Math.max(Math.ceil(totalCostTRX * 1.20 * 10) / 10, 1);
 
   cronLogger.info(
     `[TronEnergy] 📊 Dynamic TRC20 fee: ${fastFee} TRX ` +
-    `(energy: ${energyNeeded} needed, ${availableEnergy} available, ${energyDeficit} deficit @ ${networkParams.energyPriceSun} SUN/unit)`
+    `(energy: ${energyNeeded} needed [${isNewRecipient ? 'NEW' : 'ACTIVATED'}], ${availableEnergy} available, ${energyDeficit} deficit @ ${networkParams.energyPriceSun} SUN/unit)`
   );
 
   return {
@@ -445,6 +468,7 @@ export const calculateDynamicTRC20Fee = async (
     energyPrice: networkParams.energyPriceSun,
     energyNeeded,
     energyAvailable: availableEnergy,
+    isNewRecipient,
   };
 };
 
