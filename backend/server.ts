@@ -706,7 +706,8 @@ cron.schedule("0 */2 * * *", async function () {
   }
 });
 
-cron.schedule("*/15 * * * *", async function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from */15 to */30 — sweeps are rare, 30-min check is safe
+cron.schedule("*/30 * * * *", async function () {
   try {
     await paymentController.sweepNativeAdminFees();
   } catch (err) {
@@ -725,7 +726,8 @@ cron.schedule("*/30 * * * *", async () => {
   }
 });
 
-cron.schedule("*/15 * * * *", async function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from */15 to hourly — fee balance doesn't change rapidly
+cron.schedule("0 * * * *", async function () {
   try {
     await paymentController.checkFeeBalance();
   } catch (err) {
@@ -748,10 +750,10 @@ cron.schedule("0 0 * * *", async function () {
 // MERCHANT POOL: Per-merchant pool cron jobs
 // ===========================================
 
-// Merchant Pool: Sweep accumulated admin fees every 15 minutes
+// Merchant Pool: Sweep accumulated admin fees every 30 minutes
 // Handles both threshold-based ($30 USD) and time-based (3 min for ETH/TRX) sweeps
-// PERF: Increased from 5min to 15min — idle system rarely accumulates fees between checks
-cron.schedule("*/15 * * * *", async function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from 15min to 30min — idle system rarely accumulates fees
+cron.schedule("*/30 * * * *", async function () {
   const lockAcquired = await acquireLock("cron:performScheduledSweeps", 180, 1, 100, true);
   if (!lockAcquired) return; // silent skip — lock contention is normal
   try {
@@ -810,10 +812,10 @@ cron.schedule("*/2 * * * *", async function () {
   }
 });
 
-// Merchant Pool: Subscription health monitor every 2 hours
+// Merchant Pool: Subscription health monitor every 6 hours
 // Ensures all pool addresses have valid Tatum webhook subscriptions
-// OPTIMIZED: Reduced from 30 min to 2h — subscriptions rarely break on their own
-cron.schedule("0 */2 * * *", function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from 2h to 6h — subscriptions rarely break on their own
+cron.schedule("0 */6 * * *", function () {
   log("Cron: ensurePoolSubscriptions running", "info");
   merchantPoolService.ensurePoolSubscriptions().catch(err => {
     log(`Cron: Subscription health check failed: ${err.message}`, "error");
@@ -821,11 +823,11 @@ cron.schedule("0 */2 * * *", function () {
   });
 });
 
-// Merchant Pool: Check for missed webhooks every 20 minutes
+// Merchant Pool: Check for missed webhooks every hour
 // This is a fallback mechanism when Tatum webhooks fail to deliver
-// PERF: Increased from 10 min to 20 min — reduces Tatum API calls further
-cron.schedule("*/20 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:checkMissedPayments", 240, 1, 100, true);
+// TATUM CREDIT OPTIMIZATION: Reduced from 20min to hourly — saves ~3x API calls
+cron.schedule("0 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:checkMissedPayments", 600, 1, 100, true);
   if (!lockAcquired) return; // silent skip
   try {
     await merchantPoolService.checkMissedPayments();
@@ -837,11 +839,11 @@ cron.schedule("*/20 * * * *", async function () {
   }
 });
 
-// Detect orphan payments on AVAILABLE addresses (hourly)
+// Detect orphan payments on AVAILABLE addresses (every 6 hours)
 // Safety net: catches payments sent AFTER reservation expired and address was released
 // Uses saved last_payment_context for proper merchant/admin fee split
-// OPTIMIZED: Reduced from 10 min to hourly — was ~22,000 Tatum API calls/day scanning 154 addresses
-cron.schedule("0 * * * *", async function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from hourly to every 6h — was the #1 Tatum credit consumer
+cron.schedule("0 */6 * * *", async function () {
   // FIX: Increased lock TTL from 900s to 1800s (30 min) — scanning 158+ addresses can take 10+ min with API latency
   const lockAcquired = await acquireLock("cron:detectOrphanPayments", 1800, 1, 100, true);
   if (!lockAcquired) { log("Cron: detectOrphanPayments skipped (already running)", "info"); return; }
@@ -856,11 +858,11 @@ cron.schedule("0 * * * *", async function () {
   }
 });
 
-// Merchant Pool: Pre-warm pool addresses every 15 minutes
+// Merchant Pool: Pre-warm pool addresses every 30 minutes
 // Ensures each active merchant has AVAILABLE addresses ready for instant reservation
 // Eliminates ~3-4s Tatum API call bottleneck during payment creation
-// OPTIMIZED: Reduced from 3 min to 15 min — pool rarely needs new addresses
-cron.schedule("*/15 * * * *", function () {
+// TATUM CREDIT OPTIMIZATION: Reduced from 15min to 30min — pool rarely needs new addresses
+cron.schedule("*/30 * * * *", function () {
   merchantPoolService.prewarmPoolAddresses().catch(err => {
     log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
     captureError(err, 'cron', { extraContext: 'prewarmPoolAddresses' });

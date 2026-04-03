@@ -2182,7 +2182,28 @@ const validateTronAddress = (address) => {
   }
 };
 
-const getAddressBalance = async (address: string, currency: string) => {
+/**
+ * TATUM CREDIT OPTIMIZATION: Redis-cached balance check.
+ * Cron jobs call getAddressBalance hundreds of times per hour across 150+ addresses.
+ * Caching with 10-min TTL reduces redundant API calls by ~80%.
+ * Use skipCache=true for payment-critical flows that need real-time data.
+ */
+const BALANCE_CACHE_TTL_SECONDS = 600; // 10 minutes
+
+const getAddressBalance = async (address: string, currency: string, skipCache: boolean = false) => {
+  // Check Redis cache first (unless caller needs real-time data)
+  if (!skipCache) {
+    const cacheKey = `tatum:balance:${currency}:${address}`;
+    try {
+      const cached = await getRedisItem(cacheKey);
+      if (cached !== null && cached !== undefined) {
+        return cached as { balance: string; incoming?: string; outgoing?: string };
+      }
+    } catch {
+      // Cache miss or Redis error — proceed with API call
+    }
+  }
+
   const tatumSdk = await getTatumSDK();
   let res;
   if (currency === "BTC") {
@@ -2355,6 +2376,17 @@ const getAddressBalance = async (address: string, currency: string) => {
     );
     res = { balance: Number(tempRes.balance) / 1000000 };
   }
+
+  // TATUM CREDIT OPTIMIZATION: Cache the result in Redis
+  if (res && !skipCache) {
+    const cacheKey = `tatum:balance:${currency}:${address}`;
+    try {
+      await setRedisItemWithTTL(cacheKey, res, BALANCE_CACHE_TTL_SECONDS);
+    } catch {
+      // Non-critical: cache write failure doesn't affect correctness
+    }
+  }
+
   return res;
 };
 

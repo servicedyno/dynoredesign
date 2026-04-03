@@ -185,8 +185,9 @@ async function sendAlert(status: WalletStatus): Promise<void> {
 
 /**
  * Start monitoring (call this from cron or startup)
+ * TATUM CREDIT OPTIMIZATION: Increased default from 30 min to 60 min
  */
-export async function startFeeWalletMonitoring(intervalMinutes: number = 30): Promise<void> {
+export async function startFeeWalletMonitoring(intervalMinutes: number = 60): Promise<void> {
   cronLogger.info(`[FeeWalletMonitor] Starting fee wallet monitoring (every ${intervalMinutes} min)`);
   
   // Initial check

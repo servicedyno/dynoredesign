@@ -1049,6 +1049,9 @@ export const detectOrphanPayments = async (): Promise<{
 
     cronLogger.info(`[OrphanDetect] 📋 Found ${availableAddresses.length} AVAILABLE addresses to scan`);
 
+    // TATUM CREDIT OPTIMIZATION: Track how many addresses were skipped due to recent zero-balance cache
+    let skippedCachedZero = 0;
+
     for (const addr of availableAddresses) {
       result.checked++;
 
@@ -1062,6 +1065,16 @@ export const detectOrphanPayments = async (): Promise<{
       const orphanCryptoKey = getCryptoRedisKey(walletAddress, orphanDestTag);
 
       try {
+        // TATUM CREDIT OPTIMIZATION: Skip addresses that were confirmed zero-balance recently.
+        // The Redis key is set when balance=0 and lasts 6 hours (matching cron interval).
+        // This means only the FIRST scan after startup or cache expiry makes the API call.
+        const zeroCacheKey = `orphan:zero:${walletType}:${walletAddress}`;
+        const recentlyZero = await getRedisItem(zeroCacheKey).catch(() => null);
+        if (recentlyZero) {
+          skippedCachedZero++;
+          continue;
+        }
+
         let balance: number;
         let balanceResult;
 
@@ -1093,6 +1106,9 @@ export const detectOrphanPayments = async (): Promise<{
         }
 
         if (balance <= 0) {
+          // TATUM CREDIT OPTIMIZATION: Remember this address had zero balance for 6 hours
+          const zeroCacheKey = `orphan:zero:${walletType}:${walletAddress}`;
+          await setRedisItemWithTTL(zeroCacheKey, "1", 21600).catch(() => {}); // 6 hours
           continue;
         }
 
@@ -1381,6 +1397,7 @@ export const detectOrphanPayments = async (): Promise<{
 
     cronLogger.info(`[OrphanDetect] ✅ Orphan payment scan complete:`);
     cronLogger.info(`[OrphanDetect]   - Scanned: ${result.checked}`);
+    cronLogger.info(`[OrphanDetect]   - Skipped (cached zero-balance): ${skippedCachedZero}`);
     cronLogger.info(`[OrphanDetect]   - Already processed: ${result.alreadyProcessed}`);
     cronLogger.info(`[OrphanDetect]   - Orphans found: ${result.found}`);
     cronLogger.info(`[OrphanDetect]   - Successfully recovered: ${result.processed}`);

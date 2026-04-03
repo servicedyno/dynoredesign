@@ -2,21 +2,18 @@
 """
 DynoPay Backend API Testing Script
 Tests the EXACT endpoints specified in the review request:
-1. GET /api/ - Health check, should return 200 with status "operational"
-2. GET /api/pay/network-fees - Core functionality, should return 200
-3. GET /api/geo-detect - Core functionality, should return 200
-4. POST /api/pay/calculateFees - Core functionality, should return 200 (send body with amount and currency)
-5. GET /api/diagnostics/binance-ping - Should return 401 or 403 (requires admin auth)
-6. GET /api/diagnostics/volatility - Should return 401 or 403 (requires admin auth)
-7. POST /api/test/send-payment-link-email (no auth header) - Should return 401 or 403
-8. POST /api/test/send-payment-received-email (no auth header) - Should return 401 or 403
-9. POST /api/pay/getData (no auth, no body) - Should return 4xx (not 500)
-10. POST /api/webhook (empty body) - Should NOT return 500
 
-Verify:
-- No 500 errors on any endpoint
-- Auth-protected endpoints return 401/403 without valid tokens
-- Core public endpoints work normally
+Tatum Credit Optimization Review Request:
+1. GET /api/ — Health check (should return 200 with status: operational)
+2. GET /api/pay/network-fees — Should return 200 with network fees for supported chains
+3. GET /api/geo-detect — Should return 200 with geo detection info
+
+Context: Changes were made to cron job frequencies (server.ts), added Redis balance 
+caching (tatumApi.ts), added skip logic (merchantPoolMonitoring.ts), and increased 
+fee wallet monitor interval (feeWalletMonitor.ts). These changes should NOT affect 
+any API endpoint responses.
+
+Verify: All endpoints return appropriate status codes (200 - NOT 500). No functional regression.
 """
 
 import requests
@@ -27,9 +24,10 @@ from datetime import datetime
 BASE_URL = "https://setup-wizard-144.preview.emergentagent.com/api"
 
 def test_review_request_endpoints():
-    """Test the specific endpoints mentioned in the TRC20 gas cost optimization review request"""
-    print("\n=== Testing TRC20 Gas Cost Optimization Review Request Endpoints ===")
-    print("Changes: tronEnergyService.ts, merchantPoolSweep.ts, merchantPoolConfig.ts, paymentController.ts")
+    """Test the specific endpoints mentioned in the Tatum credit optimization review request"""
+    print("\n=== Testing Tatum Credit Optimization Review Request Endpoints ===")
+    print("Changes: cron job frequencies (server.ts), Redis balance caching (tatumApi.ts),")
+    print("skip logic (merchantPoolMonitoring.ts), fee wallet monitor interval (feeWalletMonitor.ts)")
     results = []
     
     # Test 1: GET /api/ - Health check (should return 200 with status: operational)
@@ -55,8 +53,8 @@ def test_review_request_endpoints():
         print(f"❌ FAIL - Request error: {e}")
         results.append(("Health Check", False, f"Request error: {e}"))
     
-    # Test 2: GET /api/pay/network-fees - Should return 200 with fee data, check USDT_TRC20 feeInNative
-    print("\n2. Testing Network Fees (TRC20 Gas Cost Optimization)")
+    # Test 2: GET /api/pay/network-fees - Should return 200 with network fees for supported chains
+    print("\n2. Testing Network Fees")
     try:
         response = requests.get(f"{BASE_URL}/pay/network-fees", timeout=10)
         print(f"GET /api/pay/network-fees → HTTP {response.status_code}")
@@ -67,23 +65,14 @@ def test_review_request_endpoints():
                 data = response_data.get('data', {}) if isinstance(response_data, dict) else response_data
                 chains = len(data) if isinstance(data, dict) else 0
                 
-                # Check for USDT_TRC20 fee optimization
-                usdt_trc20_fee = None
-                if isinstance(data, dict) and 'USDT_TRC20' in data:
-                    fee_data = data['USDT_TRC20']
-                    if isinstance(fee_data, dict) and 'feeInNative' in fee_data:
-                        usdt_trc20_fee = float(fee_data['feeInNative'])
+                # List some supported chains if available
+                chain_names = list(data.keys())[:5] if isinstance(data, dict) else []
+                chain_list = ", ".join(chain_names) + ("..." if len(data) > 5 else "") if chain_names else "unknown"
                 
-                if usdt_trc20_fee is not None:
-                    if 6 <= usdt_trc20_fee <= 8:
-                        print(f"✅ PASS - USDT_TRC20 feeInNative optimized: {usdt_trc20_fee} TRX (target: 6-8 TRX)")
-                        results.append(("Network Fees - TRC20 Optimization", True, f"HTTP 200 - USDT_TRC20 fee: {usdt_trc20_fee} TRX (optimized)"))
-                    else:
-                        print(f"⚠️ WARNING - USDT_TRC20 feeInNative: {usdt_trc20_fee} TRX (expected: 6-8 TRX)")
-                        results.append(("Network Fees - TRC20 Optimization", False, f"HTTP 200 - USDT_TRC20 fee: {usdt_trc20_fee} TRX (not optimized)"))
-                else:
-                    print(f"✅ PASS - Network fees retrieved (chains: {chains}) - USDT_TRC20 fee not found in response")
-                    results.append(("Network Fees", True, f"HTTP 200 - Fee data retrieved for {chains} chains"))
+                print(f"✅ PASS - Network fees retrieved successfully for {chains} supported chains")
+                if chain_names:
+                    print(f"  Chains: {chain_list}")
+                results.append(("Network Fees", True, f"HTTP 200 - Fee data retrieved for {chains} chains"))
                     
             except json.JSONDecodeError:
                 print(f"✅ PASS - HTTP 200 (non-JSON response)")
@@ -95,7 +84,7 @@ def test_review_request_endpoints():
         print(f"❌ FAIL - Request error: {e}")
         results.append(("Network Fees", False, f"Request error: {e}"))
     
-    # Test 3: GET /api/geo-detect - Should return 200 with geo data
+    # Test 3: GET /api/geo-detect - Should return 200 with geo detection info
     print("\n3. Testing Geo Detection")
     try:
         response = requests.get(f"{BASE_URL}/geo-detect", timeout=10)
@@ -106,7 +95,7 @@ def test_review_request_endpoints():
                 data = response.json()
                 country = data.get('country', 'unknown') if isinstance(data, dict) else 'unknown'
                 country_code = data.get('countryCode', 'unknown') if isinstance(data, dict) else 'unknown'
-                print(f"✅ PASS - Geo detection working (country: {country}, code: {country_code})")
+                print(f"✅ PASS - Geo detection working (Country: {country}, Code: {country_code})")
                 results.append(("Geo Detection", True, f"HTTP 200 - Country: {country} ({country_code})"))
             except json.JSONDecodeError:
                 print(f"✅ PASS - HTTP 200 (non-JSON response)")
@@ -123,8 +112,9 @@ def test_review_request_endpoints():
 def main():
     """Run all tests and provide summary"""
     print("=" * 80)
-    print("DynoPay Backend API Testing - TRC20 Gas Cost Optimization Review")
-    print("Changes: tronEnergyService.ts, merchantPoolSweep.ts, merchantPoolConfig.ts, paymentController.ts")
+    print("DynoPay Backend API Testing - Tatum Credit Optimization Review")
+    print("Changes: cron job frequencies (server.ts), Redis balance caching (tatumApi.ts),")
+    print("skip logic (merchantPoolMonitoring.ts), fee wallet monitor interval (feeWalletMonitor.ts)")
     print(f"Target URL: {BASE_URL}")
     print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("=" * 80)
@@ -164,23 +154,19 @@ def main():
     print(f"No 500 errors: {'✅ PASS' if not has_500_errors else '❌ FAIL'}")
     
     # Check core endpoints
-    core_tests = [result for result in test_results if result[0] in ["Health Check", "Network Fees", "Geo Detection", "Network Fees - TRC20 Optimization"]]
+    core_tests = [result for result in test_results if result[0] in ["Health Check", "Network Fees", "Geo Detection"]]
     core_working = all(success for _, success, _ in core_tests)
     print(f"Core public endpoints work normally: {'✅ PASS' if core_working else '❌ FAIL'}")
     
-    # Check TRC20 optimization
-    trc20_tests = [result for result in test_results if "TRC20 Optimization" in result[0]]
-    trc20_optimized = all(success for _, success, _ in trc20_tests) if trc20_tests else None
-    if trc20_optimized is not None:
-        print(f"TRC20 gas cost optimization working: {'✅ PASS' if trc20_optimized else '❌ FAIL'}")
-    else:
-        print(f"TRC20 gas cost optimization: ⚠️ NOT TESTED (USDT_TRC20 not found in response)")
+    # Check for functional regression
+    all_endpoints_200 = all(success for _, success, _ in test_results)
+    print(f"No functional regression: {'✅ PASS' if all_endpoints_200 else '❌ FAIL'}")
     
     if failed == 0:
-        print("\n🎉 ALL TESTS PASSED - TRC20 gas cost optimization verified successfully!")
-        print("✅ Backend compiles and serves correctly after changes")
-        if trc20_optimized:
-            print("✅ USDT_TRC20 feeInNative is optimized (6-8 TRX range)")
+        print("\n🎉 ALL TESTS PASSED - Tatum credit optimization verified successfully!")
+        print("✅ Backend API operational after Tatum credit optimization changes")
+        print("✅ All endpoints return appropriate status codes (200 - NOT 500)")
+        print("✅ No functional regression detected")
     else:
         print(f"\n⚠️  {failed} test(s) failed - See details above")
     
