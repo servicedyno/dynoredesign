@@ -4778,7 +4778,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             // This mismatch caused false DEFERRED settlements when the gas wallet was fine.
             const feeWalletAddress = process.env.TRX_FEE_WALLET || null;
             if (feeWalletAddress) {
-              const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX").catch(() => null);
+              const feeWalletCheck = await tatumApi.getAddressBalance(feeWalletAddress, "TRX", true).catch(() => null);
               const feeWalletBalance = Number(feeWalletCheck?.balance || feeWalletCheck?.incoming || 0);
               
               if (feeWalletBalance < requiredTRX && poolResources.availableEnergy < 65000) {
@@ -7306,9 +7306,11 @@ const checkFeeBalance = async () => {
       
       let currentBalance;
       try {
+        // Use skipCache=true for fee balance monitoring — must be real-time to avoid false alerts
         currentBalance = await tatumApi.getAddressBalance(
           adminFeesWallets[i]?.dataValues.wallet_address,
-          balanceCheckCurrency
+          balanceCheckCurrency,
+          true
         );
       } catch (balErr: unknown) {
         const balError = balErr as { message?: string; body?: { errorCode?: string } };

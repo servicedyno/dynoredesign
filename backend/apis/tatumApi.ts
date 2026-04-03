@@ -2378,12 +2378,18 @@ const getAddressBalance = async (address: string, currency: string, skipCache: b
   }
 
   // TATUM CREDIT OPTIMIZATION: Cache the result in Redis
+  // SAFETY: Only cache non-zero balances to prevent false "empty wallet" alerts
+  // from transient API errors (account.not.found, timeouts) being cached as 0
   if (res && !skipCache) {
-    const cacheKey = `tatum:balance:${currency}:${address}`;
-    try {
-      await setRedisItemWithTTL(cacheKey, res, BALANCE_CACHE_TTL_SECONDS);
-    } catch {
-      // Non-critical: cache write failure doesn't affect correctness
+    const balanceNum = parseFloat(res.balance || '0');
+    if (balanceNum > 0 || (res.incoming !== undefined)) {
+      // Only cache positive balances or UTXO results (which have incoming/outgoing fields)
+      const cacheKey = `tatum:balance:${currency}:${address}`;
+      try {
+        await setRedisItemWithTTL(cacheKey, res, BALANCE_CACHE_TTL_SECONDS);
+      } catch {
+        // Non-critical: cache write failure doesn't affect correctness
+      }
     }
   }
 

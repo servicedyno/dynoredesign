@@ -42,8 +42,27 @@ export async function checkFeeWalletBalance(): Promise<WalletStatus> {
       };
     }
 
-    // Get current balance
-    const balanceResult = await tatumApi.getAddressBalance(FEE_WALLET_ADDRESS, 'TRX').catch(() => null);
+    // Get current balance — MUST skip cache for critical monitoring (real-time data required)
+    let balanceResult;
+    let apiError = false;
+    try {
+      balanceResult = await tatumApi.getAddressBalance(FEE_WALLET_ADDRESS, 'TRX', true);
+    } catch (apiErr) {
+      cronLogger.warn(`[FeeWalletMonitor] API call failed: ${(apiErr as Error).message} — skipping alert cycle to avoid false positive`);
+      apiError = true;
+    }
+
+    // If API call failed entirely, don't trigger a false "empty" alert
+    if (apiError || balanceResult === null || balanceResult === undefined) {
+      const fallbackStatus: WalletStatus = {
+        balance: lastStatus?.balance ?? -1,
+        status: lastStatus?.status ?? 'warning',
+        lastChecked: new Date(),
+      };
+      cronLogger.info(`[FeeWalletMonitor] ⏭️ Using last known status (${lastStatus?.balance?.toFixed(2) ?? 'unknown'} TRX) due to API error`);
+      return fallbackStatus;
+    }
+
     const balance = Number(balanceResult?.balance || 0);
 
     // Determine status

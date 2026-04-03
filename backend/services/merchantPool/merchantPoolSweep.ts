@@ -66,7 +66,8 @@ export const fundGasIfNeeded = async (
     
     let balanceResult;
     try {
-      balanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken);
+      // skipCache=true for SmartGas — must have real-time gas balance for funding decisions
+      balanceResult = await tatumApi.getAddressBalance(tempAddress, gasToken, true);
     } catch (balanceError: unknown) {
       const balErr = balanceError as { message?: string };
       if ((balErr.message || '').includes('account.not.found') || (balErr.message || '').includes('not.found')) {
@@ -292,7 +293,8 @@ export const reclaimExcessGas = async (
   const threshold = minReclaimThreshold ?? (gasToken === "TRX" ? 2 : gasToken === "ETH" ? 0.0005 : 0.01);
 
   try {
-    const balanceResult = await tatumApi.getAddressBalance(poolAddress, gasToken).catch(() => null);
+    // skipCache=true for gas reclaim — needs real-time balance
+    const balanceResult = await tatumApi.getAddressBalance(poolAddress, gasToken, true).catch(() => null);
     const currentBalance = Number(balanceResult?.balance ?? 0);
 
     if (currentBalance <= threshold) {
@@ -467,9 +469,11 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     
     let balanceData;
     try {
+      // skipCache=true for sweep execution — must know actual balance before moving funds
       balanceData = await tatumApi.getAddressBalance(
         poolAddress.dataValues.wallet_address,
-        walletType
+        walletType,
+        true
       );
     } catch (balanceError: unknown) {
       const balErr = balanceError as { message?: string };
