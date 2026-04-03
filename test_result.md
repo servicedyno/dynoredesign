@@ -1299,3 +1299,17 @@ frontend:
   * Balance caching and fee wallet monitoring fixes did not break any core functionality
   * No functional regression detected - all bug fixes working correctly
   * Node.js/TypeScript server proxied through Python/uvicorn functioning correctly
+
+
+## Bug Fix: False "TRX Fee Wallet Empty" Alert — 2026-04-03
+- agent: main
+- message: Fixed false EMPTY alert caused by Redis balance caching storing zero-balance results from transient API errors
+- Root cause: The balance caching added in the Tatum credit optimization cached `{ balance: '0' }` results from Tatum API error catch blocks (e.g., `account.not.found`). The feeWalletMonitor then read the cached 0 and triggered a false "URGENT: TRX Fee Wallet Empty!" email alert.
+- Fixes applied:
+  1. **tatumApi.ts**: Balance cache now only stores positive balances or UTXO results — zero-from-error is never cached
+  2. **feeWalletMonitor.ts**: Uses `skipCache=true` for real-time data + gracefully handles API errors by keeping last known status instead of reporting 0
+  3. **paymentController.ts**: `checkFeeBalance` and TRC20 settlement fee wallet pre-check both use `skipCache=true`
+  4. **merchantPoolSweep.ts**: SmartGas funding, gas reclaim, and sweep execution all use `skipCache=true` for real-time balance data
+- Summary: Cache is now used ONLY for read-only monitoring cron jobs (orphan detection, missed payment checks). All fund-moving and alert-generating paths bypass cache for safety.
+- Files changed: tatumApi.ts, feeWalletMonitor.ts, paymentController.ts, merchantPoolSweep.ts
+- Test scope: Backend health check (all 3 endpoints pass)
