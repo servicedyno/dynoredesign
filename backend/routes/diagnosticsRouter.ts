@@ -904,30 +904,38 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     }
 
     // Step 5: For TRC20 — estimate energy and re-fund gas
+    // RECOVERY MODE: Always use conservative NEW recipient energy (130k) to avoid
+    // stale activation cache causing OUT_OF_ENERGY failures.
     const destination = merchantWallet || adminWallet;
     if (isTRC20) {
       try {
         const trc20Contract = currency === "USDT-TRC20"
           ? (process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
           : undefined;
-        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, destination!, trc20Contract);
+        // Pass null as recipient to force NEW recipient energy estimate (130k)
+        // instead of relying on potentially stale activation cache
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, null as any, trc20Contract);
+        // Add 30% buffer on top for recovery safety
+        const safeGasEstimate = Math.ceil(dynamicFee.fast * 1.3 * 100) / 100;
         steps.push({ step: "energy_estimation", status: "ok", details: {
-          required_trx: dynamicFee.fast,
+          required_trx: safeGasEstimate,
+          raw_estimate_trx: dynamicFee.fast,
           current_trx: gasBalance,
           energy_needed: dynamicFee.energyNeeded,
           energy_available: dynamicFee.energyAvailable,
           energy_price_sun: dynamicFee.energyPrice,
-          needs_refunding: gasBalance < dynamicFee.fast,
+          recovery_buffer: "30%",
+          needs_refunding: gasBalance < safeGasEstimate,
         }});
 
-        if (gasBalance < dynamicFee.fast) {
-          cronLogger.info(`[RecoverPayment] Re-funding gas for ${tempAddress}: need ${dynamicFee.fast} TRX, have ${gasBalance} TRX`);
+        if (gasBalance < safeGasEstimate) {
+          cronLogger.info(`[RecoverPayment] Re-funding gas for ${tempAddress}: need ${safeGasEstimate} TRX (${dynamicFee.fast} + 30% buffer), have ${gasBalance} TRX`);
           
           const fundResult = await fundGasIfNeeded(
             { dataValues: { wallet_address: tempAddress }, update: async () => {} },
             currency,
             tokenBalance,
-            merchantWallet || adminWallet
+            destination
           );
           
           steps.push({ step: "gas_refund", status: fundResult.funded ? "ok" : "skipped", details: fundResult });
@@ -1031,7 +1039,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     const effectivePaymentId = payment_id || tempData.current_payment_id;
     if (effectivePaymentId) {
       try {
-        const { PaymentJournal } = require("../models/paymentJournal");
+        const PaymentJournal = require("../models/paymentJournalModel").default;
         const { deleteRedisItem } = require("../services/redisService");
         const deletedCount = await PaymentJournal.destroy({
           where: {
@@ -1064,8 +1072,10 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         const trc20Contract = currency === "USDT-TRC20"
           ? (process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
           : undefined;
-        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, destination!, trc20Contract);
-        fees = { fast: dynamicFee.fast };
+        // RECOVERY: Use null recipient to force NEW recipient energy (130k)
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, null as any, trc20Contract);
+        // Set feeLimit with 30% buffer for safety
+        fees = { fast: Math.ceil(dynamicFee.fast * 1.3 * 100) / 100 };
       }
 
       const transferResult = await tatumApi.assetToOtherAddress({
@@ -1112,14 +1122,25 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
           tokens_moved: txVerified,
         }});
 
-        if (!txVerified && verifyResult.confirmed) {
-          // TX was included in block but execution failed (e.g., OUT_OF_ENERGY)
-          return res.status(500).json({
-            status: "transfer_execution_failed",
-            message: `Recovery TX ${recoveryTxId} was included in block ${verifyResult.blockNumber} but execution FAILED: contractResult=${verifyResult.contractResult}. Tokens did NOT move. The temp address may need more TRX gas or a higher feeLimit.`,
+        if (!txVerified) {
+          if (verifyResult.contractResult && verifyResult.contractResult !== "SUCCESS") {
+            // TX was included in block but execution failed (e.g., OUT_OF_ENERGY)
+            return res.status(500).json({
+              status: "transfer_execution_failed",
+              message: `Recovery TX ${recoveryTxId} FAILED: contractResult=${verifyResult.contractResult}. Tokens did NOT move. The temp address may need more TRX gas or energy.`,
+              payment_id: payment_id || tempData.current_payment_id,
+              tx_id: recoveryTxId,
+              contractResult: verifyResult.contractResult,
+              block: verifyResult.blockNumber,
+              steps,
+            });
+          }
+          // TX not yet confirmed (timeout) — report as pending
+          return res.status(202).json({
+            status: "transfer_pending",
+            message: `Recovery TX ${recoveryTxId} broadcast but not yet confirmed. Check manually.`,
             payment_id: payment_id || tempData.current_payment_id,
             tx_id: recoveryTxId,
-            contractResult: verifyResult.contractResult,
             steps,
           });
         }
