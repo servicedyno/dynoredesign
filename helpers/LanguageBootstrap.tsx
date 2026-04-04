@@ -10,12 +10,14 @@ function updateHtmlLang(lang: string) {
 
 export default function LanguageBootstrap() {
   useEffect(() => {
-    // Apply detected language AFTER hydration to prevent SSR mismatch
+    // i18n is already initialised with the correct synchronous language
+    // (localStorage / browser locale). We only need to:
+    // 1. Run async geo-detection for first-time visitors (no manual choice)
+    // 2. Keep <html lang> in sync on future changes
     applyDetectedLanguage().then(() => {
       updateHtmlLang(i18n.language);
     });
 
-    // Keep <html lang> in sync on every future language change
     const onLangChanged = (lng: string) => updateHtmlLang(lng);
     i18n.on("languageChanged", onLangChanged);
     return () => { i18n.off("languageChanged", onLangChanged); };

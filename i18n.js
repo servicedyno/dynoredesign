@@ -289,19 +289,29 @@ async function loadLanguageAsync(lang) {
   _loadedLanguages.add(lang);
 }
 
-// ─── Initialise i18n with ONLY English for SSR-safe hydration ───
-// We always start with "en" to match server rendering.
-// The actual detected language is applied AFTER hydration via applyDetectedLanguage().
+// ─── Detect initial language synchronously ───
+// On client: reads localStorage → browser locale → timezone (all synchronous)
+// On server: always "en" (no localStorage/navigator available)
+const initialLang = getInitialLanguage();
+
 const initialResources = {};
 
-// Always load English as the initial + fallback language
+// Always load English as the fallback language
 initialResources.en = requireLanguage("en");
 _loadedLanguages.add("en");
+
+// If the detected language is not English, also load it synchronously at init time.
+// This ensures the very first React render is already in the correct language,
+// eliminating the "English flash" for returning users and browser-locale matches.
+if (initialLang !== "en" && SUPPORTED_LANGUAGES.includes(initialLang)) {
+  initialResources[initialLang] = requireLanguage(initialLang);
+  _loadedLanguages.add(initialLang);
+}
 
 const instance = i18n.use(LanguageDetector).use(initReactI18next);
 
 instance.init({
-  lng: "en", // Always start with English to match SSR and prevent hydration mismatch
+  lng: initialLang, // Use detected language synchronously (localStorage → browser locale → timezone → "en")
   fallbackLng: DEFAULT_LANGUAGE,
   supportedLngs: SUPPORTED_LANGUAGES,
   debug: false,
@@ -341,34 +351,26 @@ if (!isServer) {
 
 /**
  * Apply the user's detected language AFTER React hydration completes.
- * Call this from _app.tsx useEffect to avoid hydration mismatches.
+ * Call this from _app.tsx useEffect.
+ *
+ * Since i18n is now initialised with the correct synchronous language
+ * (localStorage / browser locale), this function only needs to:
+ * 1. Run async IP-based geo-detection for first-time visitors whose
+ *    browser locale didn't match their country.
+ * 2. Keep <html lang> in sync.
  */
 async function applyDetectedLanguage() {
   if (isServer) return;
 
-  const detectedLang = getInitialLanguage();
-
-  if (detectedLang && detectedLang !== "en" && SUPPORTED_LANGUAGES.includes(detectedLang)) {
-    // Load the language bundle if needed
-    if (!_loadedLanguages.has(detectedLang)) {
-      const ns = requireLanguage(detectedLang);
-      for (const [nsKey, data] of Object.entries(ns)) {
-        i18n.addResourceBundle(detectedLang, nsKey, data, true, true);
-      }
-      _loadedLanguages.add(detectedLang);
-    }
-    await i18n.changeLanguage(detectedLang);
-  }
-
-  // Also run geo-detection if user hasn't manually chosen
+  // Run geo-detection immediately (no delay) if user hasn't manually chosen.
+  // This only matters for first-time visitors whose browser locale differs
+  // from their actual country (e.g., English browser in Brazil).
   const userChoseManually = (() => {
     try { return localStorage.getItem("lang_manual") === "true"; } catch { return false; }
   })();
 
   if (!userChoseManually) {
-    setTimeout(() => {
-      detectAndApplyGeoLocale();
-    }, 1000);
+    detectAndApplyGeoLocale();
   }
 }
 

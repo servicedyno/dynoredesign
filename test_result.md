@@ -1313,3 +1313,40 @@ frontend:
 - Summary: Cache is now used ONLY for read-only monitoring cron jobs (orphan detection, missed payment checks). All fund-moving and alert-generating paths bypass cache for safety.
 - Files changed: tatumApi.ts, feeWalletMonitor.ts, paymentController.ts, merchantPoolSweep.ts
 - Test scope: Backend health check (all 3 endpoints pass)
+
+## Language Flash Fix — i18n Initialization + Blocking Script — 2026-04-04
+- agent: main
+- message: Fixed language flash (English → Portuguese) on page load for geo-detected users
+- Root cause: i18n always initialized with `lng: "en"` and only switched to detected language in a post-hydration useEffect (with additional 1-second setTimeout delay for geo-detection)
+- Fixes applied:
+  1. **i18n.js**: Initialize with `getInitialLanguage()` instead of hardcoded "en" — reads localStorage then browser locale synchronously
+  2. **i18n.js**: Pre-load detected language resources synchronously via `requireLanguage()` at init time
+  3. **i18n.js**: Removed 1-second setTimeout delay before geo-detection — runs immediately after hydration
+  4. **_document.tsx**: Added blocking script for `<html lang>` (same pattern as theme FOUC fix) — sets lang attribute before React hydrates
+  5. **_document.tsx**: Removed hardcoded `<Html lang="en">` — blocking script handles it
+  6. **LanguageBootstrap.tsx**: Simplified — only runs async geo-detection for first-time visitors now
+- Files changed: i18n.js, pages/_document.tsx, helpers/LanguageBootstrap.tsx
+- Test scope: Frontend-only changes, backend unaffected
+
+## Backend Test Request — Language Flash Fix (frontend-only, regression check)
+- test_endpoints:
+  - GET /api/: Health check (should return 200)
+  - GET /api/pay/network-fees: Core functionality test
+  - GET /api/geo-detect: Core functionality test
+
+## Review Request Testing Results - 2026-04-04 10:11:03 UTC
+- agent: testing
+- message: Completed review request testing of DynoPay backend API endpoints after frontend-only i18n language flash fix changes (regression check)
+- test_results: ALL TESTS PASSED ✅
+  * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0, timestamp: 2026-04-04T10:11:03.436Z)
+  * GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully - fee data available for all supported chains)
+  * GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
+- verification_status: COMPLETE ✅
+  * All endpoints return appropriate status codes (200 - NOT 500) as specifically requested in review
+  * Health check shows operational status with comprehensive API documentation and current timestamp
+  * Network fees endpoint returns real-time fee data successfully
+  * Geo detection service working correctly with proper country identification
+  * No 500 errors detected on any tested endpoint
+  * Backend API fully operational after frontend-only i18n language flash fix changes
+  * Regression testing confirms no backend functionality was affected by frontend changes
+  * All 3 specified endpoints tested successfully with expected behavior
