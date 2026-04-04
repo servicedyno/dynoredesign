@@ -857,7 +857,37 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         tokenBalance = gasBalance;
       }
     } catch (balErr) {
-      steps.push({ step: "check_balance", status: "error", details: String(balErr) });
+      steps.push({ step: "check_balance_tatum", status: "error", details: String(balErr) });
+    }
+
+    // TronGrid fallback: Tatum balance API can return stale/0 for TRC20 tokens.
+    // Verify directly against the TRON node when Tatum reports 0.
+    if (isTRC20 && tokenBalance <= 0) {
+      try {
+        const axios = require("axios");
+        const tronRes = await axios.get(
+          `https://api.trongrid.io/v1/accounts/${tempAddress}`,
+          { timeout: 10000 }
+        );
+        const acctData = tronRes.data?.data?.[0];
+        if (acctData) {
+          gasBalance = (acctData.balance || 0) / 1e6;
+          const trc20Tokens = acctData.trc20 || [];
+          const usdtContract = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+          for (const tokenObj of trc20Tokens) {
+            if (tokenObj[usdtContract]) {
+              tokenBalance = parseInt(tokenObj[usdtContract], 10) / 1e6;
+            }
+          }
+          steps.push({ step: "check_balance_trongrid_fallback", status: "ok", details: {
+            token_balance: `${tokenBalance} ${currency}`,
+            gas_balance: `${gasBalance} TRX`,
+            source: "TronGrid direct (Tatum returned 0)",
+          }});
+        }
+      } catch (tronErr) {
+        steps.push({ step: "check_balance_trongrid_fallback", status: "error", details: String(tronErr) });
+      }
     }
     
     steps.push({ step: "check_balance", status: "ok", details: {
