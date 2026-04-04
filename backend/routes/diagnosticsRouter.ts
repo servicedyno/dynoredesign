@@ -874,9 +874,13 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     }
 
     // Step 5: For TRC20 — estimate energy and re-fund gas
+    const destination = merchantWallet || adminWallet;
     if (isTRC20) {
       try {
-        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+        const trc20Contract = currency === "USDT-TRC20"
+          ? (process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
+          : undefined;
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, destination!, trc20Contract);
         steps.push({ step: "energy_estimation", status: "ok", details: {
           required_trx: dynamicFee.fast,
           current_trx: gasBalance,
@@ -947,7 +951,7 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       });
     }
 
-    const destination = merchantWallet || adminWallet;
+    // destination already computed above (Step 5)
     
     steps.push({ step: "calculate_amounts", status: "ok", details: {
       merchant_send_amount: merchantSendAmount,
@@ -993,7 +997,32 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     
     steps.push({ step: "private_key", status: "ok", details: "Decrypted successfully" });
 
-    // Step 9: Execute the transfer
+    // Step 9: Clear stale idempotency entries that could block future retries
+    const effectivePaymentId = payment_id || tempData.current_payment_id;
+    if (effectivePaymentId) {
+      try {
+        const { PaymentJournal } = require("../models/paymentJournal");
+        const { deleteRedisItem } = require("../services/redisService");
+        const deletedCount = await PaymentJournal.destroy({
+          where: {
+            payment_id: effectivePaymentId,
+            event: 'settlement_sent',
+          },
+        });
+        const redisSettlementKey = `settlement-${effectivePaymentId}`;
+        const redisClaimKey = `settlement-claim-${effectivePaymentId}`;
+        await deleteRedisItem(redisSettlementKey).catch(() => {});
+        await deleteRedisItem(redisClaimKey).catch(() => {});
+        steps.push({ step: "clear_idempotency", status: "ok", details: {
+          journal_entries_deleted: deletedCount,
+          redis_keys_cleared: [redisSettlementKey, redisClaimKey],
+        }});
+      } catch (idempErr) {
+        steps.push({ step: "clear_idempotency", status: "warning", details: String(idempErr) });
+      }
+    }
+
+    // Step 10: Execute the transfer
     let contractAddress = "";
     if (currency === "USDT-TRC20") contractAddress = process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
     else if (currency === "USDT-ERC20") contractAddress = process.env.ETH_CONTRACT || "";
@@ -1002,7 +1031,10 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
     try {
       let fees: Record<string, number> = {};
       if (isTRC20) {
-        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress);
+        const trc20Contract = currency === "USDT-TRC20"
+          ? (process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t")
+          : undefined;
+        const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, destination!, trc20Contract);
         fees = { fast: dynamicFee.fast };
       }
 
@@ -1032,18 +1064,35 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         await setRedisTTL(`outgoing-tx-${recoveryTxId}`, 7200);
       }
       
-      // Verify the recovery TX for TRON
+      // Verify the recovery TX for TRON — check BOTH confirmation AND contractResult
       let txVerified = false;
       if (isTRC20 && recoveryTxId) {
         await new Promise(resolve => setTimeout(resolve, 5000));
         const verifyResult = await tatumApi.waitForTransactionConfirmation(recoveryTxId, currency, 60000);
-        txVerified = verifyResult.confirmed;
-        steps.push({ step: "verify_recovery_tx", status: txVerified ? "ok" : "pending", details: {
+        
+        // A TX can be "confirmed" (included in block) but still fail execution (OUT_OF_ENERGY)
+        const contractOk = !verifyResult.contractResult || verifyResult.contractResult === "SUCCESS";
+        txVerified = verifyResult.confirmed && contractOk;
+        
+        steps.push({ step: "verify_recovery_tx", status: txVerified ? "ok" : "failed", details: {
           tx_id: recoveryTxId,
           confirmed: verifyResult.confirmed,
           contractResult: verifyResult.contractResult || "N/A",
           block: verifyResult.blockNumber,
+          tokens_moved: txVerified,
         }});
+
+        if (!txVerified && verifyResult.confirmed) {
+          // TX was included in block but execution failed (e.g., OUT_OF_ENERGY)
+          return res.status(500).json({
+            status: "transfer_execution_failed",
+            message: `Recovery TX ${recoveryTxId} was included in block ${verifyResult.blockNumber} but execution FAILED: contractResult=${verifyResult.contractResult}. Tokens did NOT move. The temp address may need more TRX gas or a higher feeLimit.`,
+            payment_id: payment_id || tempData.current_payment_id,
+            tx_id: recoveryTxId,
+            contractResult: verifyResult.contractResult,
+            steps,
+          });
+        }
       }
       
       // Update the temp address admin_fee_balance
