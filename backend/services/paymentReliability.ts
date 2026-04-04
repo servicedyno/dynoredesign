@@ -77,18 +77,80 @@ export async function checkSettlementIdempotency(
     });
 
     if (journalEntry && journalEntry.settlement_tx_id) {
-      cronLogger.warn(
-        `[SettlementIdempotency] ⛔ BLOCKED duplicate settlement (DB recovery) for payment ${paymentId}. ` +
-        `Existing TX: ${journalEntry.settlement_tx_id}`
-      );
-      // Re-populate Redis for future fast-path checks
-      await setRedisItem(redisKey, {
-        status: 'completed',
-        settlementTxId: journalEntry.settlement_tx_id,
-        recoveredFromDB: true,
-      });
-      await setRedisTTL(redisKey, 86400); // 24h
-      return { alreadySettled: true, existingTxId: journalEntry.settlement_tx_id };
+      // ── DEFENSE-IN-DEPTH: Verify the existing TX actually succeeded on-chain ──
+      // A TX can be in the journal but have failed execution (e.g., TRON OUT_OF_ENERGY).
+      // If the TX failed, delete the stale journal entry and allow retry.
+      try {
+        const tatumApi = require("../services/tatumApi").default;
+        const txCurrency = journalEntry.currency || currency;
+        const isTronBased = txCurrency.includes("TRC20") || txCurrency === "TRX";
+        
+        if (isTronBased) {
+          const confirmResult = await tatumApi.waitForTransactionConfirmation(
+            journalEntry.settlement_tx_id,
+            txCurrency,
+            10000 // 10s timeout for verification
+          );
+          
+          if (confirmResult.contractResult && confirmResult.contractResult !== "SUCCESS") {
+            cronLogger.warn(
+              `[SettlementIdempotency] ⚠️ Existing TX ${journalEntry.settlement_tx_id} FAILED on-chain ` +
+              `(contractResult=${confirmResult.contractResult}). Clearing stale journal entry to allow retry.`
+            );
+            // Delete the stale journal entry so the retry can proceed
+            await PaymentJournal.destroy({
+              where: {
+                payment_id: paymentId,
+                event: 'settlement_sent',
+                settlement_tx_id: journalEntry.settlement_tx_id,
+              },
+            });
+            // Also clear any Redis entries
+            await deleteRedisItem(redisKey);
+            await deleteRedisItem(`settlement-claim-${paymentId}`);
+            // Fall through to allow retry
+          } else {
+            // TX confirmed on-chain — block as duplicate
+            cronLogger.warn(
+              `[SettlementIdempotency] ⛔ BLOCKED duplicate settlement (DB recovery, TX verified on-chain) for payment ${paymentId}. ` +
+              `Existing TX: ${journalEntry.settlement_tx_id}`
+            );
+            await setRedisItem(redisKey, {
+              status: 'completed',
+              settlementTxId: journalEntry.settlement_tx_id,
+              recoveredFromDB: true,
+            });
+            await setRedisTTL(redisKey, 86400);
+            return { alreadySettled: true, existingTxId: journalEntry.settlement_tx_id };
+          }
+        } else {
+          // Non-TRON chains: trust the journal entry (execution failures are rare)
+          cronLogger.warn(
+            `[SettlementIdempotency] ⛔ BLOCKED duplicate settlement (DB recovery) for payment ${paymentId}. ` +
+            `Existing TX: ${journalEntry.settlement_tx_id}`
+          );
+          await setRedisItem(redisKey, {
+            status: 'completed',
+            settlementTxId: journalEntry.settlement_tx_id,
+            recoveredFromDB: true,
+          });
+          await setRedisTTL(redisKey, 86400);
+          return { alreadySettled: true, existingTxId: journalEntry.settlement_tx_id };
+        }
+      } catch (verifyErr) {
+        // On-chain verification failed — err on the side of caution and block
+        cronLogger.warn(
+          `[SettlementIdempotency] ⚠️ Could not verify TX ${journalEntry.settlement_tx_id} on-chain: ${(verifyErr as Error).message}. ` +
+          `Blocking as precaution.`
+        );
+        await setRedisItem(redisKey, {
+          status: 'completed',
+          settlementTxId: journalEntry.settlement_tx_id,
+          recoveredFromDB: true,
+        });
+        await setRedisTTL(redisKey, 86400);
+        return { alreadySettled: true, existingTxId: journalEntry.settlement_tx_id };
+      }
     }
   } catch (dbErr) {
     // DB check failed — log but don't block (Redis check passed)

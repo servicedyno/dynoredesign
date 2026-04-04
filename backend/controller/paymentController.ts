@@ -3653,18 +3653,9 @@ const settleCryptoTransaction = async ({
       await setRedisTTL(`outgoing-tx-${settlementTxHash}`, 7200); // 2 hour TTL
       cronLogger.info(`[settleCryptoTransaction] Marked TX ${settlementTxHash} as outgoing (settlement)`);
 
-      // ── RELIABILITY: Mark settlement as completed + journal to PostgreSQL ──
+      // ── Journal broadcast event (informational only — NOT used by idempotency guard) ──
       try {
-        const { markSettlementCompleted, journalStateTransition } = require("../services/paymentReliability");
-        await markSettlementCompleted(
-          paymentId,
-          settlementTxHash,
-          fromAddress,
-          currency,
-          merchantSendAmount,
-          Number(receivedAmount),
-          Number((tempAddressData as any).current_company_id) || null
-        );
+        const { journalStateTransition } = require("../services/paymentReliability");
         await journalStateTransition({
           paymentId,
           txId: transactionId,
@@ -3677,8 +3668,12 @@ const settleCryptoTransaction = async ({
           metadata: { settlementTxHash, merchantAmount: merchantSendAmount, adminAmount: Number(receivedAmount) },
         });
       } catch (reliabilityErr) {
-        cronLogger.warn(`[settleCryptoTransaction] Non-critical: reliability journaling failed: ${(reliabilityErr as Error).message}`);
+        cronLogger.warn(`[settleCryptoTransaction] Non-critical: broadcast journaling failed: ${(reliabilityErr as Error).message}`);
       }
+      // NOTE: markSettlementCompleted() is intentionally NOT called here.
+      // It is called AFTER TX confirmation succeeds (below) to prevent the
+      // idempotency guard from permanently blocking retries when a TX is
+      // included in a block but fails execution (e.g., TRON OUT_OF_ENERGY).
     }
 
     // Also mark gas funding TX as outgoing (SmartGas)
@@ -3703,6 +3698,21 @@ const settleCryptoTransaction = async ({
         
         if (confirmResult.confirmed) {
           cronLogger.info(`[settleCryptoTransaction] TX ${txHash} confirmed in block ${confirmResult.blockNumber}`);
+          // ── RELIABILITY: Mark settlement as completed ONLY after on-chain confirmation ──
+          try {
+            const { markSettlementCompleted } = require("../services/paymentReliability");
+            await markSettlementCompleted(
+              paymentId,
+              txHash,
+              fromAddress,
+              currency,
+              merchantSendAmount,
+              Number(receivedAmount),
+              Number((tempAddressData as any).current_company_id) || null
+            );
+          } catch (relErr) {
+            cronLogger.warn(`[settleCryptoTransaction] Non-critical: markSettlementCompleted failed: ${(relErr as Error).message}`);
+          }
         } else if (confirmResult.contractResult && confirmResult.contractResult !== "SUCCESS") {
           // TRON execution failure: TX is in a block but tokens didn't move (e.g., OUT_OF_ENERGY)
           // This is a critical failure — must retry with gas re-funding
@@ -3776,6 +3786,21 @@ const settleCryptoTransaction = async ({
                 if (recoveryConfirm.confirmed) {
                   cronLogger.info(`[settleCryptoTransaction] ✅ RECOVERY SUCCESSFUL: TX ${retryResult.txId} confirmed in block ${recoveryConfirm.blockNumber}. Merchant transfer completed.`);
                   merchantTransactionDetails = retryResult; // Update with successful TX
+                  // ── RELIABILITY: Mark settlement as completed after recovery confirmation ──
+                  try {
+                    const { markSettlementCompleted } = require("../services/paymentReliability");
+                    await markSettlementCompleted(
+                      paymentId,
+                      retryResult.txId,
+                      fromAddress,
+                      currency,
+                      merchantSendAmount,
+                      Number(receivedAmount),
+                      Number((tempAddressData as any).current_company_id) || null
+                    );
+                  } catch (relErr) {
+                    cronLogger.warn(`[settleCryptoTransaction] Non-critical: markSettlementCompleted (recovery) failed: ${(relErr as Error).message}`);
+                  }
                   recovered = true;
                   break;
                 } else if (recoveryConfirm.contractResult && recoveryConfirm.contractResult !== "SUCCESS") {
@@ -3797,7 +3822,44 @@ const settleCryptoTransaction = async ({
           cronLogger.error(`[settleCryptoTransaction] WARNING: TX ${txHash} not confirmed within timeout!`);
           // Don't throw for timeout - allow flow to continue but log the issue
           // The sweep will detect unspent balance and retry later
+          // Still mark as completed — TX was broadcast and may confirm later
+          try {
+            const { markSettlementCompleted } = require("../services/paymentReliability");
+            await markSettlementCompleted(
+              paymentId,
+              txHash,
+              fromAddress,
+              currency,
+              merchantSendAmount,
+              Number(receivedAmount),
+              Number((tempAddressData as any).current_company_id) || null
+            );
+          } catch (relErr) {
+            cronLogger.warn(`[settleCryptoTransaction] Non-critical: markSettlementCompleted (timeout) failed: ${(relErr as Error).message}`);
+          }
         }
+      }
+    }
+
+    // ── RELIABILITY: For chains that don't go through the confirmation check above
+    // (UTXO chains like BTC, LTC, DOGE, BCH), mark settlement as completed here.
+    // Account-based chains already had markSettlementCompleted called inside the
+    // confirmation/recovery blocks above.
+    const accountBasedChains = ["ETH", "BSC", "TRX", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-TRC20", "SOL", "XRP", "RLUSD", "POLYGON", "USDT-POLYGON"];
+    if (!accountBasedChains.includes(currency) && merchantTransactionDetails?.txId) {
+      try {
+        const { markSettlementCompleted } = require("../services/paymentReliability");
+        await markSettlementCompleted(
+          paymentId,
+          merchantTransactionDetails.txId,
+          fromAddress,
+          currency,
+          merchantSendAmount,
+          Number(receivedAmount),
+          Number((tempAddressData as any).current_company_id) || null
+        );
+      } catch (relErr) {
+        cronLogger.warn(`[settleCryptoTransaction] Non-critical: markSettlementCompleted (UTXO) failed: ${(relErr as Error).message}`);
       }
     }
 
@@ -4844,6 +4906,24 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           merchantDestinationTag: walletData.dataValues.destination_tag || null,
           isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
         });
+
+        // ── DEFENSE-IN-DEPTH: If idempotency guard returned 'already_settled' but
+        // no sendAmount was provided, the original TX may have failed on-chain.
+        // Do NOT proceed as if the settlement succeeded.
+        if (adminTransferResult.status === 'already_settled' || adminTransferResult.status === 'settlement_in_progress') {
+          const hasValidAmount = adminTransferResult.sendAmount !== undefined && adminTransferResult.sendAmount > 0;
+          if (!hasValidAmount) {
+            cronLogger.error(
+              `[cryptoVerification] ⛔ Settlement returned status="${adminTransferResult.status}" with no valid sendAmount. ` +
+              `Original TX ${adminTransferResult.txId || 'N/A'} may have failed on-chain. ` +
+              `Treating as settlement failure — will retry.`
+            );
+            throw new Error(
+              `Settlement idempotency returned "${adminTransferResult.status}" but TX did not transfer funds. ` +
+              `Manual recovery may be required for payment ${tempData?.payment_id || transactionId}.`
+            );
+          }
+        }
         
         cronLogger.info(`[cryptoVerification] settleCryptoTransaction result:
           - Admin fee to retain: ${adminAmountToSend} ${tempCurrency}

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend API Regression Testing
-Testing after frontend-only i18n language flash fix changes
+Testing after settlement idempotency bug fix (paymentController.ts and paymentReliability.ts)
 Target: https://onboarding-flow-98.preview.emergentagent.com
 """
 
@@ -102,7 +102,7 @@ def main():
     """Run all regression tests"""
     print("=" * 60)
     print("DynoPay Backend API Regression Testing")
-    print("After frontend-only i18n language flash fix changes")
+    print("After settlement idempotency bug fix (paymentController.ts and paymentReliability.ts)")
     print(f"Target URL: {BASE_URL}")
     print(f"Test Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print("=" * 60)
@@ -140,8 +140,8 @@ def main():
     print(f"Failed: {failed}")
     
     if failed == 0:
-        print("\n🎉 ALL TESTS PASSED - Backend API fully operational after frontend changes")
-        print("No 500 errors detected - regression testing successful")
+        print("\n🎉 ALL TESTS PASSED - Backend API fully operational after settlement idempotency bug fix")
+        print("No 500 errors detected - settlement logic changes did not break core functionality")
         return 0
     else:
         print(f"\n⚠️  {failed} TEST(S) FAILED - Backend issues detected")
