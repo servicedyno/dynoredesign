@@ -929,18 +929,37 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
         }});
 
         if (gasBalance < safeGasEstimate) {
-          cronLogger.info(`[RecoverPayment] Re-funding gas for ${tempAddress}: need ${safeGasEstimate} TRX (${dynamicFee.fast} + 30% buffer), have ${gasBalance} TRX`);
+          const fundAmount = safeGasEstimate - gasBalance;
+          cronLogger.info(`[RecoverPayment] DIRECT gas funding for ${tempAddress}: sending ${fundAmount.toFixed(6)} TRX (need ${safeGasEstimate}, have ${gasBalance})`);
           
-          const fundResult = await fundGasIfNeeded(
-            { dataValues: { wallet_address: tempAddress }, update: async () => {} },
-            currency,
-            tokenBalance,
-            destination
+          // RECOVERY: Bypass fundGasIfNeeded (it uses stale activation cache) and send TRX directly
+          const { adminFeeModel } = await import("../models");
+          const feeWallet = await adminFeeModel.findOne({ where: { wallet_type: "TRX" } });
+          if (!feeWallet) throw new Error("TRX fee wallet not found");
+          
+          const feeWalletPrivateKey = await tatumApi.decryptSymmetric(
+            feeWallet.dataValues.privateKey,
+            process.env.TEMP_KEY_ID
           );
           
-          steps.push({ step: "gas_refund", status: fundResult.funded ? "ok" : "skipped", details: fundResult });
+          const gasTxResult = await tatumApi.assetToOtherAddress({
+            currency: "TRX",
+            fromAddress: feeWallet.dataValues.address,
+            toAddress: tempAddress,
+            privateKey: feeWalletPrivateKey,
+            amount: fundAmount,
+            fee: null,
+          });
           
-          if (fundResult.funded) {
+          steps.push({ step: "gas_refund_direct", status: gasTxResult?.txId ? "ok" : "failed", details: {
+            funded: true,
+            amount: fundAmount,
+            txId: gasTxResult?.txId,
+            method: "direct_trx_transfer (bypassed fundGasIfNeeded)",
+            reason: `Recovery mode: ${safeGasEstimate} TRX needed (130k energy + 30% buffer)`,
+          }});
+          
+          if (gasTxResult?.txId) {
             await new Promise(resolve => setTimeout(resolve, 6000));
           }
         }
