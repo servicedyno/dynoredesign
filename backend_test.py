@@ -2,7 +2,7 @@
 """
 DynoPay Backend API Regression Testing
 Testing after hardening /diagnostics/recover-stuck-payment endpoint
-Target: https://onboarding-flow-98.preview.emergentagent.com
+Target: https://initial-setup-20.preview.emergentagent.com
 """
 
 import requests
@@ -11,7 +11,7 @@ import sys
 from datetime import datetime
 
 # Test configuration
-BASE_URL = "https://onboarding-flow-98.preview.emergentagent.com"
+BASE_URL = "https://initial-setup-20.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 def test_health_check():
