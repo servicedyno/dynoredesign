@@ -7438,13 +7438,22 @@ const checkFeeBalance = async () => {
         continue;
       }
 
-      const tempData = await currencyConvert({
-        currency: ["USD"],
-        sourceCurrency: wallet_type,
-        amount,
-        fixedDecimal: true,
-      });
-      const amount_in_usd = tempData[0].amount;
+      // Wrap currencyConvert in try-catch so one Tatum API failure (e.g., ETH→BRL)
+      // doesn't crash the entire loop via AggregateError — other wallets still get checked
+      let amount_in_usd: number;
+      try {
+        const tempData = await currencyConvert({
+          currency: ["USD"],
+          sourceCurrency: wallet_type,
+          amount,
+          fixedDecimal: true,
+        });
+        amount_in_usd = tempData[0].amount;
+      } catch (convErr: unknown) {
+        const convError = convErr as { message?: string };
+        cronLogger.warn(`[checkFeeBalance] ⚠️ Currency conversion failed for ${wallet_type}: ${convError?.message || 'unknown'} — skipping this wallet`);
+        continue;
+      }
       if (amount_in_usd < feeLimit) {
         textData += `\n⚠️ ${wallet_type} fee wallet: $${amount_in_usd} (threshold: $${feeLimit}) — balance: ${amount} ${wallet_type}`;
       }
@@ -7518,10 +7527,8 @@ const checkFeeBalance = async () => {
       }
     }
   } catch (e) {
-
       const message = getErrorMessage(e);
-
-      cronLogger.error(message, new Error(e));
+      cronLogger.error(`[checkFeeBalance] ${message}`, { stack: (e as Error)?.stack || 'no stack' });
   }
 };
 

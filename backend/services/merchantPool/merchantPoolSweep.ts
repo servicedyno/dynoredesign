@@ -524,7 +524,20 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
       cronLogger.warn(`[MerchantPool]    Skipping sweep — NO gas funded (profitability-first optimization)`);
       
-      await poolAddress.update({ status: "AVAILABLE" });
+      // BUG FIX: Keep token addresses as IN_USE (not AVAILABLE) when sweep is not profitable.
+      // Previously, setting to AVAILABLE removed the address from sweepByTime's stale sweep
+      // safety net (which only checks IN_USE), AND if admin_fee_balance < threshold value,
+      // sweepByThreshold also wouldn't pick it up — causing funds to be permanently stuck.
+      // By keeping IN_USE, the stale sweep retries when gas prices drop.
+      const isToken = TOKEN_CHAINS.includes(walletType);
+      const hasAdminFees = actualBalance > 0;
+      
+      if (isToken && hasAdminFees) {
+        cronLogger.info(`[MerchantPool]    Keeping ${poolAddress.dataValues.wallet_address} as IN_USE for stale sweep retry (token with admin fees)`);
+        await poolAddress.update({ status: "IN_USE" });
+      } else {
+        await poolAddress.update({ status: "AVAILABLE" });
+      }
       
       return { 
         success: false, 
