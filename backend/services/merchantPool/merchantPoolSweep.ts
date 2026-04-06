@@ -203,8 +203,11 @@ export const fundGasIfNeeded = async (
 
     cronLogger.info(`[SmartGas] 📊 Gas deficit: ${deficit.toFixed(6)} ${gasToken} (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)})`);
 
-    // Ensure we fund at least a useful minimum amount to avoid immediate re-funding
-    const fundAmount = Math.max(deficit, requiredGas, gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
+    // Fund only the deficit (what's actually missing), with a minimum floor to avoid micro-transactions.
+    // BUG FIX (2026-04-06): Previously included `requiredGas` in Math.max, which caused funding the
+    // FULL gas requirement even when the address already had partial balance (e.g., funding 9.96 TRX
+    // when only 2.39 TRX deficit existed, wasting 7.57 TRX per sweep cycle).
+    const fundAmount = Math.max(deficit, gasToken === "TRX" ? POOL_CONFIG.TRX_MIN_DEFICIT 
       : gasToken === "XRP" ? POOL_CONFIG.XRP_MIN_DEFICIT
       : gasToken === "POLYGON" ? POOL_CONFIG.POLYGON_MIN_DEFICIT
       : POOL_CONFIG.ETH_MIN_DEFICIT);
