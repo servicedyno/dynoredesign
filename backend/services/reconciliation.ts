@@ -10,7 +10,7 @@
  */
 
 import { webhookLogs } from "../utils/loggers";
-import { redis as redisClient, getRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
+import { redis as redisClient, getRedisItem, setRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
 import { enqueueWebhook, WebhookJobData, webhookQueue } from "./webhookQueue";
 import { captureError } from "./errorMonitoringService";
 import { parseState, PaymentState } from "./paymentStateMachine";
@@ -278,7 +278,9 @@ async function reconcileFailedStatePayments(): Promise<number> {
         if (!isRecoverableStatus && data.status !== "permanently_failed") continue;
         if (data.status === "permanently_failed") {
           // Allow one more retry for permanently_failed payments whose root cause
-          // may have been fixed (e.g., trc20[0] balance bug). Reset retry count.
+          // may have been fixed (e.g., fee wallet topped up, gas prices dropped).
+          // CRITICAL: Reset retryCount and status in Redis so the webhook processor
+          // doesn't immediately reject the re-queued job.
           const pfReason = data.permanentFailReason || "";
           const pfAge = data.permanentlyFailedAt ? Date.now() - new Date(data.permanentlyFailedAt).getTime() : 0;
           // Only retry if permanently failed > 5 min ago (avoid tight loops) and < 7 days
@@ -286,8 +288,23 @@ async function reconcileFailedStatePayments(): Promise<number> {
             skippedPermanent++;
             continue;
           }
-          // Reset for one more attempt
-          webhookLogs.info(`[Reconciliation] Strategy 4: Retrying permanently_failed payment (reason=${pfReason}, age=${Math.round(pfAge / 60000)}min)`);
+          // Reset Redis state to allow webhook processor to actually retry
+          // Note: key from scan already ends with :json, setRedisItem would double-suffix.
+          // Use the base key (without :json) since setRedisItem appends :json internally.
+          const baseKey = key.endsWith(":json") ? key.slice(0, -5) : key;
+          await setRedisItem(baseKey, {
+            ...data,
+            status: "failed",           // Downgrade from permanently_failed to failed
+            retryCount: "0",            // Reset retry count for fresh attempts
+            lastError: undefined,       // Clear stale error
+            failedAt: undefined,        // Clear stale timestamp
+            permanentlyFailedAt: undefined,
+            permanentFailReason: undefined,
+            reconciledAt: new Date().toISOString(),
+            reconciledFrom: "permanently_failed",
+            previousError: data.lastError?.slice(0, 200),  // Preserve for debugging
+          });
+          webhookLogs.info(`[Reconciliation] Strategy 4: Retrying permanently_failed payment (reason=${pfReason}, age=${Math.round(pfAge / 60000)}min) — Redis retryCount RESET to 0`);
         }
 
         // Skip if already retried too many times
