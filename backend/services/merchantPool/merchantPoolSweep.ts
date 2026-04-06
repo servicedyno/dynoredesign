@@ -443,12 +443,12 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
     const status = poolAddress.dataValues.status;
     const adminBalance = parseFloat(poolAddress.dataValues.admin_fee_balance || "0");
     
-    if (status !== "IN_USE" && status !== "AVAILABLE") {
-      throw new Error(`Cannot sweep address in ${status} status. Only IN_USE or AVAILABLE addresses can be swept.`);
+    if (status !== "IN_USE" && status !== "AVAILABLE" && status !== "PRE_RESERVED") {
+      throw new Error(`Cannot sweep address in ${status} status. Only IN_USE, AVAILABLE, or PRE_RESERVED addresses can be swept.`);
     }
     
-    // If still AVAILABLE (e.g., direct call without pre-transition), claim it for sweep
-    if (status === "AVAILABLE") {
+    // If still AVAILABLE or PRE_RESERVED (e.g., direct call without pre-transition), claim it for sweep
+    if (status === "AVAILABLE" || status === "PRE_RESERVED") {
       await poolAddress.update({ status: "IN_USE" }, { transaction: dbTransaction });
     }
     
@@ -982,7 +982,7 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 export const sweepByThreshold = async (): Promise<number> => {
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: { [Op.in]: ["AVAILABLE", "IN_USE"] },
+      status: { [Op.in]: ["AVAILABLE", "IN_USE", "PRE_RESERVED"] },
       admin_fee_balance: { [Op.gt]: 0 },
     },
   });
@@ -1030,11 +1030,11 @@ export const sweepByThreshold = async (): Promise<number> => {
       
       if (usdAmount >= (sweepConfig.value || 30)) {
         cronLogger.info(`[MerchantPool] ✅ ${walletAddress} (${walletType}): $${usdAmount.toFixed(2)} >= $${sweepConfig.value} threshold — sweeping`);
-        // Conditional update: only transition if still AVAILABLE or IN_USE (not RESERVED/PROCESSING)
+        // Conditional update: only transition if still AVAILABLE, IN_USE, or PRE_RESERVED (not RESERVED/PROCESSING)
         // Prevents race condition where reservation claimed the address between our read and update
         const [updatedRows] = await merchantTempAddressModel.update(
           { status: "IN_USE" },
-          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE"] } } }
+          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE", "PRE_RESERVED"] } } }
         );
         if (updatedRows === 0) {
           cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} status changed (likely reserved for payment) — skipping sweep`);
@@ -1091,7 +1091,7 @@ export const sweepByThreshold = async (): Promise<number> => {
 export const sweepByTime = async (): Promise<number> => {
   const addressesWithFees = await merchantTempAddressModel.findAll({
     where: {
-      status: { [Op.in]: ["AVAILABLE", "IN_USE"] },
+      status: { [Op.in]: ["AVAILABLE", "IN_USE", "PRE_RESERVED"] },
       admin_fee_balance: { [Op.gt]: 0 },
       last_merchant_payout: { [Op.ne]: null },
     },
@@ -1129,10 +1129,10 @@ export const sweepByTime = async (): Promise<number> => {
       
       // For stale token addresses, override the time threshold check — sweep immediately
       if (isStaleTokenAddress) {
-        // Conditional update: only transition if still AVAILABLE or IN_USE (not RESERVED/PROCESSING)
+        // Conditional update: only transition if still AVAILABLE, IN_USE, or PRE_RESERVED (not RESERVED/PROCESSING)
         const [updatedRows] = await merchantTempAddressModel.update(
           { status: "IN_USE" },
-          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE"] } } }
+          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE", "PRE_RESERVED"] } } }
         );
         if (updatedRows === 0) {
           cronLogger.info(`[MerchantPool] ⏭️ ${address.dataValues.wallet_address} status changed (likely reserved) — skipping stale sweep`);
@@ -1148,10 +1148,10 @@ export const sweepByTime = async (): Promise<number> => {
       timeThreshold.setMinutes(timeThreshold.getMinutes() - timeThresholdMinutes);
       
       if (lastPayout < timeThreshold) {
-        // Conditional update: only transition if still AVAILABLE or IN_USE (not RESERVED/PROCESSING)
+        // Conditional update: only transition if still AVAILABLE, IN_USE, or PRE_RESERVED (not RESERVED/PROCESSING)
         const [updatedRows] = await merchantTempAddressModel.update(
           { status: "IN_USE" },
-          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE"] } } }
+          { where: { temp_address_id: address.dataValues.temp_address_id, status: { [Op.in]: ["AVAILABLE", "IN_USE", "PRE_RESERVED"] } } }
         );
         if (updatedRows === 0) {
           cronLogger.info(`[MerchantPool] ⏭️ ${address.dataValues.wallet_address} status changed (likely reserved) — skipping time sweep`);
