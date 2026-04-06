@@ -318,7 +318,8 @@ const processAddress = async (addr: any, result: {
               expected_amount: null, 
               reserved_until: null, 
               current_company_id: null,
-              admin_fee_balance: 0,
+              // NOTE: Preserve admin_fee_balance — accumulated fees from prior
+              // settlements must NOT be wiped. Only sweep should reset to 0.
             },
             { where: { wallet_address: walletAddress } }
           );

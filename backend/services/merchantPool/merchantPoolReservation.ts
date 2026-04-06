@@ -625,8 +625,12 @@ export const cleanupStaleAddresses = async (
     const addrStr = address.dataValues.wallet_address;
     
     if (status === "SWEEPING") {
-      cronLogger.info(`[MerchantPool] 🔄 Resetting stuck SWEEPING address for retry: ${addrStr}`);
-      await address.update({ status: "IN_USE" });
+      // Reset to AVAILABLE instead of IN_USE so the address is visible to reservation
+      // pipeline for fee concentration. The sweep failed/timed out (>10 min in SWEEPING),
+      // so making it available for new payments accumulates more fees. sweepByThreshold
+      // will retry the sweep on the next run if threshold is met.
+      cronLogger.info(`[MerchantPool] 🔄 Resetting stuck SWEEPING address for reuse: ${addrStr}`);
+      await address.update({ status: "AVAILABLE" });
       retryCount++;
     } else {
       cronLogger.info(`[MerchantPool] 🚨 Force-releasing stuck address: ${addrStr}`);

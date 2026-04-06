@@ -8005,7 +8005,8 @@ const processIncompletePayments = async () => {
                   expected_amount: null, 
                   reserved_until: null, 
                   current_company_id: null,
-                  admin_fee_balance: 0,
+                  // NOTE: Preserve admin_fee_balance — these are accumulated fees from prior
+                  // settlements and must NOT be wiped. Only sweep should reset this to 0.
                 },
                 { where: { wallet_address: walletAddress } }
               );
