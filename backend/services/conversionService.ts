@@ -15,7 +15,7 @@ import stablecoinConversionModel from "../models/stablecoinConversionModel";
 import { cronLogger } from "../utils/loggers";
 import * as binanceService from "./binanceService";
 import { isConnected as wsBinanceConnected, getStatus as getBinanceWsStatus } from "./binanceWebSocketService";
-import { Op, fn, col, literal } from "sequelize";
+import { Op, fn, col, literal, QueryTypes } from "sequelize";
 import sequelize from "../utils/dbInstance";
 import userModel from "../models/userModels/userModel";
 import companyModel from "../models/companyModels/companyModel";
@@ -313,7 +313,7 @@ const processConversions = async (): Promise<number> => {
       try {
         const sweepRecord = await sequelize.query(
           `SELECT gas_used FROM tbl_merchant_pool_sweep WHERE sweep_tx_id = $1 LIMIT 1`,
-          { bind: [data.deposit_tx_hash], type: (sequelize as any).constructor.QueryTypes.SELECT }
+          { bind: [data.deposit_tx_hash], type: QueryTypes.SELECT }
         ) as any[];
         if (sweepRecord.length > 0 && sweepRecord[0].gas_used) {
           sweepFeeUsd = parseFloat(sweepRecord[0].gas_used) * conversionRate;

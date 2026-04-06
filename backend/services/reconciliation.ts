@@ -369,6 +369,7 @@ async function reconcileFailedStatePayments(): Promise<number> {
               // Also update user_transaction if we can find it
               try {
                 const { default: sequelize } = await import("../utils/dbInstance");
+                const { QueryTypes } = await import("sequelize");
                 const txId = data.txId || "";
                 if (txId) {
                   await sequelize.query(
@@ -391,7 +392,7 @@ async function reconcileFailedStatePayments(): Promise<number> {
                         startDate: new Date(new Date(data.detectedAt || data.createdAt || Date.now()).getTime() - 60000).toISOString(),
                         endDate: new Date(new Date(data.detectedAt || data.createdAt || Date.now()).getTime() + 60000).toISOString(),
                       },
-                      type: sequelize.constructor.QueryTypes ? (sequelize.constructor as any).QueryTypes.UPDATE : "UPDATE",
+                      type: QueryTypes.UPDATE,
                     }
                   );
                   webhookLogs.info(`[Reconciliation] ✅ Auto-updated user_transaction for ${address}`);
