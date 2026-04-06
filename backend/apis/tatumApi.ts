@@ -1154,7 +1154,12 @@ const feeEstimation = async (
     // Dynamic TRC20 fee calculation using live TRON Energy price
     // Post Proposal #104 (Aug 2025): Energy reduced from 420 → 100 SUN/unit
     try {
-      const dynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+      // FIX: Pass recipient (toAddress) and TRC20 contract so the energy estimation
+      // can check if the admin wallet is already ACTIVATED (65k energy) vs NEW (130k).
+      // Previously only passed fromAddress, causing it to always assume 130k energy
+      // and making sweeps appear unprofitable (16.1 TRX gas vs actual ~8 TRX).
+      const trc20Contract = process.env.TRX_CONTRACT || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+      const dynamicFee = await calculateDynamicTRC20Fee(fromAddress, toAddress, trc20Contract);
       logCostSavings("feeEstimation", 20, dynamicFee.fast, {
         energyPrice: dynamicFee.energyPrice,
         energyAvailable: dynamicFee.energyAvailable,
