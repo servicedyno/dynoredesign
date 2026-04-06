@@ -48,8 +48,8 @@ export const reserveAddress = async (
         status: "PRE_RESERVED",
       },
       order: [
-        ["total_transactions", "DESC"],
         ["admin_fee_balance", "DESC"],
+        ["total_transactions", "DESC"],
       ],
     });
     
@@ -133,8 +133,8 @@ export const reserveAddress = async (
           status: "AVAILABLE",
         },
         order: [
-          ["total_transactions", "DESC"],
           ["admin_fee_balance", "DESC"],
+          ["total_transactions", "DESC"],
         ],
         lock: transaction.LOCK.UPDATE,
         transaction,
@@ -728,7 +728,7 @@ export const replenishPreReservedPool = async (
       const needed = PRE_RESERVE_TARGET - currentCount;
       if (needed <= 0) return 0;
       
-      // Find AVAILABLE addresses to pre-reserve
+      // Find AVAILABLE addresses to pre-reserve (prioritize highest admin_fee_balance for concentration)
       const availableAddresses = await merchantTempAddressModel.findAll({
         where: {
           owner_user_id: userId,
@@ -736,8 +736,8 @@ export const replenishPreReservedPool = async (
           status: "AVAILABLE",
         },
         order: [
-          ["total_transactions", "DESC"],
           ["admin_fee_balance", "DESC"],
+          ["total_transactions", "DESC"],
         ],
         limit: needed,
       });

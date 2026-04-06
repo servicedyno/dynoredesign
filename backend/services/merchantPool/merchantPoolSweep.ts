@@ -999,8 +999,28 @@ export const sweepByThreshold = async (): Promise<number> => {
       const cryptoAmount = parseFloat(address.dataValues.admin_fee_balance);
       const walletType = address.dataValues.wallet_type;
       const walletAddress = address.dataValues.wallet_address;
+      const currentStatus = address.dataValues.status;
       
       const sweepConfig = getSweepConfig(walletType);
+      
+      // SELF-HEAL: Transition any IN_USE address (regardless of sweep mode) to AVAILABLE
+      // so it becomes visible to the reservation pipeline for fee concentration.
+      // This fixes pre-existing stuck IN_USE addresses from before the releaseAddress fix.
+      // Only heal addresses with NO active payment (current_payment_id is null).
+      if (currentStatus === "IN_USE" && !address.dataValues.current_payment_id) {
+        if (sweepConfig.mode !== "threshold") {
+          // Non-threshold mode (time/batch) — just heal, sweepByTime handles actual sweep
+          const [healed] = await merchantTempAddressModel.update(
+            { status: "AVAILABLE" },
+            { where: { temp_address_id: address.dataValues.temp_address_id, status: "IN_USE", current_payment_id: null } }
+          );
+          if (healed > 0) {
+            cronLogger.info(`[MerchantPool] 🔄 Self-heal: ${walletAddress} (${walletType}) IN_USE → AVAILABLE (mode=${sweepConfig.mode}, visible for reuse)`);
+          }
+          continue;
+        }
+        // Threshold mode — continue to threshold check below (may sweep or heal)
+      }
       
       if (sweepConfig.mode !== "threshold") {
         continue;
@@ -1021,6 +1041,15 @@ export const sweepByThreshold = async (): Promise<number> => {
           continue;
         }
         eligibleAddresses.push(address);
+      } else if (currentStatus === "IN_USE" && !address.dataValues.current_payment_id) {
+        // Below threshold AND stuck as IN_USE — self-heal to AVAILABLE for fee concentration
+        const [healed] = await merchantTempAddressModel.update(
+          { status: "AVAILABLE" },
+          { where: { temp_address_id: address.dataValues.temp_address_id, status: "IN_USE", current_payment_id: null } }
+        );
+        if (healed > 0) {
+          cronLogger.info(`[MerchantPool] 🔄 Self-heal: ${walletAddress} (${walletType}) IN_USE → AVAILABLE ($${usdAmount.toFixed(2)} < $${sweepConfig.value} threshold, visible for reuse)`);
+        }
       }
     } catch (error) {
       const message = getErrorMessage(error);
