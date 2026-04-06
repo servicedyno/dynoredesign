@@ -527,12 +527,18 @@ export const releaseAddress = async (
   let newStatus: string;
   if (isUTXO && !pendingSweep) {
     newStatus = "AVAILABLE";
-  } else if (isToken) {
-    // For token chains: if there's an admin fee balance, keep as IN_USE for sweeping
-    // If no balance, mark AVAILABLE for reuse
-    newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
   } else {
-    newStatus = newAdminBalance > 0 ? "IN_USE" : "AVAILABLE";
+    // FIX: All chains (token + native) release as AVAILABLE even with admin fees.
+    // This makes addresses with accumulated fees VISIBLE to reserveAddress() and
+    // preWarmAddressPool(), enabling fee concentration on fewer addresses instead
+    // of spreading across 4+ addresses that never reach sweep threshold.
+    // The admin_fee_balance DESC ordering in reservation ensures these addresses
+    // are picked FIRST for the next payment.
+    // Sweep pipeline (sweepByThreshold/sweepByTime) queries BOTH AVAILABLE and
+    // IN_USE statuses, so sweep still finds these addresses.
+    // Race safety: sweepByThreshold uses conditional update (only if still AVAILABLE),
+    // reservation uses DB row locks (SELECT FOR UPDATE).
+    newStatus = "AVAILABLE";
   }
 
   cronLogger.info(`[releaseAddress] Setting newStatus=${newStatus}, newAdminBalance=${newAdminBalance}`);
@@ -560,6 +566,11 @@ export const releaseAddress = async (
   cronLogger.info(`[MerchantPool]    - New status: ${newStatus}`);
   cronLogger.info(`[MerchantPool]    - Admin fee balance: ${newAdminBalance}`);
   
+  // Log sweep mode for addresses with admin fees (even though AVAILABLE for reuse)
+  if (newAdminBalance > 0) {
+    cronLogger.info(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'} (AVAILABLE for reuse + sweep)`);
+  }
+
   if (newStatus === "AVAILABLE") {
     try {
       const subResult = await tatumApi.createSubscription(
@@ -574,8 +585,6 @@ export const releaseAddress = async (
     } catch (subError) {
       cronLogger.warn(`[MerchantPool]    - ⚠️ Failed to renew subscription (will retry on next reserve)`);
     }
-  } else {
-    cronLogger.info(`[MerchantPool]    - Sweep mode: ${sweepConfig.mode}:${sweepConfig.value || 'N/A'}`);
   }
 };
 
