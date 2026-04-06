@@ -17,6 +17,129 @@ import { captureError } from "./errorMonitoringService";
 import { getQueueHealth } from "./webhookQueue";
 
 // ═══════════════════════════════════════════════════════════════════════════════
+// 0. BLOCKCHAIN SETTLEMENT VERIFICATION — Auto-detect completed settlements
+// ═══════════════════════════════════════════════════════════════════════════════
+
+/**
+ * Verify on-chain whether a settlement actually completed by checking if funds
+ * left the pool address and arrived at the expected merchant wallet.
+ * 
+ * This handles the critical edge case where:
+ *   1. The blockchain TX succeeded (funds transferred)
+ *   2. But the DB update failed (crash, timeout, etc.)
+ *   3. The system thinks the payment is still pending/failed
+ * 
+ * Returns the outgoing TX ID if settlement is confirmed on-chain, null otherwise.
+ */
+export async function verifySettlementOnChain(
+  poolAddress: string,
+  currency: string,
+  expectedMerchantWallet: string | null,
+  paymentId: string,
+): Promise<{ settled: boolean; outgoingTxId: string | null; amount: number }> {
+  try {
+    const isTronBased = currency.includes("TRC20") || currency === "TRX";
+    const isEthBased = currency.includes("ERC20") || currency === "ETH" || currency.includes("POLYGON");
+
+    if (isTronBased) {
+      return await verifyTronSettlement(poolAddress, currency, expectedMerchantWallet, paymentId);
+    } else if (isEthBased) {
+      // For ETH-based, use Tatum API to check recent outgoing TRC20/ERC20 transfers
+      // Less critical since ETH settlements rarely have this issue, but still covered
+      cronLogger.info(`[SettlementVerify] ETH-based verification not yet implemented for ${currency}, skipping`);
+      return { settled: false, outgoingTxId: null, amount: 0 };
+    }
+
+    return { settled: false, outgoingTxId: null, amount: 0 };
+  } catch (err) {
+    cronLogger.warn(`[SettlementVerify] On-chain verification failed for ${paymentId}: ${(err as Error).message}`);
+    return { settled: false, outgoingTxId: null, amount: 0 };
+  }
+}
+
+/**
+ * Check TRON blockchain for outgoing USDT-TRC20/TRX transfers from the pool address.
+ * Uses TronGrid API (direct blockchain, independent of Tatum).
+ */
+async function verifyTronSettlement(
+  poolAddress: string,
+  currency: string,
+  expectedMerchantWallet: string | null,
+  paymentId: string,
+): Promise<{ settled: boolean; outgoingTxId: string | null; amount: number }> {
+  const axios = require("axios");
+  const USDT_CONTRACT = process.env.TRX_CONTRACT || "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+
+  // Step 1: Check current USDT balance on pool address
+  const accountResp = await axios.get(
+    `https://api.trongrid.io/v1/accounts/${poolAddress}`,
+    { timeout: 10000, headers: { Accept: "application/json" } }
+  );
+
+  let currentUsdtBalance = 0;
+  if (accountResp.data?.success && accountResp.data?.data?.[0]) {
+    const trc20List = accountResp.data.data[0].trc20 || [];
+    for (const tok of trc20List) {
+      if (typeof tok === "object" && USDT_CONTRACT in tok) {
+        currentUsdtBalance = parseInt(tok[USDT_CONTRACT]) / 1_000_000;
+      }
+    }
+  }
+
+  // If the pool address still has significant USDT, settlement likely didn't happen
+  if (currentUsdtBalance > 1.0) {
+    cronLogger.info(
+      `[SettlementVerify] Pool ${poolAddress} still has ${currentUsdtBalance} USDT — settlement not completed`
+    );
+    return { settled: false, outgoingTxId: null, amount: 0 };
+  }
+
+  // Step 2: Check outgoing TRC20 transfers from pool address
+  const txResp = await axios.get(
+    `https://api.trongrid.io/v1/accounts/${poolAddress}/transactions/trc20`,
+    {
+      params: {
+        limit: 20,
+        contract_address: USDT_CONTRACT,
+        order_by: "block_timestamp,desc",
+      },
+      timeout: 10000,
+      headers: { Accept: "application/json" },
+    }
+  );
+
+  const txs = txResp.data?.data || [];
+  
+  // Look for outgoing transfers (from = poolAddress)
+  for (const tx of txs) {
+    if (tx.from !== poolAddress) continue; // Only outgoing
+    
+    const toAddr = tx.to || "";
+    const value = parseInt(tx.value || "0") / 1_000_000;
+    const txId = tx.transaction_id || "";
+
+    // If we know the expected merchant wallet, verify it matches
+    if (expectedMerchantWallet && toAddr !== expectedMerchantWallet) {
+      continue; // Not to the expected merchant
+    }
+
+    // Found an outgoing transfer of significant value
+    if (value > 0.5) {
+      cronLogger.info(
+        `[SettlementVerify] ✅ Found on-chain settlement for payment ${paymentId}: ` +
+        `${value} USDT sent from ${poolAddress} to ${toAddr} (TX: ${txId})`
+      );
+      return { settled: true, outgoingTxId: txId, amount: value };
+    }
+  }
+
+  cronLogger.info(
+    `[SettlementVerify] No outgoing USDT transfer found from ${poolAddress} for payment ${paymentId}`
+  );
+  return { settled: false, outgoingTxId: null, amount: 0 };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
 // 1. SETTLEMENT IDEMPOTENCY — Prevents double-spend on retry
 // ═══════════════════════════════════════════════════════════════════════════════
 
@@ -59,8 +182,63 @@ export async function checkSettlementIdempotency(
         return { alreadySettled: true, existingTxId: null };
       }
       cronLogger.warn(
-        `[SettlementIdempotency] ⚠️ Stale in-progress marker for ${paymentId} (${Math.round(elapsed / 1000)}s). Allowing retry.`
+        `[SettlementIdempotency] ⚠️ Stale in-progress marker for ${paymentId} (${Math.round(elapsed / 1000)}s). Checking blockchain before retry.`
       );
+      
+      // ── AUTO-RECOVERY: Before allowing retry, check if the settlement actually
+      // succeeded on-chain. This handles the critical case where the blockchain TX
+      // executed but the DB/Redis update failed (crash, timeout, etc).
+      // Without this check, the system endlessly retries a payment that's already settled.
+      try {
+        const onChainResult = await verifySettlementOnChain(address, currency, null, paymentId);
+        if (onChainResult.settled && onChainResult.outgoingTxId) {
+          cronLogger.warn(
+            `[SettlementIdempotency] 🔄 AUTO-RECOVERY: Settlement for ${paymentId} was already completed on-chain! ` +
+            `TX: ${onChainResult.outgoingTxId}, amount: ${onChainResult.amount}. ` +
+            `Marking as completed and blocking retry.`
+          );
+          // Auto-complete: update Redis + journal to reflect the real on-chain state
+          await setRedisItem(redisKey, {
+            status: 'completed',
+            settlementTxId: onChainResult.outgoingTxId,
+            completedAt: Date.now(),
+            autoRecovered: true,
+            recoveredFrom: 'stale_in_progress',
+          });
+          await setRedisTTL(redisKey, 86400 * 7);
+
+          // Record in journal
+          try {
+            await PaymentJournal.create({
+              payment_id: paymentId,
+              tx_id: null,
+              address,
+              currency,
+              event: 'settlement_auto_recovered',
+              from_state: 'stale_in_progress',
+              to_state: 'completed',
+              amount: onChainResult.amount,
+              settlement_tx_id: onChainResult.outgoingTxId,
+              company_id: null,
+              metadata: {
+                source: 'idempotency_auto_recovery',
+                reason: 'Settlement TX found on-chain but DB was never updated',
+                elapsedMs: elapsed,
+              },
+            });
+          } catch (journalErr) {
+            cronLogger.warn(`[SettlementIdempotency] Journal write failed during auto-recovery: ${(journalErr as Error).message}`);
+          }
+
+          return { alreadySettled: true, existingTxId: onChainResult.outgoingTxId };
+        }
+      } catch (verifyErr) {
+        cronLogger.warn(
+          `[SettlementIdempotency] On-chain verification failed for ${paymentId}: ${(verifyErr as Error).message}. ` +
+          `Allowing retry as fallback.`
+        );
+      }
+
       // Delete stale marker so atomic claim below can succeed
       await deleteRedisItem(redisKey);
     }

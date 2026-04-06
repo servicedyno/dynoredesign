@@ -4909,19 +4909,72 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
 
         // ── DEFENSE-IN-DEPTH: If idempotency guard returned 'already_settled' but
         // no sendAmount was provided, the original TX may have failed on-chain.
-        // Do NOT proceed as if the settlement succeeded.
+        // Before throwing, check blockchain to see if funds were actually transferred.
         if (adminTransferResult.status === 'already_settled' || adminTransferResult.status === 'settlement_in_progress') {
           const hasValidAmount = adminTransferResult.sendAmount !== undefined && adminTransferResult.sendAmount > 0;
           if (!hasValidAmount) {
-            cronLogger.error(
-              `[cryptoVerification] ⛔ Settlement returned status="${adminTransferResult.status}" with no valid sendAmount. ` +
-              `Original TX ${adminTransferResult.txId || 'N/A'} may have failed on-chain. ` +
-              `Treating as settlement failure — will retry.`
-            );
-            throw new Error(
-              `Settlement idempotency returned "${adminTransferResult.status}" but TX did not transfer funds. ` +
-              `Manual recovery may be required for payment ${tempData?.payment_id || transactionId}.`
-            );
+            // ── AUTO-RECOVERY: Check on-chain before giving up ──
+            // The settlement TX may have succeeded but the DB/Redis was never updated.
+            // Verify by checking if funds left the pool address.
+            try {
+              const { verifySettlementOnChain, markSettlementCompleted } = require("../services/paymentReliability");
+              const poolAddr = tempAddressData.wallet_address || tempAddressData.address;
+              const merchantAddr = walletData?.dataValues?.wallet_address || null;
+              const pId = tempData?.payment_id || transactionId;
+              
+              const onChainResult = await verifySettlementOnChain(poolAddr, tempCurrency, merchantAddr, pId);
+              
+              if (onChainResult.settled && onChainResult.outgoingTxId) {
+                cronLogger.warn(
+                  `[cryptoVerification] 🔄 AUTO-RECOVERY: Settlement for ${pId} confirmed on-chain! ` +
+                  `TX: ${onChainResult.outgoingTxId}, amount: ${onChainResult.amount}. ` +
+                  `Proceeding with DB update instead of failing.`
+                );
+                // Override the adminTransferResult with the recovered data
+                adminTransferResult.sendAmount = onChainResult.amount;
+                adminTransferResult.txId = onChainResult.outgoingTxId;
+                adminTransferResult.transactionDetails = { txId: onChainResult.outgoingTxId };
+                adminTransferResult.status = 'auto_recovered';
+                
+                // Mark settlement as completed in idempotency store
+                await markSettlementCompleted(
+                  pId,
+                  onChainResult.outgoingTxId,
+                  poolAddr,
+                  tempCurrency,
+                  onChainResult.amount,
+                  Number(adminAmountToSend),
+                  Number(customerData?.company_id) || null
+                );
+                
+                // Don't throw — fall through to the normal DB update path below
+              } else {
+                // Funds still in pool or no outgoing TX found — original failure stands
+                cronLogger.error(
+                  `[cryptoVerification] ⛔ Settlement returned status="${adminTransferResult.status}" with no valid sendAmount. ` +
+                  `On-chain check: funds ${onChainResult.settled ? 'moved' : 'still in pool'}. ` +
+                  `Original TX ${adminTransferResult.txId || 'N/A'} may have failed on-chain. ` +
+                  `Treating as settlement failure — will retry.`
+                );
+                throw new Error(
+                  `Settlement idempotency returned "${adminTransferResult.status}" but TX did not transfer funds. ` +
+                  `Manual recovery may be required for payment ${tempData?.payment_id || transactionId}.`
+                );
+              }
+            } catch (recoveryErr: any) {
+              if (recoveryErr.message?.includes('Settlement idempotency returned')) {
+                throw recoveryErr; // Re-throw the intentional error from the else branch above
+              }
+              cronLogger.error(
+                `[cryptoVerification] ⛔ Auto-recovery check failed: ${recoveryErr.message}. ` +
+                `Settlement returned status="${adminTransferResult.status}" with no valid sendAmount. ` +
+                `Treating as settlement failure — will retry.`
+              );
+              throw new Error(
+                `Settlement idempotency returned "${adminTransferResult.status}" but TX did not transfer funds. ` +
+                `Manual recovery may be required for payment ${tempData?.payment_id || transactionId}.`
+              );
+            }
           }
         }
         

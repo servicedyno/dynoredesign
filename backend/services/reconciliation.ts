@@ -14,6 +14,7 @@ import { redis as redisClient, getRedisItem, setRedisItem, setRedisItemWithTTL }
 import { enqueueWebhook, WebhookJobData, webhookQueue } from "./webhookQueue";
 import { captureError } from "./errorMonitoringService";
 import { parseState, PaymentState } from "./paymentStateMachine";
+import { verifySettlementOnChain, markSettlementCompleted } from "./paymentReliability";
 import axios from "axios";
 
 /**
@@ -334,6 +335,82 @@ async function reconcileFailedStatePayments(): Promise<number> {
         }
 
         const address = key.replace("crypto-", "").replace(":json", "");
+        
+        // ── AUTO-RECOVERY: Before re-queueing, check if the settlement already
+        // completed on-chain. This prevents the infinite reconciliation loop where
+        // the blockchain TX succeeded but the DB was never updated.
+        const currency = data.currency || "";
+        const paymentId = data.payment_id || data.paymentId || "";
+        const isTronOrEth = currency.includes("TRC20") || currency === "TRX" ||
+                            currency.includes("ERC20") || currency === "ETH";
+        
+        if (isTronOrEth && address && retryCount >= 2) {
+          try {
+            const onChainResult = await verifySettlementOnChain(
+              address, currency, null, paymentId || address
+            );
+            if (onChainResult.settled && onChainResult.outgoingTxId) {
+              webhookLogs.info(
+                `[Reconciliation] 🔄 AUTO-RECOVERY: Payment at ${address} already settled on-chain! ` +
+                `TX: ${onChainResult.outgoingTxId}, amount: ${onChainResult.amount}. ` +
+                `Updating Redis state to completed — NOT re-queueing.`
+              );
+              // Update Redis state to completed so it's not picked up again
+              const baseKey = key.endsWith(":json") ? key.slice(0, -5) : key;
+              await setRedisItem(baseKey, {
+                ...data,
+                status: "completed",
+                settlementTxId: onChainResult.outgoingTxId,
+                settledAmount: onChainResult.amount,
+                autoRecoveredAt: new Date().toISOString(),
+                autoRecoverySource: "reconciliation_blockchain_verify",
+              });
+              
+              // Also update user_transaction if we can find it
+              try {
+                const { default: sequelize } = await import("../utils/dbInstance");
+                const txId = data.txId || "";
+                if (txId) {
+                  await sequelize.query(
+                    `UPDATE tbl_user_transaction 
+                     SET status = 'successful', 
+                         incoming_tx_hash = :incomingTx, 
+                         outgoing_tx_hash = :outgoingTx,
+                         "updatedAt" = NOW()
+                     WHERE incoming_tx_hash IS NULL 
+                     AND status IN ('pending', 'processing', 'failed')
+                     AND crypto_currency = :currency
+                     AND company_id = :companyId
+                     AND "createdAt" BETWEEN :startDate AND :endDate`,
+                    {
+                      replacements: {
+                        incomingTx: txId,
+                        outgoingTx: onChainResult.outgoingTxId,
+                        currency: currency,
+                        companyId: data.company_id ? Number(data.company_id) : 0,
+                        startDate: new Date(new Date(data.detectedAt || data.createdAt || Date.now()).getTime() - 60000).toISOString(),
+                        endDate: new Date(new Date(data.detectedAt || data.createdAt || Date.now()).getTime() + 60000).toISOString(),
+                      },
+                      type: sequelize.constructor.QueryTypes ? (sequelize.constructor as any).QueryTypes.UPDATE : "UPDATE",
+                    }
+                  );
+                  webhookLogs.info(`[Reconciliation] ✅ Auto-updated user_transaction for ${address}`);
+                }
+              } catch (dbErr) {
+                webhookLogs.warn(`[Reconciliation] DB auto-update failed (non-critical): ${(dbErr as Error).message}`);
+              }
+              
+              skippedPermanent++;
+              continue; // Don't re-queue — it's already settled
+            }
+          } catch (verifyErr) {
+            webhookLogs.warn(
+              `[Reconciliation] On-chain verify failed for ${address}: ${(verifyErr as Error).message}. ` +
+              `Proceeding with normal re-queue.`
+            );
+          }
+        }
+
         webhookLogs.info(`[Reconciliation] Strategy 4: Found failed-state payment: ${address}, txId=${data.txId}, retryCount=${retryCount}, failedAt=${data.failedAt || "unknown"}, error=${(data.lastError || "unknown").slice(0, 100)}`);
 
         await enqueueWebhook({
