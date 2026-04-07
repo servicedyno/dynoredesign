@@ -545,9 +545,31 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
       
       // ─── DUST SWEEP DEFERRAL: Track consecutive unprofitable sweeps ───
-      // After MAX_UNPROFITABLE_SWEEPS failures, defer sweeping for DEFERRAL_HOURS instead
-      // of zeroing admin_fee_balance. The on-chain balance is preserved, and sweeping
-      // resumes later when gas prices may have dropped or fee wallet was topped up.
+      // ERC20 dust < $0.10: permanent write-off immediately (gas always >> balance).
+      // Other chains: after MAX_UNPROFITABLE_SWEEPS failures, defer for DEFERRAL_HOURS.
+      const ERC20_CHAINS = ["USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20"];
+      const isERC20 = ERC20_CHAINS.includes(walletType);
+      const balUSD = profitabilityResult.balanceUSD || 0;
+      
+      // ERC20 immediate write-off for dust < $0.10
+      if (isERC20 && balUSD < 0.10) {
+        cronLogger.warn(`[MerchantPool] 🗑️ ERC20 WRITE-OFF: ${poolAddress.dataValues.wallet_address} — $${balUSD.toFixed(4)} permanently written off (gas always >> balance)`);
+        await poolAddress.update({ 
+          status: "AVAILABLE", 
+          admin_fee_balance: 0,
+          last_swept_at: new Date(),
+        });
+        return {
+          success: true,
+          skipped: false,
+          reason: `ERC20 dust written off ($${balUSD.toFixed(4)})`,
+          balanceUSD: balUSD,
+          feeUSD: profitabilityResult.feeUSD,
+          dustWriteOff: true,
+        };
+      }
+      
+      // Non-ERC20: track failures and defer after threshold
       const MAX_UNPROFITABLE_SWEEPS = 5;
       const DEFERRAL_HOURS = 168; // 7 days
       const failCountKey = `sweep:unprofitable:${tempAddressId}`;
@@ -1222,19 +1244,32 @@ export const sweepByTime = async (): Promise<number> => {
       const isStaleTokenAddress = TOKEN_CHAINS.includes(walletType) && timeSincePayout > 1440; // 24 hours
       
       // ─── AUTO-RELEASE: Micro-dust addresses idle for > 14 days ───
-      // Addresses with < $1 balance that have been idle for 14+ days will never be profitable
-      // to sweep. Defer sweeping for 30 days instead of retrying every 30 min. On-chain balance is preserved.
+      // ERC20 dust < $0.10: permanent write-off (gas will always be 10,000x+ the balance).
+      //   On-chain balance preserved — recovered automatically if address is reused.
+      // Non-ERC20 dust < $1.00: deferred for 30 days (gas prices may drop).
       const MAX_IDLE_DUST_MINUTES = 20160; // 14 days
-      const MICRO_DUST_USD = 1.00;
+      const ERC20_CHAINS = ["USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20"];
+      const isERC20 = ERC20_CHAINS.includes(walletType);
+      const MICRO_DUST_USD = isERC20 ? 0.10 : 1.00;
       if (isStaleTokenAddress && timeSincePayout > MAX_IDLE_DUST_MINUTES) {
         try {
           const dustUSD = await convertToUSD(walletType, cryptoAmount);
           if (dustUSD < MICRO_DUST_USD) {
-            cronLogger.warn(`[MerchantPool] ⏸️ LONG DEFER: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} micro-dust, idle ${timeSincePayout} min (${Math.floor(timeSincePayout / 1440)}d) — deferring sweep for 30 days`);
-            // Defer in Redis for 30 days; admin_fee_balance preserved on-chain
-            const deferKey = `sweep:unprofitable:${address.dataValues.temp_address_id}`;
-            const deferUntil = new Date(Date.now() + 30 * 24 * 3600000).toISOString();
-            await setRedisItemWithTTL(deferKey, { count: 99, deferredUntil: deferUntil }, 30 * 86400);
+            if (isERC20) {
+              // ERC20 permanent write-off: gas will always dwarf the balance.
+              // On-chain crypto preserved — swept automatically when address is reused.
+              cronLogger.warn(`[MerchantPool] 🗑️ ERC20 WRITE-OFF: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} dust, idle ${Math.floor(timeSincePayout / 1440)}d — permanently written off`);
+              await merchantTempAddressModel.update(
+                { status: "AVAILABLE", admin_fee_balance: 0, last_swept_at: new Date() },
+                { where: { temp_address_id: address.dataValues.temp_address_id } }
+              );
+            } else {
+              // Non-ERC20: defer for 30 days (gas prices may drop or fee wallet topped up)
+              cronLogger.warn(`[MerchantPool] ⏸️ LONG DEFER: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} micro-dust, idle ${Math.floor(timeSincePayout / 1440)}d — deferring sweep for 30 days`);
+              const deferKey = `sweep:unprofitable:${address.dataValues.temp_address_id}`;
+              const deferUntil = new Date(Date.now() + 30 * 24 * 3600000).toISOString();
+              await setRedisItemWithTTL(deferKey, { count: 99, deferredUntil: deferUntil }, 30 * 86400);
+            }
             continue; // Skip to next address
           }
         } catch (_convErr) {
