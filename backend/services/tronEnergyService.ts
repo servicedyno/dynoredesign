@@ -31,7 +31,11 @@ const CACHE_KEYS = {
 const CACHE_TTL = {
   NETWORK_PARAMS: 300,      // 5 min — network params change rarely
   ACCOUNT_RESOURCES: 180,   // 180 sec — increased from 120s to further reduce TronGrid 429s during sweep cycles
-  ACCOUNT_ACTIVATED: 86400,  // 24 hours — activation status is permanent once true
+  ACCOUNT_ACTIVATED: 300,   // 5 min — FIX (2026-04-07): Reduced from 24h. Merchants can zero their
+                            // token balance at any time (outgoing transfer), making the "activated"
+                            // status stale. A stale cache caused OUT_OF_ENERGY on $98 payment when
+                            // SmartGas funded for 65k energy (ACTIVATED) but TRON VM charged 130k (NEW).
+                            // 5 min balances accuracy vs API rate limiting.
 };
 
 // Energy required for TRC20 transfers
@@ -272,10 +276,11 @@ export const isRecipientActivatedForToken = async (
 ): Promise<boolean> => {
   const cacheKey = `${CACHE_KEYS.ACCOUNT_ACTIVATED_PREFIX}${recipientAddress}:${tokenContractAddress}`;
 
-  // Check cache (long TTL — once activated, stays activated)
+  // Check cache (short TTL — balance can change anytime)
   try {
-    const cached = await getRedisItem(cacheKey) as { activated?: boolean } | null;
+    const cached = await getRedisItem(cacheKey) as { activated?: boolean; ts?: number } | null;
     if (cached && cached.activated !== undefined) {
+      // FIX: Redis TTL handles expiry, but also check if cached value exists
       return cached.activated;
     }
   } catch (_e) {
@@ -297,13 +302,14 @@ export const isRecipientActivatedForToken = async (
         const tokens = response.data?.data || [];
         const activated = tokens.length > 0 && parseFloat(tokens[0]?.balance || "0") > 0;
 
-        // Only cache if activated (permanent state)
-        if (activated) {
-          try {
-            await setRedisItem(cacheKey, { activated: true });
-          } catch (_e) {
-            // Non-critical
-          }
+        // FIX (2026-04-07): Cache BOTH activated and not-activated states.
+        // Previously only cached TRUE, which meant zeroed wallets were checked
+        // on every call (causing 429s) and once cached TRUE, stayed cached for 24h
+        // even after balance went to 0. Now caches both with short 5-min TTL.
+        try {
+          await setRedisItemWithTTL(cacheKey, { activated }, CACHE_TTL.ACCOUNT_ACTIVATED);
+        } catch (_e) {
+          // Non-critical
         }
 
         return activated;
