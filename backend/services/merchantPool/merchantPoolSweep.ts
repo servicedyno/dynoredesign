@@ -976,6 +976,35 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
 };
 
 /**
+ * Retry-aware sweep helper — retries once on transient network errors (ETIMEDOUT, ECONNRESET).
+ * Prevents single transient network failures from marking a sweep as permanently failed for this cycle.
+ */
+const sweepWithRetry = async (addrId: number, walletAddress: string): Promise<void> => {
+  try {
+    await sweepPoolAddress(addrId);
+  } catch (error: unknown) {
+    const err = error as { code?: string; message?: string };
+    const isTransient = err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED'
+      || (err.message || '').includes('ETIMEDOUT') || (err.message || '').includes('ECONNRESET')
+      || (err.message || '').includes('timeout');
+    
+    if (isTransient) {
+      cronLogger.warn(`[MerchantPool] ⚠️ Transient error sweeping ${walletAddress} (${err.code || 'timeout'}), retrying in 3s...`);
+      await new Promise(r => setTimeout(r, 3000));
+      try {
+        await sweepPoolAddress(addrId);
+        cronLogger.info(`[MerchantPool] ✅ Sweep retry succeeded for ${walletAddress}`);
+        return;
+      } catch (retryError) {
+        cronLogger.error(`[MerchantPool] ❌ Sweep retry also failed for ${walletAddress}:`, retryError);
+        throw retryError;
+      }
+    }
+    throw error; // Non-transient error — rethrow immediately
+  }
+};
+
+/**
  * Sweep addresses by USD threshold
  * BUG FIX: Now checks BOTH 'AVAILABLE' AND 'IN_USE' addresses with admin_fee_balance > 0.
  * Previously only checked AVAILABLE, which caused token addresses (USDT-TRC20, USDT-ERC20, USDC-ERC20)
@@ -1076,7 +1105,7 @@ export const sweepByThreshold = async (): Promise<number> => {
       return;
     }
     try {
-      await sweepPoolAddress(addrId);
+      await sweepWithRetry(addrId, address.dataValues.wallet_address);
     } catch (error) {
       cronLogger.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     } finally {
@@ -1184,7 +1213,7 @@ export const sweepByTime = async (): Promise<number> => {
       return;
     }
     try {
-      await sweepPoolAddress(addrId);
+      await sweepWithRetry(addrId, address.dataValues.wallet_address);
     } catch (error) {
       cronLogger.error(`[MerchantPool] Failed to sweep ${address.dataValues.wallet_address}:`, error);
     } finally {

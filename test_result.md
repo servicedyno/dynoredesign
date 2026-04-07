@@ -1480,3 +1480,37 @@ frontend:
   - GET /api/pay/network-fees: Core functionality test
   - GET /api/geo-detect: Core functionality test
 
+
+## Backend Test Request — Railway Log Anomaly Fixes (5 fixes) — 2026-04-07
+- agent: main
+- message: Fixed 5 anomalies from Railway log analysis:
+  1. **#6 TronEnergy 429 Rate Limiting**: Added retry with backoff (2 attempts, 1.5s delay for 429), increased ACCOUNT_RESOURCES cache TTL from 30s to 120s
+  2. **#7 ETH Sweep ETIMEDOUT**: Added `sweepWithRetry()` wrapper — retries once on transient network errors (ETIMEDOUT/ECONNRESET/timeout) with 3s delay
+  3. **#8 Merchant Webhook Timeout**: Increased callMerchantWebhook timeout from 10s to 15s
+  4. **#9 Tatum Rate API Failure**: Added 1 retry with 1s backoff before caching failure (was immediate cache on first fail)
+  5. **#10 Cron Lock Expiry**: Increased preWarmAddressPool lock TTL from 60s to 120s
+- Files changed: tronEnergyService.ts, merchantPoolSweep.ts, webhooks/index.ts, currencyConvert.ts, server.ts
+- test_endpoints:
+  - GET /api/: Health check (should return 200)
+  - GET /api/pay/network-fees: Core functionality test
+  - GET /api/geo-detect: Core functionality test
+
+## Review Request Testing Results - 2026-04-07 06:35:24 UTC
+- agent: testing
+- message: Completed review request testing of DynoPay backend API endpoints after applying 5 bug fixes for Railway log anomalies
+- context: Testing after TronEnergy retry/backoff, Sweep ETIMEDOUT wrapper, Webhook timeout increase, Tatum rate API retry, and Cron lock TTL increase
+- test_results: ALL TESTS PASSED ✅
+  * GET /api/ → HTTP 200 (Health check operational, status: operational, service: Dynopay API, version: 1.0.0, timestamp: 2026-04-07T06:35:24.447Z)
+  * GET /api/pay/network-fees → HTTP 200 (Network fees retrieved successfully with proper data structure)
+  * GET /api/geo-detect → HTTP 200 (Geo detection working - Country: United States, countryCode: US)
+- verification_status: COMPLETE ✅
+  * All endpoints return appropriate status codes (200 - NOT 500) as specifically requested in review
+  * Health check shows operational status with comprehensive API documentation and current timestamp
+  * Network fees endpoint returns proper data structure with message and data fields
+  * Geo detection service working correctly with proper country identification
+  * No 500 errors detected on any tested endpoint - key requirement verified
+  * Backend API fully operational after Railway log anomaly fixes
+  * All 5 bug fixes (TronEnergy retry, Sweep wrapper, Webhook timeout, Tatum retry, Cron lock TTL) did not break any core functionality
+  * Node.js/TypeScript API running behind Python proxy is functioning correctly
+  * Regression testing confirms continued stability after reliability improvements
+

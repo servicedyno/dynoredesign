@@ -13,7 +13,7 @@
 
 import axios from "axios";
 import { cronLogger } from "../utils/loggers";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisItemWithTTL, setRedisTTL } from "../utils/redisInstance";
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -30,7 +30,7 @@ const CACHE_KEYS = {
 // Cache TTLs (seconds)
 const CACHE_TTL = {
   NETWORK_PARAMS: 300,      // 5 min — network params change rarely
-  ACCOUNT_RESOURCES: 30,    // 30 sec — resources can change with each block
+  ACCOUNT_RESOURCES: 120,   // 120 sec — increased from 30s to reduce TronGrid 429s during sweep cycles
   ACCOUNT_ACTIVATED: 86400,  // 24 hours — activation status is permanent once true
 };
 
@@ -181,66 +181,83 @@ export const getAccountResources = async (address: string): Promise<AccountResou
     // Continue
   }
 
-  try {
-    const response = await axios.post(
-      `${TRONGRID_API}/wallet/getaccountresource`,
-      { address, visible: true },
-      { timeout: 8000 }
-    );
-
-    const data = response.data;
-
-    const energyLimit = data.EnergyLimit || 0;
-    const energyUsed = data.EnergyUsed || 0;
-    const availableEnergy = Math.max(0, energyLimit - energyUsed);
-
-    const freeBandwidth = data.freeNetLimit || FALLBACK.FREE_BANDWIDTH;
-    const freeBandwidthUsed = data.freeNetUsed || 0;
-    const stakedBandwidth = data.NetLimit || 0;
-    const stakedBandwidthUsed = data.NetUsed || 0;
-
-    const totalBandwidth = freeBandwidth + stakedBandwidth;
-    const totalBandwidthUsed = freeBandwidthUsed + stakedBandwidthUsed;
-    const availableBandwidth = Math.max(0, totalBandwidth - totalBandwidthUsed);
-
-    const result: AccountResources = {
-      address,
-      energyLimit,
-      energyUsed,
-      availableEnergy,
-      bandwidthLimit: stakedBandwidth,
-      freeBandwidth,
-      bandwidthUsed: totalBandwidthUsed,
-      availableBandwidth,
-      hasSufficientEnergy: availableEnergy >= TRC20_ENERGY.EXISTING_RECIPIENT,
-      timestamp: Date.now(),
-    };
-
-    // Cache
+  // Retry with backoff for transient errors (429 rate limits, ETIMEDOUT, etc.)
+  const MAX_RETRIES = 2;
+  let lastError: string = '';
+  
+  for (let attempt = 1; attempt <= MAX_RETRIES; attempt++) {
     try {
-      await setRedisItem(cacheKey, result);
-    } catch (_e) {
-      // Non-critical
+      const response = await axios.post(
+        `${TRONGRID_API}/wallet/getaccountresource`,
+        { address, visible: true },
+        { timeout: 8000 }
+      );
+
+      const data = response.data;
+
+      const energyLimit = data.EnergyLimit || 0;
+      const energyUsed = data.EnergyUsed || 0;
+      const availableEnergy = Math.max(0, energyLimit - energyUsed);
+
+      const freeBandwidth = data.freeNetLimit || FALLBACK.FREE_BANDWIDTH;
+      const freeBandwidthUsed = data.freeNetUsed || 0;
+      const stakedBandwidth = data.NetLimit || 0;
+      const stakedBandwidthUsed = data.NetUsed || 0;
+
+      const totalBandwidth = freeBandwidth + stakedBandwidth;
+      const totalBandwidthUsed = freeBandwidthUsed + stakedBandwidthUsed;
+      const availableBandwidth = Math.max(0, totalBandwidth - totalBandwidthUsed);
+
+      const result: AccountResources = {
+        address,
+        energyLimit,
+        energyUsed,
+        availableEnergy,
+        bandwidthLimit: stakedBandwidth,
+        freeBandwidth,
+        bandwidthUsed: totalBandwidthUsed,
+        availableBandwidth,
+        hasSufficientEnergy: availableEnergy >= TRC20_ENERGY.EXISTING_RECIPIENT,
+        timestamp: Date.now(),
+      };
+
+      // Cache with explicit TTL
+      try {
+        await setRedisItemWithTTL(cacheKey, result, CACHE_TTL.ACCOUNT_RESOURCES);
+      } catch (_e) {
+        // Non-critical
+      }
+
+      return result;
+
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string; code?: string };
+      lastError = err.message || 'Unknown error';
+      const is429 = err.response?.status === 429;
+      const isTransient = is429 || err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED';
+      
+      if (isTransient && attempt < MAX_RETRIES) {
+        const delay = is429 ? 1500 * attempt : 500 * attempt; // Longer backoff for 429
+        await new Promise(r => setTimeout(r, delay));
+        continue; // Retry
+      }
+      // Final attempt failed — fall through to fallback below
     }
-
-    return result;
-
-  } catch (error: unknown) {
-    const err = error as { message?: string };
-    cronLogger.warn(`[TronEnergy] ⚠️ Failed to get resources for ${address}: ${err.message}`);
-    return {
-      address,
-      energyLimit: 0,
-      energyUsed: 0,
-      availableEnergy: 0,
-      bandwidthLimit: 0,
-      freeBandwidth: FALLBACK.FREE_BANDWIDTH,
-      bandwidthUsed: 0,
-      availableBandwidth: FALLBACK.FREE_BANDWIDTH,
-      hasSufficientEnergy: false,
-      timestamp: Date.now(),
-    };
   }
+  
+  cronLogger.warn(`[TronEnergy] ⚠️ Failed to get resources for ${address}: ${lastError}`);
+  return {
+    address,
+    energyLimit: 0,
+    energyUsed: 0,
+    availableEnergy: 0,
+    bandwidthLimit: 0,
+    freeBandwidth: FALLBACK.FREE_BANDWIDTH,
+    bandwidthUsed: 0,
+    availableBandwidth: FALLBACK.FREE_BANDWIDTH,
+    hasSufficientEnergy: false,
+    timestamp: Date.now(),
+  };
 };
 
 // ─── Recipient Activation Check ──────────────────────────────────────────────

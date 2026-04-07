@@ -800,7 +800,7 @@ cron.schedule("*/15 * * * *", function () {
 // This moves ~400-600ms of lock+transaction+findOne off the payment creation critical path
 // ═══════════════════════════════════════════════════════════════════════
 cron.schedule("*/2 * * * *", async function () {
-  const lockAcquired = await acquireLock("cron:preWarmAddressPool", 60, 1, 100, true);
+  const lockAcquired = await acquireLock("cron:preWarmAddressPool", 120, 1, 100, true);
   if (!lockAcquired) return;
   try {
     await merchantPoolService.preWarmAddressPool();

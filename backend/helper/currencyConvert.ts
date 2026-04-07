@@ -238,31 +238,44 @@ const getTatumRate = async (crypto: string, fiat: string = 'USD'): Promise<numbe
     return null;
   }
 
-  try {
-    const { data } = await axios.get(
-      `https://api.tatum.io/v3/tatum/rate/${id}`,
-      {
-        params: { basePair: fiat.toUpperCase() },
-        headers: { 'x-api-key': apiKey },
-        timeout: 8000,
+  // Retry once on transient errors before caching the failure
+  const MAX_RATE_RETRIES = 2;
+  for (let attempt = 1; attempt <= MAX_RATE_RETRIES; attempt++) {
+    try {
+      const { data } = await axios.get(
+        `https://api.tatum.io/v3/tatum/rate/${id}`,
+        {
+          params: { basePair: fiat.toUpperCase() },
+          headers: { 'x-api-key': apiKey },
+          timeout: 8000,
+        }
+      );
+      const rate = parseFloat(data?.value);
+      if (rate > 0) {
+        apiLogger.info(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
+        return rate;
       }
-    );
-    const rate = parseFloat(data?.value);
-    if (rate > 0) {
-      apiLogger.info(`[currencyConvert] Tatum rate for ${crypto}→${fiat}: ${rate}`);
-      return rate;
-    }
-  } catch (error: unknown) {
-    const err = error as { response?: { status?: number }; message?: string };
-    // Cache the failure to avoid hammering and log spam
-    const is403 = err.response?.status === 403;
-    tatumFailureCache.set(failKey, { timestamp: Date.now(), is403 });
-    // Log once per failure window (not every cron tick)
-    if (!lastFail) {
-      const suffix = is403
-        ? `(Tatum 403 — pair permanently unsupported; cached for 24h. Cross-rate recovery will fill the gap)`
-        : `(transient error; cached for 2 min)`;
-      apiLogger.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
+    } catch (error: unknown) {
+      const err = error as { response?: { status?: number }; message?: string; code?: string };
+      const is403 = err.response?.status === 403;
+      const isTransient = !is403 && (err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET' || err.response?.status === 429
+        || (err.message || '').includes('timeout'));
+      
+      // Retry on transient errors only
+      if (isTransient && attempt < MAX_RATE_RETRIES) {
+        await new Promise(r => setTimeout(r, 1000));
+        continue;
+      }
+      
+      // Cache the failure to avoid hammering and log spam
+      tatumFailureCache.set(failKey, { timestamp: Date.now(), is403 });
+      // Log once per failure window (not every cron tick)
+      if (!lastFail) {
+        const suffix = is403
+          ? `(Tatum 403 — pair permanently unsupported; cached for 24h. Cross-rate recovery will fill the gap)`
+          : `(transient error; cached for 2 min)`;
+        apiLogger.warn(`[currencyConvert] Tatum rate API failed for ${crypto}→${fiat}: ${err.message} ${suffix}`);
+      }
     }
   }
   return null;

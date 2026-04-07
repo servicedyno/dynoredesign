@@ -297,7 +297,7 @@ const callUrlWithPayload = async (
     for (let attempt = 1; attempt <= maxRetries; attempt++) {
       try {
         const response = await axios.post(url, webhookPayload, {
-          timeout: 10000,
+          timeout: 15000,
           headers,
         });
         
