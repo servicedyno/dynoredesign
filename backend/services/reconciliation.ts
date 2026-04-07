@@ -100,23 +100,30 @@ export async function runStartupReconciliation(): Promise<{
     const criticalCount = stats.stuckPayments + stats.failedPayments + stats.failedStatePayments;
     const replayCount = stats.tatumMissed + stats.bullmqFailedJobs;
 
-    let severity: "high" | "medium" | "low";
-    if (criticalCount > 3 || total > 20) {
-      severity = "high";  // Actual stuck/failed payments, or huge backlog
-    } else if (criticalCount > 0 || replayCount > 10) {
-      severity = "medium"; // Some real issues, or notable replay backlog
+    // Pure tatum replays with no critical issues are expected after restart — don't alert
+    if (criticalCount === 0 && stats.bullmqFailedJobs === 0 && stats.tatumMissed <= 10) {
+      webhookLogs.info(
+        `[Reconciliation] ℹ️ Only ${stats.tatumMissed} Tatum replays (no critical issues) — suppressing alert`
+      );
     } else {
-      severity = "low";   // Only Tatum replays — normal after restart
-    }
-
-    captureError(
-      new Error(`Reconciliation found ${total} items to process`),
-      "system",
-      {
-        severity,
-        extraContext: JSON.stringify(stats),
+      let severity: "high" | "medium" | "low";
+      if (criticalCount > 3 || total > 20) {
+        severity = "high";  // Actual stuck/failed payments, or huge backlog
+      } else if (criticalCount > 0 || replayCount > 10) {
+        severity = "medium"; // Some real issues, or notable replay backlog
+      } else {
+        severity = "low";   // Only Tatum replays — normal after restart
       }
-    );
+
+      captureError(
+        new Error(`Reconciliation found ${total} items to process`),
+        "system",
+        {
+          severity,
+          extraContext: JSON.stringify(stats),
+        }
+      );
+    }
   }
 
   return stats;

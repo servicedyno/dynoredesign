@@ -333,6 +333,9 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
 
     if (!items || Object.keys(items).length === 0) {
       webhookLogs.info("[WebhookProcessor] No Redis data found, ignoring webhook");
+      // Mark as processed so reconciliation doesn't re-queue this TX on every restart
+      await setRedisItem(processedTxKey, { processed: true, type: "no_matching_payment", timestamp: new Date().toISOString() });
+      await setRedisTTL(processedTxKey, 172800); // 48h guard
       return;
     }
 
@@ -368,6 +371,9 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
           `[WebhookProcessor] ⛽ Gas funding TX detected: asset="${webhookAsset}" for ${expectedCurrency} address — skipping payment processing`,
           { address, txId: payload.txId, amount: payload.amount }
         );
+        // Mark as processed so reconciliation doesn't re-queue this TX on every restart
+        await setRedisItem(processedTxKey, { processed: true, type: "gas_funding", timestamp: new Date().toISOString() });
+        await setRedisTTL(processedTxKey, 172800); // 48h guard
         return;
       }
 
@@ -403,6 +409,9 @@ export async function processWebhookJob(data: WebhookJobData): Promise<void> {
             },
           });
         } catch (_journalErr) { /* non-blocking */ }
+        // Mark as processed so reconciliation doesn't re-queue this TX on every restart
+        await setRedisItem(processedTxKey, { processed: true, type: "asset_mismatch_rejected", timestamp: new Date().toISOString() });
+        await setRedisTTL(processedTxKey, 172800); // 48h guard
         return;
       }
 
