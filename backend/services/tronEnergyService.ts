@@ -30,7 +30,7 @@ const CACHE_KEYS = {
 // Cache TTLs (seconds)
 const CACHE_TTL = {
   NETWORK_PARAMS: 300,      // 5 min — network params change rarely
-  ACCOUNT_RESOURCES: 120,   // 120 sec — increased from 30s to reduce TronGrid 429s during sweep cycles
+  ACCOUNT_RESOURCES: 180,   // 180 sec — increased from 120s to further reduce TronGrid 429s during sweep cycles
   ACCOUNT_ACTIVATED: 86400,  // 24 hours — activation status is permanent once true
 };
 
@@ -237,7 +237,7 @@ export const getAccountResources = async (address: string): Promise<AccountResou
       const isTransient = is429 || err.code === 'ETIMEDOUT' || err.code === 'ECONNRESET' || err.code === 'ECONNREFUSED';
       
       if (isTransient && attempt < MAX_RETRIES) {
-        const delay = is429 ? 1500 * attempt : 500 * attempt; // Longer backoff for 429
+        const delay = is429 ? 2500 * attempt : 500 * attempt; // Longer backoff for 429 rate limits
         await new Promise(r => setTimeout(r, delay));
         continue; // Retry
       }

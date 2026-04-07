@@ -17,7 +17,7 @@ import tatumApi from "../../apis/tatumApi";
 import { getErrorMessage, sendAdminFeeSweepEmail } from "../../helper";
 import { sendPaymentReceivedEmail } from "../../helper/sendEmail";
 import { convertToUSD, convertToFiat } from "../../utils/currencyUtils";
-import { getRedisItem, setRedisItem, setRedisTTL } from "../../utils/redisInstance";
+import { getRedisItem, setRedisItem, setRedisTTL, setRedisItemWithTTL } from "../../utils/redisInstance";
 import {
   getAccountResources,
   calculateDynamicTRC20Fee,
@@ -530,12 +530,46 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       cronLogger.warn(`[MerchantPool] ⚠️ Sweep not profitable for ${poolAddress.dataValues.wallet_address}`);
       cronLogger.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
       cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
-      cronLogger.warn(`[MerchantPool]    Skipping sweep — NO gas funded (profitability-first optimization)`);
       
-      // BUG FIX: Return to AVAILABLE so address remains visible to reservation pipeline
-      // for fee concentration AND to sweep pipeline (both check AVAILABLE + IN_USE).
-      // Previously kept token addresses as IN_USE which made them invisible to reservation,
-      // spreading admin fees across 4+ addresses that never reached threshold.
+      // ─── DUST WRITE-OFF: Track consecutive unprofitable sweeps ───
+      // After MAX_UNPROFITABLE_SWEEPS failures, write off dust and release address
+      // This prevents the infinite sweep loop where stale addresses retry every 30 min
+      const MAX_UNPROFITABLE_SWEEPS = 5;
+      const DUST_WRITEOFF_USD = 5.00; // Only write off balances below this amount
+      const failCountKey = `sweep:unprofitable:${tempAddressId}`;
+      
+      let failCount = 1;
+      try {
+        const existing = await getRedisItem(failCountKey) as { count: number } | null;
+        failCount = (existing?.count || 0) + 1;
+        await setRedisItemWithTTL(failCountKey, { count: failCount, lastAttempt: new Date().toISOString() }, 86400 * 7); // 7-day TTL
+      } catch (_e) { /* Non-critical */ }
+      
+      const balUSD = profitabilityResult.balanceUSD || 0;
+      
+      if (failCount >= MAX_UNPROFITABLE_SWEEPS && balUSD < DUST_WRITEOFF_USD) {
+        // Write off: zero out admin_fee_balance and release address back to pool
+        cronLogger.warn(`[MerchantPool] 🗑️ DUST WRITE-OFF: ${poolAddress.dataValues.wallet_address} — $${balUSD.toFixed(2)} written off after ${failCount} consecutive unprofitable sweeps`);
+        await poolAddress.update({ 
+          status: "AVAILABLE", 
+          admin_fee_balance: 0,
+          last_swept_at: new Date(),
+        });
+        // Clear the failure counter
+        try { await setRedisItemWithTTL(failCountKey, { count: 0 }, 3600); } catch (_e) { /* */ }
+        return {
+          success: true,
+          skipped: false,
+          reason: `Dust written off ($${balUSD.toFixed(2)}) after ${failCount} unprofitable attempts`,
+          balanceUSD: balUSD,
+          feeUSD: profitabilityResult.feeUSD,
+          dustWriteOff: true,
+        };
+      }
+      
+      cronLogger.warn(`[MerchantPool]    Skipping sweep — NO gas funded (profitability-first, fail ${failCount}/${MAX_UNPROFITABLE_SWEEPS})`);
+      
+      // Return to AVAILABLE so address remains visible to reservation pipeline
       await poolAddress.update({ status: "AVAILABLE" });
       
       return { 
@@ -546,6 +580,12 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
         feeUSD: profitabilityResult.feeUSD
       };
     }
+    
+    // Reset unprofitable sweep counter on success
+    try { 
+      const failCountKey = `sweep:unprofitable:${tempAddressId}`;
+      await setRedisItemWithTTL(failCountKey, { count: 0 }, 3600); 
+    } catch (_e) { /* Non-critical */ }
     
     cronLogger.info(`[MerchantPool] ✅ Sweep is profitable: $${profitabilityResult.balanceUSD?.toFixed(2)} balance vs $${profitabilityResult.feeUSD?.toFixed(2)} fee`);
 
@@ -1093,9 +1133,12 @@ export const sweepByThreshold = async (): Promise<number> => {
     cronLogger.info(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for threshold sweep`);
   }
 
-  // Sweep eligible addresses concurrently with per-address locks
-  // This allows multiple chains to sweep simultaneously instead of sequentially
-  const sweepPromises = eligibleAddresses.map(async (address) => {
+  // Sweep eligible addresses with staggered TRON execution to avoid TronGrid 429 rate limits.
+  const TRON_INTER_SWEEP_DELAY_MS = 500;
+  const tronAddrs = eligibleAddresses.filter(a => (a.dataValues.wallet_type || '').includes('TRC20') || a.dataValues.wallet_type === 'TRX');
+  const otherAddrs = eligibleAddresses.filter(a => !((a.dataValues.wallet_type || '').includes('TRC20') || a.dataValues.wallet_type === 'TRX'));
+
+  const sweepOneAddr = async (address: typeof eligibleAddresses[0]) => {
     const addrId = address.dataValues.temp_address_id;
     const lockKey = `sweep:address:${addrId}`;
     const { acquireLock, releaseLock } = await import("../../utils/redisInstance");
@@ -1111,8 +1154,20 @@ export const sweepByThreshold = async (): Promise<number> => {
     } finally {
       await releaseLock(lockKey);
     }
-  });
-  await Promise.allSettled(sweepPromises);
+  };
+
+  // Non-TRON: sweep concurrently
+  const otherPs = otherAddrs.map(sweepOneAddr);
+
+  // TRON: sweep sequentially with delay to avoid TronGrid 429s
+  const tronP = (async () => {
+    for (let i = 0; i < tronAddrs.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, TRON_INTER_SWEEP_DELAY_MS));
+      await sweepOneAddr(tronAddrs[i]);
+    }
+  })();
+
+  await Promise.allSettled([...otherPs, tronP]);
   
   return eligibleAddresses.length;
 };
@@ -1154,6 +1209,27 @@ export const sweepByTime = async (): Promise<number> => {
       // should be force-swept regardless of sweep mode. This catches threshold-mode tokens
       // that accumulated fees below threshold but have been stuck for too long.
       const isStaleTokenAddress = TOKEN_CHAINS.includes(walletType) && timeSincePayout > 1440; // 24 hours
+      
+      // ─── AUTO-RELEASE: Micro-dust addresses idle for > 14 days ───
+      // Addresses with < $1 balance that have been idle for 14+ days will never be profitable
+      // to sweep. Write off the dust and release immediately instead of retrying forever.
+      const MAX_IDLE_DUST_MINUTES = 20160; // 14 days
+      const MICRO_DUST_USD = 1.00;
+      if (isStaleTokenAddress && timeSincePayout > MAX_IDLE_DUST_MINUTES) {
+        try {
+          const dustUSD = await convertToUSD(walletType, cryptoAmount);
+          if (dustUSD < MICRO_DUST_USD) {
+            cronLogger.warn(`[MerchantPool] 🗑️ AUTO-RELEASE: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} dust, idle ${timeSincePayout} min (${Math.floor(timeSincePayout / 1440)}d) — writing off`);
+            await merchantTempAddressModel.update(
+              { status: "AVAILABLE", admin_fee_balance: 0, last_swept_at: new Date() },
+              { where: { temp_address_id: address.dataValues.temp_address_id } }
+            );
+            continue; // Skip to next address
+          }
+        } catch (_convErr) {
+          // If conversion fails, proceed with normal sweep attempt
+        }
+      }
       
       if (sweepConfig.mode !== "time" && !isUTXOAutoConvertRecovery && !isStaleTokenAddress) {
         continue;
@@ -1202,8 +1278,13 @@ export const sweepByTime = async (): Promise<number> => {
     cronLogger.info(`[MerchantPool] Found ${eligibleAddresses.length} addresses eligible for time-based sweep`);
   }
 
-  // Sweep eligible addresses concurrently with per-address locks
-  const sweepPromises = eligibleAddresses.map(async (address) => {
+  // Sweep eligible addresses with staggered execution to avoid TRON API rate limits (429).
+  // TRON addresses are processed sequentially with a delay; other chains run concurrently.
+  const TRON_INTER_SWEEP_DELAY_MS = 500; // 500ms between TRON address sweeps
+  const tronAddresses = eligibleAddresses.filter(a => (a.dataValues.wallet_type || '').includes('TRC20') || a.dataValues.wallet_type === 'TRX');
+  const otherAddresses = eligibleAddresses.filter(a => !((a.dataValues.wallet_type || '').includes('TRC20') || a.dataValues.wallet_type === 'TRX'));
+
+  const sweepOne = async (address: typeof eligibleAddresses[0]) => {
     const addrId = address.dataValues.temp_address_id;
     const lockKey = `sweep:address:${addrId}`;
     const { acquireLock, releaseLock } = await import("../../utils/redisInstance");
@@ -1219,8 +1300,20 @@ export const sweepByTime = async (): Promise<number> => {
     } finally {
       await releaseLock(lockKey);
     }
-  });
-  await Promise.allSettled(sweepPromises);
+  };
+
+  // Non-TRON: sweep concurrently
+  const otherPromises = otherAddresses.map(sweepOne);
+
+  // TRON: sweep sequentially with delay to avoid TronGrid 429s
+  const tronPromise = (async () => {
+    for (let i = 0; i < tronAddresses.length; i++) {
+      if (i > 0) await new Promise(r => setTimeout(r, TRON_INTER_SWEEP_DELAY_MS));
+      await sweepOne(tronAddresses[i]);
+    }
+  })();
+
+  await Promise.allSettled([...otherPromises, tronPromise]);
   
   return eligibleAddresses.length;
 };
