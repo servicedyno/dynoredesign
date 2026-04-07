@@ -2,7 +2,7 @@ const axios = require('axios');
 require('dotenv').config();
 
 // Configuration
-const BACKEND_URL = process.env.SERVER_URL || 'https://onboard-flow-85.preview.emergentagent.com';
+const BACKEND_URL = process.env.SERVER_URL || 'https://infallible-dhawan-4.preview.emergentagent.com';
 
 // Test data
 const TEST_USER = {

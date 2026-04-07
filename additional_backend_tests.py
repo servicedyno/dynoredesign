@@ -8,7 +8,7 @@ import requests
 import json
 import sys
 
-BACKEND_URL = "https://onboard-flow-85.preview.emergentagent.com"
+BACKEND_URL = "https://infallible-dhawan-4.preview.emergentagent.com"
 
 def test_additional_scenarios():
     """Test additional scenarios and edge cases"""
