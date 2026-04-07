@@ -3381,8 +3381,10 @@ const settleCryptoTransaction = async ({
                 throw new Error(`Gas cap exceeded for payment. ${totalGasFundedTRX} TRX already funded. Manual recovery required.`);
               }
 
-              // Use tronEnergyService for accurate energy estimation
-              const dynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+              // FIX (2026-04-07): Pass recipient + contract for accurate activation-aware estimation
+              // Previously only passed fromAddress, defaulting to NEW (130k) energy always.
+              const trc20Contract = contractAddress || process.env.TRX_CONTRACT || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+              const dynamicFee = await calculateDynamicTRC20Fee(fromAddress, userAddress, trc20Contract);
               const extraGasNeeded = dynamicFee.fast;
               totalGasFundedTRX += extraGasNeeded;
               
@@ -3733,8 +3735,10 @@ const settleCryptoTransaction = async ({
                 }
                 
                 // Re-fund gas with energy-aware estimation
+                // FIX (2026-04-07): Pass recipient + contract for correct activation check
                 cronLogger.info(`[settleCryptoTransaction] 🔋 Recovery: Re-funding TRX gas for ${fromAddress} (total gas funded: ${totalGasFundedTRX}/${MAX_GAS_PER_PAYMENT_TRX} TRX)...`);
-                const recoveryDynamicFee = await calculateDynamicTRC20Fee(fromAddress);
+                const recoveryTrc20Contract = process.env.TRX_CONTRACT || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t';
+                const recoveryDynamicFee = await calculateDynamicTRC20Fee(fromAddress, userAddress, recoveryTrc20Contract);
                 totalGasFundedTRX += recoveryDynamicFee.fast;
                 
                 const refundResult = await merchantPoolService.fundGasIfNeeded(

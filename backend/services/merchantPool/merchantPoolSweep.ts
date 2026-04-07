@@ -129,14 +129,26 @@ export const fundGasIfNeeded = async (
         // tatumApi.feeEstimation() which returns stale/underestimated values.
         // This prevents OUT_OF_ENERGY failures on TRON.
         if (gasToken === "TRX" && TOKEN_CHAINS.includes(walletType) && walletType.includes("TRC20")) {
-          // FIX (2026-04-02): Pass recipient address and token contract for activation-aware estimation.
-          // Activated recipients need 65k energy (not 130k), saving ~50% on gas funding.
+          // FIX (2026-04-07): ALWAYS use NEW_RECIPIENT (130k) energy for gas funding.
+          // The isRecipientActivatedForToken() API check proved unreliable in production:
+          // TronGrid/TronScan may report ACTIVATED but TRON VM still charges 130k energy,
+          // causing OUT_OF_ENERGY when SmartGas only funded for 65k.
+          // Extra ~$2 in TRX stays in pool address and gets reclaimed on sweep.
+          // Passing undefined for recipient forces safe NEW_RECIPIENT default.
           const trc20Contract = walletType === 'USDT-TRC20'
             ? (process.env.TRX_CONTRACT || 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t')
             : undefined;
-          const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, recipientAddress, trc20Contract);
+          const dynamicFee = await calculateDynamicTRC20Fee(tempAddress, undefined, undefined);
           estimatedGas = dynamicFee.fast;
           cronLogger.info(`[SmartGas] 🔋 TRC20 energy-aware gas: ${estimatedGas} TRX (energy: ${dynamicFee.energyNeeded} needed [${dynamicFee.isNewRecipient ? 'NEW' : 'ACTIVATED'}], ${dynamicFee.energyAvailable} available, price: ${dynamicFee.energyPrice} SUN/unit)`);
+          
+          // Safety: if the estimate came back as ACTIVATED (65k) despite our intent,
+          // force minimum to cover NEW_RECIPIENT (130k) energy anyway
+          const minSafeTRC20Gas = 16.1; // 130k energy at 100 SUN/unit ≈ 13 TRX + 20% buffer
+          if (estimatedGas < minSafeTRC20Gas) {
+            cronLogger.info(`[SmartGas] 🛡️ Safety override: ${estimatedGas} TRX → ${minSafeTRC20Gas} TRX (force NEW_RECIPIENT minimum to prevent OUT_OF_ENERGY)`);
+            estimatedGas = minSafeTRC20Gas;
+          }
         } else {
           let contractAddress: string | undefined;
           if (walletType === 'USDT-ERC20') {
