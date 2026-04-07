@@ -462,6 +462,19 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       return { success: true, amount: 0, message: "No admin fee balance" };
     }
 
+    // ─── DEFERRAL CHECK: Skip addresses that have been deferred due to repeated unprofitable sweeps ───
+    // Deferral expires after DEFERRAL_HOURS (7 days), then the address is retried normally.
+    const deferKey = `sweep:unprofitable:${tempAddressId}`;
+    try {
+      const deferData = await getRedisItem(deferKey) as { count: number; deferredUntil?: string } | null;
+      if (deferData?.deferredUntil && new Date(deferData.deferredUntil) > new Date()) {
+        cronLogger.info(`[MerchantPool] ⏸️ Sweep deferred until ${deferData.deferredUntil} for address ${tempAddressId} (${deferData.count} unprofitable attempts)`);
+        await poolAddress.update({ status: "AVAILABLE" }, { transaction: dbTransaction });
+        await dbTransaction.commit();
+        return { success: false, skipped: true, reason: `Deferred until ${deferData.deferredUntil}` };
+      }
+    } catch (_e) { /* Non-critical — proceed with sweep attempt */ }
+
     const walletType = poolAddress.dataValues.wallet_type;
     const adminWallet = ADMIN_WALLETS[walletType];
     
@@ -531,41 +544,39 @@ export const sweepPoolAddress = async (tempAddressId: number): Promise<unknown> 
       cronLogger.warn(`[MerchantPool]    Balance: ${actualBalance} ${walletType} ($${profitabilityResult.balanceUSD?.toFixed(2)})`);
       cronLogger.warn(`[MerchantPool]    Est. Fee: ${profitabilityResult.estimatedFee} ${walletType} ($${profitabilityResult.feeUSD?.toFixed(2)})`);
       
-      // ─── DUST WRITE-OFF: Track consecutive unprofitable sweeps ───
-      // After MAX_UNPROFITABLE_SWEEPS failures, write off dust and release address
-      // This prevents the infinite sweep loop where stale addresses retry every 30 min
+      // ─── DUST SWEEP DEFERRAL: Track consecutive unprofitable sweeps ───
+      // After MAX_UNPROFITABLE_SWEEPS failures, defer sweeping for DEFERRAL_HOURS instead
+      // of zeroing admin_fee_balance. The on-chain balance is preserved, and sweeping
+      // resumes later when gas prices may have dropped or fee wallet was topped up.
       const MAX_UNPROFITABLE_SWEEPS = 5;
-      const DUST_WRITEOFF_USD = 5.00; // Only write off balances below this amount
+      const DEFERRAL_HOURS = 168; // 7 days
       const failCountKey = `sweep:unprofitable:${tempAddressId}`;
       
       let failCount = 1;
       try {
-        const existing = await getRedisItem(failCountKey) as { count: number } | null;
+        const existing = await getRedisItem(failCountKey) as { count: number; deferredUntil?: string } | null;
         failCount = (existing?.count || 0) + 1;
-        await setRedisItemWithTTL(failCountKey, { count: failCount, lastAttempt: new Date().toISOString() }, 86400 * 7); // 7-day TTL
+        
+        if (failCount >= MAX_UNPROFITABLE_SWEEPS) {
+          // Defer: stop retrying for DEFERRAL_HOURS, then the counter resets and sweeping resumes
+          const deferUntil = new Date(Date.now() + DEFERRAL_HOURS * 3600000).toISOString();
+          await setRedisItemWithTTL(failCountKey, { count: failCount, deferredUntil: deferUntil }, DEFERRAL_HOURS * 3600);
+          cronLogger.warn(`[MerchantPool] ⏸️ SWEEP DEFERRED: ${poolAddress.dataValues.wallet_address} — $${(profitabilityResult.balanceUSD || 0).toFixed(2)} deferred after ${failCount} consecutive unprofitable sweeps. Will retry after ${deferUntil}`);
+          
+          // Keep admin_fee_balance intact (on-chain funds preserved), just release the lock
+          await poolAddress.update({ status: "AVAILABLE" });
+          return {
+            success: false,
+            skipped: true,
+            reason: `Deferred for ${DEFERRAL_HOURS}h after ${failCount} unprofitable attempts`,
+            balanceUSD: profitabilityResult.balanceUSD,
+            feeUSD: profitabilityResult.feeUSD,
+            deferredUntil: deferUntil,
+          };
+        }
+        
+        await setRedisItemWithTTL(failCountKey, { count: failCount, lastAttempt: new Date().toISOString() }, 86400 * 7);
       } catch (_e) { /* Non-critical */ }
-      
-      const balUSD = profitabilityResult.balanceUSD || 0;
-      
-      if (failCount >= MAX_UNPROFITABLE_SWEEPS && balUSD < DUST_WRITEOFF_USD) {
-        // Write off: zero out admin_fee_balance and release address back to pool
-        cronLogger.warn(`[MerchantPool] 🗑️ DUST WRITE-OFF: ${poolAddress.dataValues.wallet_address} — $${balUSD.toFixed(2)} written off after ${failCount} consecutive unprofitable sweeps`);
-        await poolAddress.update({ 
-          status: "AVAILABLE", 
-          admin_fee_balance: 0,
-          last_swept_at: new Date(),
-        });
-        // Clear the failure counter
-        try { await setRedisItemWithTTL(failCountKey, { count: 0 }, 3600); } catch (_e) { /* */ }
-        return {
-          success: true,
-          skipped: false,
-          reason: `Dust written off ($${balUSD.toFixed(2)}) after ${failCount} unprofitable attempts`,
-          balanceUSD: balUSD,
-          feeUSD: profitabilityResult.feeUSD,
-          dustWriteOff: true,
-        };
-      }
       
       cronLogger.warn(`[MerchantPool]    Skipping sweep — NO gas funded (profitability-first, fail ${failCount}/${MAX_UNPROFITABLE_SWEEPS})`);
       
@@ -1212,18 +1223,18 @@ export const sweepByTime = async (): Promise<number> => {
       
       // ─── AUTO-RELEASE: Micro-dust addresses idle for > 14 days ───
       // Addresses with < $1 balance that have been idle for 14+ days will never be profitable
-      // to sweep. Write off the dust and release immediately instead of retrying forever.
+      // to sweep. Defer sweeping for 30 days instead of retrying every 30 min. On-chain balance is preserved.
       const MAX_IDLE_DUST_MINUTES = 20160; // 14 days
       const MICRO_DUST_USD = 1.00;
       if (isStaleTokenAddress && timeSincePayout > MAX_IDLE_DUST_MINUTES) {
         try {
           const dustUSD = await convertToUSD(walletType, cryptoAmount);
           if (dustUSD < MICRO_DUST_USD) {
-            cronLogger.warn(`[MerchantPool] 🗑️ AUTO-RELEASE: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} dust, idle ${timeSincePayout} min (${Math.floor(timeSincePayout / 1440)}d) — writing off`);
-            await merchantTempAddressModel.update(
-              { status: "AVAILABLE", admin_fee_balance: 0, last_swept_at: new Date() },
-              { where: { temp_address_id: address.dataValues.temp_address_id } }
-            );
+            cronLogger.warn(`[MerchantPool] ⏸️ LONG DEFER: ${address.dataValues.wallet_address} (${walletType}): $${dustUSD.toFixed(4)} micro-dust, idle ${timeSincePayout} min (${Math.floor(timeSincePayout / 1440)}d) — deferring sweep for 30 days`);
+            // Defer in Redis for 30 days; admin_fee_balance preserved on-chain
+            const deferKey = `sweep:unprofitable:${address.dataValues.temp_address_id}`;
+            const deferUntil = new Date(Date.now() + 30 * 24 * 3600000).toISOString();
+            await setRedisItemWithTTL(deferKey, { count: 99, deferredUntil: deferUntil }, 30 * 86400);
             continue; // Skip to next address
           }
         } catch (_convErr) {
