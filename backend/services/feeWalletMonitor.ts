@@ -28,6 +28,17 @@ interface WalletStatus {
 let lastStatus: WalletStatus | null = null;
 const ALERT_COOLDOWN_MS = 3600000; // 1 hour - don't spam alerts
 
+/** Safely extract a human-readable message from any thrown value */
+const safeErrorMsg = (err: unknown): string => {
+  if (err instanceof Error) return err.message;
+  if (typeof err === 'string') return err;
+  // AxiosError / HTTP errors with nested response
+  const axiosMsg = (err as Record<string, unknown>)?.response
+    && ((err as Record<string, Record<string, unknown>>).response?.data as Record<string, unknown>)?.message;
+  if (typeof axiosMsg === 'string') return axiosMsg;
+  try { return JSON.stringify(err); } catch { return String(err); }
+};
+
 /**
  * Check fee wallet balance and send alerts if needed
  */
@@ -48,7 +59,7 @@ export async function checkFeeWalletBalance(): Promise<WalletStatus> {
     try {
       balanceResult = await tatumApi.getAddressBalance(FEE_WALLET_ADDRESS, 'TRX', true);
     } catch (apiErr) {
-      cronLogger.warn(`[FeeWalletMonitor] API call failed: ${(apiErr as Error).message} — skipping alert cycle to avoid false positive`);
+      cronLogger.warn(`[FeeWalletMonitor] API call failed: ${safeErrorMsg(apiErr)} — skipping alert cycle to avoid false positive`);
       apiError = true;
     }
 
@@ -104,7 +115,7 @@ export async function checkFeeWalletBalance(): Promise<WalletStatus> {
     return currentStatus;
 
   } catch (error) {
-    cronLogger.error(`[FeeWalletMonitor] Error checking fee wallet: ${(error as Error).message}`);
+    cronLogger.error(`[FeeWalletMonitor] Error checking fee wallet: ${safeErrorMsg(error)}`);
     throw error;
   }
 }
@@ -198,7 +209,7 @@ async function sendAlert(status: WalletStatus): Promise<void> {
 
     cronLogger.info(`[FeeWalletMonitor] ${statusLevel.toUpperCase()} alert sent to ${ALERT_EMAIL}`);
   } catch (emailError) {
-    cronLogger.error(`[FeeWalletMonitor] Failed to send alert email: ${(emailError as Error).message}`);
+    cronLogger.error(`[FeeWalletMonitor] Failed to send alert email: ${safeErrorMsg(emailError)}`);
   }
 }
 

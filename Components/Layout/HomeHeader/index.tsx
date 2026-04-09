@@ -67,6 +67,12 @@ const HomeHeader = memo(function HomeHeader() {
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [isHeaderVisible, setIsHeaderVisible] = useState<boolean>(true);
+  // Avoid SSR/client hydration mismatch for theme-dependent assets.
+  // SSR always renders in 'dark' mode (ThemeContext fallback), so we
+  // must match that on the first client render, then switch after mount.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => { setMounted(true); }, []);
+  const logoSrc = (!mounted || isDark) ? DynopayWhiteLogo : DynopayLogo;
 
   const lastScrollY = useRef<number>(0);
   const ticking = useRef<boolean>(false);
@@ -183,7 +189,7 @@ const HomeHeader = memo(function HomeHeader() {
             onClick={navigateHome}
           >
             <Image
-              src={isDark ? DynopayWhiteLogo : DynopayLogo}
+              src={logoSrc}
               alt="Dynopay"
               width={134}
               height={45}
