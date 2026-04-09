@@ -2,7 +2,7 @@
 """
 DynoPay Backend API Testing Script
 Testing TRC20 energy estimation fix endpoints
-Target: https://analysis-hub-54.preview.emergentagent.com/api
+Target: https://setup-wizard-153.preview.emergentagent.com/api
 """
 
 import requests
@@ -11,7 +11,7 @@ import sys
 from datetime import datetime
 
 # Test configuration from review request
-BASE_URL = "https://analysis-hub-54.preview.emergentagent.com/api"
+BASE_URL = "https://setup-wizard-153.preview.emergentagent.com/api"
 
 def test_health_check():
     """Test GET /api/ - Health check endpoint (expect 200)"""

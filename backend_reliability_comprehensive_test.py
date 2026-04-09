@@ -10,7 +10,7 @@ import json
 import time
 
 # Configuration
-BASE_URL = "https://analysis-hub-54.preview.emergentagent.com"
+BASE_URL = "https://setup-wizard-153.preview.emergentagent.com"
 API_BASE = f"{BASE_URL}/api"
 
 # Test credentials
