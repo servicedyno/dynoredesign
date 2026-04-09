@@ -99,9 +99,9 @@ frontend:
 6. Report exact error messages and status codes
 
 ## Test Results Summary
-- ✅ ALL TESTS PASSED - Sweep deferral bug fix verification (2026-04-09)
-- Health Check: PASS - API operational (status: operational, service: Dynopay API)
-- Network Fees: PASS - 12 chains returned with real-time fee data
+- ✅ ALL TESTS PASSED - Fee concentration + sweep deferral bug fix (2026-04-09)
+- Health Check: PASS - API operational
+- Network Fees: PASS - 12 chains with real-time fee data
 - Geo Detection: PASS - Working correctly
 - Admin Diagnostics: PASS - Protected (403) as expected
 - No 500 errors on any endpoint
