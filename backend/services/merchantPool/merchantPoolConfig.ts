@@ -46,6 +46,18 @@ export const POOL_CONFIG = {
   MAX_RETRIES: 3,
   RETRY_DELAY_MS: 2000,
   SWEEP_RETRY_DELAY_MS: 5000,
+  
+  // ─── Fee Concentration: Minimum USD balance to attempt a sweep ───
+  // Addresses below this threshold are left AVAILABLE for reuse by the
+  // reservation pipeline (admin_fee_balance DESC ordering picks them first).
+  // The next payment to the same address adds more fees, eventually making
+  // the combined balance profitable to sweep — zero gas wasted.
+  //
+  // Thresholds are set at ~2× typical gas cost per chain family (matching
+  // the 50% profitability rule in checkSweepProfitability).
+  MIN_SWEEP_USD_TOKEN_HIGH_FEE: parseFloat(process.env.MIN_SWEEP_USD_TOKEN_HIGH_FEE || "10"),   // TRC20, ERC20 tokens (energy/gas expensive)
+  MIN_SWEEP_USD_NATIVE: parseFloat(process.env.MIN_SWEEP_USD_NATIVE || "5"),                     // ETH, TRX, SOL, BNB, MATIC (native transfers)
+  MIN_SWEEP_USD_LOW_FEE: parseFloat(process.env.MIN_SWEEP_USD_LOW_FEE || "2"),                   // XRP, XLM (very cheap tx fees)
 };
 
 // UTXO chains that support batch transfers
@@ -231,6 +243,23 @@ export const withRetry = async <T>(
 
 // Minimum time to wait before considering a webhook "failed" (in minutes)
 export const WEBHOOK_GRACE_PERIOD_MINUTES = 10;
+
+/**
+ * Get the minimum USD balance required before attempting a sweep for a given chain.
+ * Addresses below this threshold are left AVAILABLE for fee concentration via reuse.
+ */
+const HIGH_FEE_TOKEN_CHAINS = ["USDT-TRC20", "USDT-ERC20", "USDC-ERC20", "RLUSD-ERC20", "USDT-POLYGON"];
+const LOW_FEE_CHAINS = ["XRP", "XLM", "RLUSD"];
+
+export const getMinSweepUSD = (walletType: string): number => {
+  if (HIGH_FEE_TOKEN_CHAINS.includes(walletType)) {
+    return POOL_CONFIG.MIN_SWEEP_USD_TOKEN_HIGH_FEE;
+  }
+  if (LOW_FEE_CHAINS.includes(walletType)) {
+    return POOL_CONFIG.MIN_SWEEP_USD_LOW_FEE;
+  }
+  return POOL_CONFIG.MIN_SWEEP_USD_NATIVE;
+};
 
 // Re-export Op for convenience
 export { Op };

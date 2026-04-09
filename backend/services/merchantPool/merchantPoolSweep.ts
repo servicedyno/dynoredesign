@@ -31,6 +31,7 @@ import {
   FEE_WALLETS,
   ADMIN_WALLETS,
   getSweepConfig,
+  getMinSweepUSD,
   withRetry,
   Op,
 } from "./merchantPoolConfig";
@@ -1304,7 +1305,33 @@ export const sweepByTime = async (): Promise<number> => {
       } catch (_e) { /* Non-critical — proceed with sweep attempt */ }
       
       // For stale token addresses, override the time threshold check — sweep immediately
+      // BUT only if the balance is above the minimum profitable sweep threshold.
+      // Small balances are left AVAILABLE for fee concentration: the reservation pipeline
+      // picks addresses with the highest admin_fee_balance first (ORDER BY admin_fee_balance DESC),
+      // so the next payment to this chain will reuse this address, adding more fees until
+      // the combined balance becomes profitable to sweep. Zero gas wasted.
       if (isStaleTokenAddress) {
+        try {
+          const balanceUSD = await convertToUSD(walletType, cryptoAmount);
+          const minSweepUSD = getMinSweepUSD(walletType);
+          
+          if (balanceUSD < minSweepUSD) {
+            // Balance too small to sweep profitably — leave for fee concentration via reuse.
+            // The address stays AVAILABLE with admin_fee_balance > 0, so reserveAddress()
+            // will pick it first for the next payment on this chain.
+            // Only log once per hour to avoid spam (check Redis throttle).
+            const throttleKey = `sweep:reuse-log:${address.dataValues.temp_address_id}`;
+            const lastLogged = await getRedisItem(throttleKey);
+            if (!lastLogged) {
+              cronLogger.info(`[MerchantPool] 🔄 FEE CONCENTRATION: ${address.dataValues.wallet_address} (${walletType}): $${balanceUSD.toFixed(2)} < $${minSweepUSD} min sweep — leaving for reuse (idle ${Math.floor(timeSincePayout / 1440)}d)`);
+              await setRedisItemWithTTL(throttleKey, { logged: true }, 3600); // Suppress for 1 hour
+            }
+            continue; // Skip — address stays AVAILABLE for the next payment
+          }
+        } catch (_convErr) {
+          // If USD conversion fails, proceed with sweep attempt (fail-safe)
+        }
+
         // Conditional update: only transition if still AVAILABLE, IN_USE, or PRE_RESERVED (not RESERVED/PROCESSING)
         const [updatedRows] = await merchantTempAddressModel.update(
           { status: "IN_USE" },
