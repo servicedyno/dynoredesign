@@ -63,6 +63,8 @@ const EXEMPT_PATHS = [
   "/api/pay/calculate-payment",
   "/api/pay/network-fees",
   "/api/pay/encrypt-payload",
+  // Visitor tracking — public, rate-limited, fire-and-forget from landing page
+  "/api/track/visitor",
 ];
 
 /**

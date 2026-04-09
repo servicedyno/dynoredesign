@@ -922,6 +922,302 @@ export const triggerPaymentLinkReminders = async () => {
   return results;
 };
 
+// ============================================================
+// ONBOARDING MONITOR CRON (A + B)
+// ============================================================
+
+/**
+ * Onboarding Monitor Cron Job
+ * Schedule: Every hour
+ * 
+ * (A) Stuck Detection:
+ *   - Checks users registered in the last 72 hours
+ *   - Determines which onboarding step they're stuck at
+ *   - Sends admin email at tiered intervals (4h, 12h, 24h, 48h)
+ *   - Redis dedup prevents duplicate notifications per step per tier
+ * 
+ * (B) Completion Detection:
+ *   - Checks if any recently-registered users have completed all onboarding steps
+ *   - Sends admin email once per user when onboarding_complete flips to true
+ */
+export const setupOnboardingMonitorCron = () => {
+  // Run every hour at minute 15
+  cron.schedule("15 * * * *", async () => {
+    log("Onboarding Monitor Cron starting...", "info");
+    
+    try {
+      const { getRedisItem, setRedisItemWithTTL } = await import("./redisInstance");
+      const { sendOnboardingStuckAdminEmail, sendOnboardingCompletedAdminEmail } = await import("../services/emailService");
+
+      // Fetch users registered in the last 72 hours
+      const users = await sequelize.query<{
+        user_id: number;
+        name: string | null;
+        email: string | null;
+        mobile: string | null;
+        email_verified: boolean;
+        createdAt: string;
+      }>(
+        `SELECT user_id, name, email, mobile, email_verified, "createdAt"
+         FROM tbl_user
+         WHERE "createdAt" >= NOW() - INTERVAL '72 hours'
+         ORDER BY "createdAt" DESC`,
+        { type: QueryTypes.SELECT }
+      );
+
+      if (users.length === 0) {
+        log("Onboarding Monitor: No recent users to check", "info");
+        return;
+      }
+
+      log(`Onboarding Monitor: Checking ${users.length} users registered in last 72h`, "info");
+
+      let stuckCount = 0;
+      let completedCount = 0;
+
+      for (const user of users) {
+        try {
+          const userId = user.user_id;
+          const createdAt = new Date(user.createdAt);
+          const hoursSinceReg = Math.floor((Date.now() - createdAt.getTime()) / 3600000);
+
+          // Check onboarding steps
+          const isEmailVerified = user.email_verified === true;
+
+          // Company check
+          const companyResult = await sequelize.query<{ company_id: number; company_name: string }>(
+            `SELECT company_id, company_name FROM tbl_company WHERE user_id = :userId LIMIT 1`,
+            { replacements: { userId }, type: QueryTypes.SELECT }
+          );
+          const hasCompany = companyResult.length > 0;
+          const companyName = companyResult[0]?.company_name || null;
+
+          // Wallet address check (crypto wallets with actual addresses)
+          const walletResult = await sequelize.query<{ cnt: string }>(
+            `SELECT COUNT(*) as cnt FROM (
+               SELECT 1 FROM tbl_user_wallet
+               WHERE user_id = :userId AND currency_type = 'CRYPTO'
+                 AND wallet_address IS NOT NULL AND wallet_address != ''
+               UNION ALL
+               SELECT 1 FROM tbl_user_addresses WHERE user_id = :userId
+             ) combined`,
+            { replacements: { userId }, type: QueryTypes.SELECT }
+          );
+          const walletCount = parseInt(walletResult[0]?.cnt || "0");
+          const hasWallet = walletCount > 0;
+
+          const onboardingComplete = isEmailVerified && hasCompany && hasWallet;
+
+          // ─── (B) Completion check ───
+          if (onboardingComplete) {
+            const completedKey = `onboarding-complete-notified:${userId}`;
+            const alreadyNotified = await getRedisItem(completedKey);
+            if (!alreadyNotified) {
+              await setRedisItemWithTTL(completedKey, { notified: true }, 30 * 86400); // 30-day dedup
+              completedCount++;
+
+              await sendOnboardingCompletedAdminEmail({
+                user_id: userId,
+                name: user.name,
+                email: user.email,
+                company_name: companyName,
+                wallet_count: walletCount,
+                registered_at: createdAt.toLocaleString("en-US", {
+                  dateStyle: "medium", timeStyle: "short", timeZone: "UTC",
+                }) + " UTC",
+                hours_to_complete: hoursSinceReg,
+              });
+            }
+            continue; // Onboarding complete — no stuck check needed
+          }
+
+          // ─── (A) Stuck detection ───
+          // Determine which step they're stuck at (first incomplete step)
+          let stuckStep = "";
+          const completedSteps: string[] = [];
+          const pendingSteps: string[] = [];
+
+          if (isEmailVerified) {
+            completedSteps.push("Email Verified");
+          } else {
+            if (!stuckStep) stuckStep = "Email Verification";
+            pendingSteps.push("Email Verification");
+          }
+
+          if (hasCompany) {
+            completedSteps.push("Company Created");
+          } else {
+            if (!stuckStep) stuckStep = "Company Setup";
+            pendingSteps.push("Company Setup");
+          }
+
+          if (hasWallet) {
+            completedSteps.push("Wallet Address Configured");
+          } else {
+            if (!stuckStep) stuckStep = "Wallet Setup";
+            pendingSteps.push("Wallet Setup");
+          }
+
+          // Tiered notification: send at 4h, 12h, 24h, 48h milestones
+          const tiers = [
+            { hours: 4, label: "4h" },
+            { hours: 12, label: "12h" },
+            { hours: 24, label: "24h" },
+            { hours: 48, label: "48h" },
+          ];
+
+          // Find the highest tier the user qualifies for
+          const applicableTier = tiers.filter(t => hoursSinceReg >= t.hours).pop();
+          if (!applicableTier) continue; // Less than 4 hours — too early
+
+          const stuckKey = `onboarding-stuck:${userId}:${applicableTier.label}`;
+          const alreadyNotified = await getRedisItem(stuckKey);
+          if (alreadyNotified) continue; // Already sent for this tier
+
+          // Mark as notified for this tier (TTL = 7 days)
+          await setRedisItemWithTTL(stuckKey, { notified: true, step: stuckStep }, 7 * 86400);
+          stuckCount++;
+
+          await sendOnboardingStuckAdminEmail({
+            user_id: userId,
+            name: user.name,
+            email: user.email,
+            mobile: user.mobile,
+            registered_at: createdAt.toLocaleString("en-US", {
+              dateStyle: "medium", timeStyle: "short", timeZone: "UTC",
+            }) + " UTC",
+            hours_since_registration: hoursSinceReg,
+            stuck_step: stuckStep,
+            completed_steps: completedSteps,
+            pending_steps: pendingSteps,
+          });
+
+        } catch (userErr) {
+          log(`Onboarding Monitor: Error checking user ${user.user_id}: ${userErr}`, "error");
+        }
+      }
+
+      log(`Onboarding Monitor completed: ${stuckCount} stuck notifications, ${completedCount} completion notifications`, "info");
+
+    } catch (e) {
+      log(`Onboarding Monitor Error: ${e}`, "error");
+      captureError(e, 'cron', { extraContext: 'setupOnboardingMonitorCron' });
+    }
+  });
+
+  log("Onboarding Monitor Cron scheduled for every hour at :15", "info");
+};
+
+// ============================================================
+// FIRST PAYMENT MONITOR CRON (C)
+// ============================================================
+
+/**
+ * First Payment Monitor Cron Job
+ * Schedule: Every 15 minutes
+ * 
+ * Detects when a merchant receives their very first successful payment.
+ * Queries companies that have exactly 1 successful transaction
+ * that was created in the last 30 minutes (to catch recent first payments).
+ * Redis dedup ensures one notification per company.
+ */
+export const setupFirstPaymentMonitorCron = () => {
+  // Run every 15 minutes at minute 5, 20, 35, 50
+  cron.schedule("5,20,35,50 * * * *", async () => {
+    try {
+      const { getRedisItem, setRedisItemWithTTL } = await import("./redisInstance");
+      const { sendFirstPaymentAdminEmail } = await import("../services/emailService");
+
+      // Find companies whose first successful transaction happened in the last 30 minutes
+      const firstPayments = await sequelize.query<{
+        company_id: number;
+        user_id: number;
+        company_name: string;
+        merchant_name: string | null;
+        merchant_email: string | null;
+        registered_at: string;
+        tx_id: string;
+        amount: string;
+        currency: string;
+        base_amount: string;
+        customer_email: string | null;
+        tx_created_at: string;
+      }>(
+        `SELECT
+          c.company_id,
+          c.user_id,
+          c.company_name,
+          u.name as merchant_name,
+          u.email as merchant_email,
+          u."createdAt" as registered_at,
+          t.transaction_id as tx_id,
+          t.amount,
+          t.currency,
+          t.base_amount,
+          t.customer_email,
+          t."createdAt" as tx_created_at
+        FROM tbl_company c
+        JOIN tbl_user u ON u.user_id = c.user_id
+        JOIN tbl_customer_transaction t ON t.company_id = c.company_id
+        WHERE t.status = 'successful'
+          AND t."createdAt" >= NOW() - INTERVAL '30 minutes'
+        AND (
+          SELECT COUNT(*) FROM tbl_customer_transaction t2
+          WHERE t2.company_id = c.company_id AND t2.status = 'successful'
+        ) = 1
+        ORDER BY t."createdAt" DESC`,
+        { type: QueryTypes.SELECT }
+      );
+
+      if (firstPayments.length === 0) return;
+
+      log(`First Payment Monitor: Found ${firstPayments.length} companies with first payment`, "info");
+
+      for (const fp of firstPayments) {
+        try {
+          const dedupKey = `first-payment-admin-notified:${fp.company_id}`;
+          const already = await getRedisItem(dedupKey);
+          if (already) continue;
+
+          await setRedisItemWithTTL(dedupKey, { notified: true }, 365 * 86400); // 1 year dedup
+
+          // Calculate days since registration
+          const regDate = new Date(fp.registered_at);
+          const txDate = new Date(fp.tx_created_at);
+          const daysSinceReg = Math.floor((txDate.getTime() - regDate.getTime()) / (1000 * 60 * 60 * 24));
+
+          await sendFirstPaymentAdminEmail({
+            user_id: fp.user_id,
+            merchant_name: fp.merchant_name,
+            merchant_email: fp.merchant_email,
+            company_name: fp.company_name,
+            company_id: fp.company_id,
+            amount: fp.amount,
+            currency: fp.currency,
+            amount_usd: fp.base_amount || null,
+            payment_method: fp.currency,
+            customer_email: fp.customer_email,
+            transaction_id: fp.tx_id,
+            registered_at: regDate.toLocaleString("en-US", {
+              dateStyle: "medium", timeStyle: "short", timeZone: "UTC",
+            }) + " UTC",
+            days_since_registration: daysSinceReg,
+          });
+
+        } catch (fpErr) {
+          log(`First Payment Monitor: Error for company ${fp.company_id}: ${fpErr}`, "error");
+        }
+      }
+
+    } catch (e) {
+      log(`First Payment Monitor Error: ${e}`, "error");
+      captureError(e, 'cron', { extraContext: 'setupFirstPaymentMonitorCron' });
+    }
+  });
+
+  log("First Payment Monitor Cron scheduled for every 15 minutes", "info");
+};
+
 export default {
   setupWeeklySummaryCron,
   triggerWeeklySummary,
@@ -932,4 +1228,6 @@ export default {
   triggerRefereeCodeReminders,
   setupPaymentLinkReminderCron,
   triggerPaymentLinkReminders,
+  setupOnboardingMonitorCron,
+  setupFirstPaymentMonitorCron,
 };

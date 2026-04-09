@@ -39,7 +39,7 @@ import cron from "node-cron";
 import { getTransactionFee, getBlockchainFee } from "./services/feeService";
 import { paymentController } from "./controller";
 import sequelize from "./utils/dbInstance";
-import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron } from "./utils/cronJobs";
+import { setupWeeklySummaryCron, setupWalletReminderCron, setupHealthCheckCron, setupRefereeCodeReminderCron, setupPaymentLinkReminderCron, setupOnboardingMonitorCron, setupFirstPaymentMonitorCron } from "./utils/cronJobs";
 import { getOptimizationDiagnostics } from "./services/tronEnergyService";
 import { migrateWebhookUrls } from "./services/migrateWebhookUrls";
 import { processStablecoinConversions, getConversionStats, sendWeeklyConversionSummaries } from "./services/conversionService";
@@ -905,6 +905,12 @@ setupRefereeCodeReminderCron();
 
 // Setup payment link reminder cron job (every hour)
 setupPaymentLinkReminderCron();
+
+// Onboarding monitor — detects stuck/completed users, emails admin (A + B)
+setupOnboardingMonitorCron();
+
+// First payment monitor — detects merchants' first successful payment, emails admin (C)
+setupFirstPaymentMonitorCron();
 
 // ═══════════════════════════════════════════════════════════════════════
 // RELIABILITY: Payment Watchdog — detect stuck payments every 2 minutes

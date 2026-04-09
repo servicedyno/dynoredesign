@@ -17,6 +17,7 @@ import testRouter from "./testRouter";
 import referralRouter from "./referralRouter";
 import knowledgeBaseRouter from "./knowledgeBaseRouter";
 import merchantApiRouter from "./merchantApiRouter";
+import trackRouter from "./trackRouter";
 
 import {
   authMiddleware,
@@ -212,6 +213,7 @@ router.use("/test", testRouter); // Test endpoints for development
 router.use("/referral", referralRouter); // Referral system endpoints
 router.use("/kb", knowledgeBaseRouter); // Knowledge Base endpoints
 router.use("/events", eventsRouter); // SSE real-time events
+router.use("/track", trackRouter); // Visitor tracking (public, rate-limited)
 router.use("/admin/analytics", analyticsRouter); // Admin analytics (revenue, cohorts, funnels)
 router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
 
