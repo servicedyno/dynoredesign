@@ -98,12 +98,12 @@ frontend:
 6. Report exact error messages and status codes
 
 ## Test Results Summary
-- ✅ ALL TESTS PASSED - Trial link removal verification completed successfully
+- ✅ ALL TESTS PASSED - Sweep deferral bug fix verification (2026-04-09)
 - Health Check: PASS - API operational (status: operational, service: Dynopay API)
-- Trial Endpoints Removed: PASS - All trial endpoints correctly blocked/removed:
-  * POST /api/public/create-trial-link → HTTP 403 (Forbidden)
-  * GET /api/public/trial/test-slug → HTTP 404 (Not Found)
-  * GET /api/public/trial-links → HTTP 404 (Not Found)
+- Network Fees: PASS - 12 chains returned with real-time fee data
+- Geo Detection: PASS - Working correctly
+- Admin Diagnostics: PASS - Protected (403) as expected
+- No 500 errors on any endpoint
 
 ## Settlement Bug Fixes — TRX Drain & OUT_OF_ENERGY — 2026-03-31
 - agent: main
