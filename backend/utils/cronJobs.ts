@@ -1012,7 +1012,7 @@ export const setupOnboardingMonitorCron = () => {
           if (onboardingComplete) {
             const completedKey = `onboarding-complete-notified:${userId}`;
             const alreadyNotified = await getRedisItem(completedKey);
-            if (!alreadyNotified) {
+            if (!alreadyNotified || Object.keys(alreadyNotified).length === 0) {
               await setRedisItemWithTTL(completedKey, { notified: true }, 30 * 86400); // 30-day dedup
               completedCount++;
 
@@ -1072,7 +1072,7 @@ export const setupOnboardingMonitorCron = () => {
 
           const stuckKey = `onboarding-stuck:${userId}:${applicableTier.label}`;
           const alreadyNotified = await getRedisItem(stuckKey);
-          if (alreadyNotified) continue; // Already sent for this tier
+          if (alreadyNotified && Object.keys(alreadyNotified).length > 0) continue; // Already sent for this tier
 
           // Mark as notified for this tier (TTL = 7 days)
           await setRedisItemWithTTL(stuckKey, { notified: true, step: stuckStep }, 7 * 86400);
@@ -1151,14 +1151,15 @@ export const setupFirstPaymentMonitorCron = () => {
           u.email as merchant_email,
           u."createdAt" as registered_at,
           t.transaction_id as tx_id,
-          t.amount,
-          t.currency,
+          t.paid_amount as amount,
+          t.paid_currency as currency,
           t.base_amount,
-          t.customer_email,
+          cust.email as customer_email,
           t."createdAt" as tx_created_at
         FROM tbl_company c
         JOIN tbl_user u ON u.user_id = c.user_id
         JOIN tbl_customer_transaction t ON t.company_id = c.company_id
+        LEFT JOIN tbl_customer cust ON cust.customer_id = t.customer_id
         WHERE t.status = 'successful'
           AND t."createdAt" >= NOW() - INTERVAL '30 minutes'
         AND (
@@ -1177,7 +1178,7 @@ export const setupFirstPaymentMonitorCron = () => {
         try {
           const dedupKey = `first-payment-admin-notified:${fp.company_id}`;
           const already = await getRedisItem(dedupKey);
-          if (already) continue;
+          if (already && Object.keys(already).length > 0) continue;
 
           await setRedisItemWithTTL(dedupKey, { notified: true }, 365 * 86400); // 1 year dedup
 

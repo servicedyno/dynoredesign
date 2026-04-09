@@ -49,12 +49,18 @@ trackRouter.post("/visitor", async (req: express.Request, res: express.Response)
 
     // Skip bots/crawlers
     const botPatterns = /bot|crawl|spider|slurp|feed|fetch|monitor|check|ping|curl|wget|python|go-http|java|ruby|perl/i;
-    if (botPatterns.test(userAgent)) return;
+    if (botPatterns.test(userAgent)) {
+      apiLogger.info(`[Track] Skipping bot/crawler: ${userAgent.substring(0, 60)}`);
+      return;
+    }
 
     // Redis dedup: 1 notification per IP per 24 hours
     const dedupKey = `visitor:seen:${ip}`;
     const alreadySeen = await getRedisItem(dedupKey);
-    if (alreadySeen) return;
+    if (alreadySeen && Object.keys(alreadySeen).length > 0) {
+      apiLogger.info(`[Track] Visitor ${ip} already seen in last 24h — skipping email`);
+      return;
+    }
 
     // Mark as seen for 24 hours
     await setRedisItemWithTTL(dedupKey, { first_seen: new Date().toISOString(), page }, 86400);
