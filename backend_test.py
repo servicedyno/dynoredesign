@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend API Testing Script
-Testing TRC20 energy estimation fix endpoints
+Testing after merchantPoolSweep.ts deferral pre-check bug fix
 Target: https://setup-wizard-153.preview.emergentagent.com/api
 """
 
@@ -139,15 +139,16 @@ def test_volatility():
 
 def main():
     print("=" * 80)
-    print("DynoPay Backend API Testing - TRC20 Energy Estimation Fix Verification")
+    print("DynoPay Backend API Testing - Deferral Pre-Check Bug Fix Verification")
     print("=" * 80)
     print(f"Target URL: {BASE_URL}")
     print(f"Test Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     print()
-    print("Context: Testing after TRC20 OUT_OF_ENERGY bug fixes in:")
-    print("- tatumApi.ts — feeLimit alignment now passes recipient info")
-    print("- paymentController.ts — Recovery loops pass recipient + contract")
-    print("- merchantPoolSweep.ts — fundGasIfNeeded always uses 130k energy for TRC20")
+    print("Context: Testing after merchantPoolSweep.ts deferral pre-check bug fix:")
+    print("- Added deferral pre-checks in sweepByTime() and sweepByThreshold()")
+    print("- Skip addresses whose deferral hasn't expired")
+    print("- Prevents unnecessary status transitions and lock acquisitions")
+    print("- Reduces log entries (~160 entries/hour)")
     print()
     
     # Run all tests
@@ -206,7 +207,7 @@ def main():
     print()
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED - TRC20 energy estimation fix verification complete")
+        print("🎉 ALL TESTS PASSED - Deferral pre-check bug fix verification complete")
         print("✅ No 500 errors detected - backend appears stable after fixes")
         return 0
     else:

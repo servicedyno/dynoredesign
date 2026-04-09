@@ -1134,6 +1134,14 @@ export const sweepByThreshold = async (): Promise<number> => {
       if (sweepConfig.mode !== "threshold") {
         continue;
       }
+
+      // ─── DEFERRAL PRE-CHECK: Skip addresses deferred due to repeated unprofitable sweeps ───
+      try {
+        const deferData = await getRedisItem(`sweep:unprofitable:${address.dataValues.temp_address_id}`) as { count: number; deferredUntil?: string } | null;
+        if (deferData?.deferredUntil && new Date(deferData.deferredUntil) > new Date()) {
+          continue; // Silently skip — deferral check inside sweepAdminFeeToWallet will log if needed
+        }
+      } catch (_e) { /* Non-critical — proceed with sweep attempt */ }
       
       const usdAmount = await convertToUSD(walletType, cryptoAmount);
       
@@ -1284,6 +1292,16 @@ export const sweepByTime = async (): Promise<number> => {
       if (sweepConfig.mode !== "time" && !isUTXOAutoConvertRecovery && !isStaleTokenAddress) {
         continue;
       }
+
+      // ─── DEFERRAL PRE-CHECK: Skip addresses deferred due to repeated unprofitable sweeps ───
+      // This prevents the infinite loop where sweepByTime adds addresses to the eligible list
+      // every 30 minutes, only for sweepAdminFeeToWallet to reject them inside the lock.
+      try {
+        const deferData = await getRedisItem(`sweep:unprofitable:${address.dataValues.temp_address_id}`) as { count: number; deferredUntil?: string } | null;
+        if (deferData?.deferredUntil && new Date(deferData.deferredUntil) > new Date()) {
+          continue; // Silently skip — address is deferred, will be retried after deferral expires
+        }
+      } catch (_e) { /* Non-critical — proceed with sweep attempt */ }
       
       // For stale token addresses, override the time threshold check — sweep immediately
       if (isStaleTokenAddress) {
