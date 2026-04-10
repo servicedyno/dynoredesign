@@ -903,7 +903,42 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       });
     }
 
-    // Step 5: For TRC20 — estimate energy and re-fund gas
+    // Step 5 (MOVED UP from Step 7): Calculate and validate merchant amount BEFORE gas funding.
+    // FIX (2026-04-10): Previously gas was funded before amount validation. If the payment had
+    // already been settled (by auto-recovery/reconciliation), gas was still sent to the temp address
+    // and wasted — this drained 37.49 TRX from the fee wallet unnecessarily.
+    let merchantSendAmount: number;
+    
+    if (overrideMerchantAmount && Number(overrideMerchantAmount) > 0) {
+      merchantSendAmount = Number(overrideMerchantAmount);
+    } else if (poolTx?.dataValues?.merchant_amount && Number(poolTx.dataValues.merchant_amount) > 0) {
+      merchantSendAmount = Number(poolTx.dataValues.merchant_amount);
+    } else {
+      // Fallback: on-chain balance minus DB admin_fee_balance
+      const dbAdminFee = Number(tempData.admin_fee_balance || 0);
+      merchantSendAmount = tokenBalance - dbAdminFee;
+    }
+    
+    if (merchantSendAmount <= 0 || merchantSendAmount > tokenBalance) {
+      return res.status(400).json({
+        error: `Invalid merchant amount: ${merchantSendAmount} (on-chain balance: ${tokenBalance}). Use merchant_amount override if needed.`,
+        steps,
+        debug: { 
+          poolTxMerchantAmount: poolTx?.dataValues?.merchant_amount,
+          adminFeeBalance: tempData.admin_fee_balance,
+          tokenBalance,
+          overrideMerchantAmount,
+        },
+      });
+    }
+    
+    steps.push({ step: "validate_amount", status: "ok", details: {
+      merchant_send_amount: merchantSendAmount,
+      token_balance: tokenBalance,
+      source: overrideMerchantAmount ? "override" : poolTx ? "pool_transaction" : "balance_minus_admin",
+    }});
+
+    // Step 6: For TRC20 — estimate energy and re-fund gas (only after amount is validated)
     // RECOVERY MODE: Always use conservative NEW recipient energy (130k) to avoid
     // stale activation cache causing OUT_OF_ENERGY failures.
     const destination = merchantWallet || adminWallet;
@@ -982,37 +1017,12 @@ router.post("/recover-stuck-payment", adminAuthMiddleware, async (req: express.R
       has_data: !!redisData,
     }});
 
-    // Step 7: Calculate merchant send amount
-    let merchantSendAmount: number;
-    
-    if (overrideMerchantAmount && Number(overrideMerchantAmount) > 0) {
-      merchantSendAmount = Number(overrideMerchantAmount);
-    } else if (poolTx?.dataValues?.merchant_amount && Number(poolTx.dataValues.merchant_amount) > 0) {
-      merchantSendAmount = Number(poolTx.dataValues.merchant_amount);
-    } else {
-      // Fallback: on-chain balance minus DB admin_fee_balance
-      const dbAdminFee = Number(tempData.admin_fee_balance || 0);
-      merchantSendAmount = tokenBalance - dbAdminFee;
-    }
-    
-    if (merchantSendAmount <= 0 || merchantSendAmount > tokenBalance) {
-      return res.status(400).json({
-        error: `Invalid merchant amount: ${merchantSendAmount} (on-chain balance: ${tokenBalance}). Use merchant_amount override if needed.`,
-        steps,
-        debug: { 
-          poolTxMerchantAmount: poolTx?.dataValues?.merchant_amount,
-          adminFeeBalance: tempData.admin_fee_balance,
-          tokenBalance,
-          overrideMerchantAmount,
-        },
-      });
-    }
-
-    // destination already computed above (Step 5)
+    // Step 8: Final amount check (already validated above, compute admin fee remaining)
+    const adminFeeRemaining = tokenBalance - merchantSendAmount;
     
     steps.push({ step: "calculate_amounts", status: "ok", details: {
       merchant_send_amount: merchantSendAmount,
-      admin_fee_remaining: tokenBalance - merchantSendAmount,
+      admin_fee_remaining: adminFeeRemaining,
       destination,
       source: overrideMerchantAmount ? "override" : poolTx ? "pool_transaction" : "balance_minus_admin",
     }});
@@ -1521,9 +1531,27 @@ router.post("/recover-excess-trx", adminAuthMiddleware, async (req: express.Requ
     for (const addr of poolAddresses) {
       const walletAddress = addr.dataValues.wallet_address;
       try {
-        // Get TRX balance (getAddressBalance already converts SUN→TRX)
-        const balanceResult = await tatumApi.getAddressBalance(walletAddress, "TRX");
-        const balanceTRX = Number(balanceResult?.balance ?? 0);
+        // Get TRX balance — try Tatum first, fall back to TronGrid if stale/0
+        let balanceTRX = 0;
+        try {
+          const balanceResult = await tatumApi.getAddressBalance(walletAddress, "TRX");
+          balanceTRX = Number(balanceResult?.balance ?? 0);
+        } catch (_e) { /* fall through to TronGrid */ }
+        
+        // TronGrid fallback: Tatum balance API can return stale/0 for TRON addresses
+        if (balanceTRX <= 0) {
+          try {
+            const axios = require("axios");
+            const tronRes = await axios.get(
+              `https://api.trongrid.io/v1/accounts/${walletAddress}`,
+              { timeout: 8000 }
+            );
+            const acctData = tronRes.data?.data?.[0];
+            if (acctData?.balance) {
+              balanceTRX = acctData.balance / 1e6;
+            }
+          } catch (_tronErr) { /* use 0 */ }
+        }
 
         if (balanceTRX <= reservePerAddress) {
           // Nothing to recover
