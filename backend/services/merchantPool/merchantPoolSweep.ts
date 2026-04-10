@@ -198,9 +198,13 @@ export const fundGasIfNeeded = async (
       : POOL_CONFIG.ETH_MIN_DEFICIT;
 
     // Primary check: does the address actually have enough gas?
-    // Only skip funding when currentBalance genuinely covers the required gas.
-    // The minDeficit threshold prevents micro-fundings ONLY when the balance is already close to sufficient.
-    if (currentBalance >= requiredGas || (deficit <= minDeficit && currentBalance > 0)) {
+    // FIX (2026-04-10): Removed the minDeficit bypass that could skip funding when
+    // currentBalance < requiredGas. Previously, if deficit was small (e.g., 0.000098 ETH
+    // < minDeficit 0.0002 ETH), SmartGas would skip funding even though the balance was
+    // genuinely insufficient → "Insufficient funds" error on settlement.
+    // Now ONLY skip when balance actually covers the required gas. The minDeficit is still
+    // used below for minimum funding amount (preventing micro-transactions).
+    if (currentBalance >= requiredGas) {
       cronLogger.info(`[SmartGas] ✅ Sufficient gas (have: ${currentBalance.toFixed(6)}, need: ${requiredGas.toFixed(6)}) - No funding needed`);
       await poolAddress.update({ gas_balance: currentBalance });
       return { funded: false, amount: 0, reason: 'Sufficient balance' };
