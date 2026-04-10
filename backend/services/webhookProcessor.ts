@@ -74,6 +74,24 @@ const TATUM_ASSET_TO_CURRENCY: Record<string, string[]> = {
 };
 
 /**
+ * FIX (2026-04-10): ERC-20/TRC-20 contract addresses → DynoPay currency.
+ * Tatum sometimes sends the raw contract address as the `asset` field instead
+ * of a human-readable name. Without this mapping, legitimate USDT-ERC20 payments
+ * were rejected as "SPAM TOKEN" (incident: payment 509b5aaf, $33 USDT-ERC20).
+ *
+ * Keys are LOWERCASE contract addresses for case-insensitive matching.
+ */
+const CONTRACT_ADDRESS_TO_CURRENCY: Record<string, { currencies: string[]; tatumAsset: string }> = {
+  // Ethereum ERC-20
+  "0xdac17f958d2ee523a2206206994597c13d831ec7": { currencies: ["USDT-ERC20"],  tatumAsset: "USDT" },
+  "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48": { currencies: ["USDC-ERC20"],  tatumAsset: "USDC" },
+  // TRON TRC-20
+  "tr7nhqjekqxgtci8q8zy4pl8otszgjlj6t":         { currencies: ["USDT-TRC20"], tatumAsset: "USDT_TRON" },
+  // Polygon ERC-20
+  "0xc2132d05d31c914a87c6611c10748aeb04b58e8f": { currencies: ["USDT-POLYGON"], tatumAsset: "USDT_MATIC" },
+};
+
+/**
  * Gas tokens for each chain — used to identify gas-funding webhooks that
  * arrive on token addresses (e.g., TRON gas funding for USDT-TRC20 addresses).
  * These are not spam; they are SmartGas system transactions and should be
@@ -105,8 +123,9 @@ function validateWebhookAsset(
   }
 
   const assetUpper = webhookAsset.toUpperCase().trim();
+  const assetLower = webhookAsset.toLowerCase().trim();
 
-  // 1. Check if the asset is a known Tatum asset
+  // 1. Check if the asset is a known Tatum asset name (e.g., "BTC", "USDT", "TRON")
   const compatibleCurrencies = TATUM_ASSET_TO_CURRENCY[assetUpper];
 
   if (compatibleCurrencies) {
@@ -130,7 +149,23 @@ function validateWebhookAsset(
     };
   }
 
-  // 2. Reverse lookup: asset might be an internal DynoPay currency name (e.g., "USDT-TRC20")
+  // 2. FIX (2026-04-10): Check if asset is an ERC-20/TRC-20 contract address.
+  //    Tatum sometimes sends the raw contract address (e.g., "0xdac17f958d2ee523a2206206994597c13d831ec7")
+  //    instead of the human-readable name ("USDT"). This is legitimate for token transfers.
+  const contractMatch = CONTRACT_ADDRESS_TO_CURRENCY[assetLower];
+  if (contractMatch) {
+    if (contractMatch.currencies.includes(expectedCurrency)) {
+      return { valid: true, isGasFunding: false };
+    }
+    // Contract address is known but for a different currency
+    return {
+      valid: false,
+      isGasFunding: false,
+      reason: `Contract "${webhookAsset}" maps to ${contractMatch.currencies.join("/")} but expected "${expectedCurrency}"`,
+    };
+  }
+
+  // 3. Reverse lookup: asset might be an internal DynoPay currency name (e.g., "USDT-TRC20")
   //    This happens when reconciliation re-queues using the internal currency format.
   for (const [tatumAsset, currencies] of Object.entries(TATUM_ASSET_TO_CURRENCY)) {
     if (currencies.includes(assetUpper) || currencies.includes(webhookAsset)) {
@@ -140,7 +175,7 @@ function validateWebhookAsset(
     }
   }
 
-  // 3. Unknown asset — not in our supported list
+  // 4. Unknown asset — not in our supported list
   //    This catches spam/scam tokens like "ha138com", random TRC10 airdrops, etc.
   return {
     valid: false,
@@ -1255,4 +1290,4 @@ async function handleNewTransaction(
 
 
 // Export the validation function for testing and reuse
-export { validateWebhookAsset, TATUM_ASSET_TO_CURRENCY, GAS_TOKEN_FOR_CURRENCY };
+export { validateWebhookAsset, TATUM_ASSET_TO_CURRENCY, CONTRACT_ADDRESS_TO_CURRENCY, GAS_TOKEN_FOR_CURRENCY };

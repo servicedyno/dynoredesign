@@ -583,9 +583,12 @@ const tatumCryptoWebHook = async (
     // This is a lightweight pre-queue check. Full validation happens in the worker.
     // We only check if the asset is in our known list — if not, skip enqueuing entirely.
     if (payload.asset) {
-      const { TATUM_ASSET_TO_CURRENCY } = require("../services/webhookProcessor");
+      const { TATUM_ASSET_TO_CURRENCY, CONTRACT_ADDRESS_TO_CURRENCY } = require("../services/webhookProcessor");
       const assetUpper = payload.asset.toUpperCase().trim();
-      if (!TATUM_ASSET_TO_CURRENCY[assetUpper]) {
+      const assetLower = payload.asset.toLowerCase().trim();
+      // FIX (2026-04-10): Also check contract address map. Tatum can send ERC-20 contract
+      // addresses (e.g., "0xdac17f958d2ee523a2206206994597c13d831ec7" for USDT) as the asset.
+      if (!TATUM_ASSET_TO_CURRENCY[assetUpper] && !CONTRACT_ADDRESS_TO_CURRENCY[assetLower]) {
         webhookLogs.warn(`[tatumCryptoWebHook] ⛔ SPAM TOKEN REJECTED at receiver: unknown asset "${payload.asset}" — not enqueuing`, {
           address: payload.address,
           txId: payload.txId,

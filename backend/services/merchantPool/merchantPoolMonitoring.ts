@@ -363,7 +363,13 @@ const processAddress = async (addr: any, result: {
         if (activeRedisData && typeof activeRedisData === 'object') {
           const activeStatus = (activeRedisData as Record<string, unknown>).status as string | undefined;
           const activeTxId = (activeRedisData as Record<string, unknown>).txId as string | undefined;
-          if (activeStatus && ['pending', 'processing', 'retrying', 'detected'].includes(activeStatus)) {
+          // FIX (2026-04-10): Only skip balance check when a webhook IS actively being processed
+          // (status is processing/retrying/detected AND txId exists). When status is "pending"
+          // with txId=undefined, it means no webhook was received yet — the balance check is the
+          // ONLY safety net to detect the payment. Previously, "pending" was in the skip list,
+          // causing $33 USDT-ERC20 payment to go undetected after the spam filter rejected the webhook.
+          const hasActiveTxId = !!activeTxId && activeTxId !== 'undefined';
+          if (activeStatus && hasActiveTxId && ['processing', 'retrying', 'detected'].includes(activeStatus)) {
             cronLogger.info(`[MerchantPool] ⏭️ ${walletAddress} — webhook actively processing (status=${activeStatus}, txId=${activeTxId?.substring(0, 12)}...), skipping balance check`);
             result.skippedTooRecent++;
             return;
