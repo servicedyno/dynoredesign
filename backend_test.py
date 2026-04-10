@@ -5,7 +5,7 @@ Testing after bug fixes for:
 1. First Payment Monitor SQL column fix (column t.amount does not exist)
 2. Visitor email notification dedup fix
 
-Target: https://setup-wizard-154.preview.emergentagent.com/api
+Target: https://getting-started-205.preview.emergentagent.com/api
 """
 
 import requests
@@ -15,7 +15,7 @@ import time
 from datetime import datetime
 
 # Test configuration from review request
-BASE_URL = "https://setup-wizard-154.preview.emergentagent.com/api"
+BASE_URL = "https://getting-started-205.preview.emergentagent.com/api"
 
 def test_health_check():
     """Test GET /api/ - Health check endpoint (expect 200)"""
