@@ -89,7 +89,7 @@ import {
 import * as merchantPoolService from "../services/merchantPoolService";
 import { callMerchantWebhook } from "../webhooks";
 import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
-import { recordTransactionVolume } from "../services/feeFreeService";
+import { recordTransactionVolume, reverseTransactionVolume } from "../services/feeFreeService";
 import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
 import { createConversionRecord } from "../services/conversionService";
 import { stablecoinConversionModel, TOKEN_CHAINS } from "../models";
@@ -3265,12 +3265,25 @@ const settleCryptoTransaction = async ({
       }
 
       const totalGasDeductionToken = merchantTransferGasUSD + estimatedSweepGasUSD;
-      merchantSendAmount = Number((Number(userAmount) - totalGasDeductionToken).toFixed(6));
-      if (merchantSendAmount <= 0) {
-        throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGasUSD}, SweepGas: ${estimatedSweepGasUSD}`);
+
+      // FIX (2026-04-10): In same-wallet mode, combine merchant + admin amounts into a single transfer.
+      // Previously only sent userAmount (merchant portion), leaving adminFee (receivedAmount) stranded
+      // on the temp address for a separate sweep — wasting gas and delaying the merchant's funds.
+      // Since admin wallet = merchant wallet, send everything in one TX.
+      let effectiveSendBase: number;
+      if (isSameWallet && receivedAmount && receivedAmount > 0) {
+        effectiveSendBase = Number(userAmount) + Number(receivedAmount);
+        cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Same-wallet combined: merchant ${userAmount} + admin ${receivedAmount} = ${effectiveSendBase} (single TX)`);
+      } else {
+        effectiveSendBase = Number(userAmount);
       }
 
-      cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${userAmount}, transfer gas $${merchantTransferGasUSD.toFixed(4)} + sweep gas $${estimatedSweepGasUSD.toFixed(4)} = $${totalGasDeductionToken.toFixed(4)} total)`);
+      merchantSendAmount = Number((effectiveSendBase - totalGasDeductionToken).toFixed(6));
+      if (merchantSendAmount <= 0) {
+        throw new Error(`Merchant token amount after gas deduction is non-positive. Amount: ${effectiveSendBase}, TransferGas: ${merchantTransferGasUSD}, SweepGas: ${estimatedSweepGasUSD}`);
+      }
+
+      cronLogger.info(`[settleCryptoTransaction] Token ${currency}: Merchant gets ${merchantSendAmount} (was ${effectiveSendBase}${isSameWallet ? ' [combined]' : ''}, transfer gas $${merchantTransferGasUSD.toFixed(4)} + sweep gas $${estimatedSweepGasUSD.toFixed(4)} = $${totalGasDeductionToken.toFixed(4)} total)`);
 
       // === SmartGas: Fund gas (TRX/ETH) to temp address BEFORE token transfer ===
       try {
@@ -3596,11 +3609,21 @@ const settleCryptoTransaction = async ({
         //   - Same-wallet mode: skip sweep gas (admin fees go to same wallet)
         //   - Fee-free (receivedAmount=0): skip sweep gas (no admin fee to sweep)
         // This prevents: sweep gas eroding the admin fee (reducing platform revenue)
+
+        // FIX (2026-04-10): In same-wallet mode, combine merchant + admin into single transfer
+        let effectiveNativeBase: number;
+        if (isSameWallet && receivedAmount && receivedAmount > 0) {
+          effectiveNativeBase = Number(userAmount) + Number(receivedAmount);
+          cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Same-wallet combined: merchant ${userAmount} + admin ${receivedAmount} = ${effectiveNativeBase} (single TX)`);
+        } else {
+          effectiveNativeBase = Number(userAmount);
+        }
+
         fees = await tatumApi.feeEstimation(
           currency,
           fromAddress,
           userAddress,
-          Number(userAmount)
+          effectiveNativeBase
         );
 
         // Use `fast` tier for gas deduction — this is the actual gas cost the transaction will incur.
@@ -3612,14 +3635,14 @@ const settleCryptoTransaction = async ({
         const totalGasDeduction = merchantTransferGas + estimatedSweepGas;
 
         // Deduct both gas costs from merchant payout — merchant pays for gas (consistent with UTXO)
-        merchantSendAmount = Number((Number(userAmount) - totalGasDeduction).toFixed(8));
+        merchantSendAmount = Number((effectiveNativeBase - totalGasDeduction).toFixed(8));
 
         if (merchantSendAmount <= 0) {
-          throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${userAmount}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
+          throw new Error(`Merchant amount after gas deduction is non-positive. Amount: ${effectiveNativeBase}, TransferGas: ${merchantTransferGas}, SweepGas: ${estimatedSweepGas}`);
         }
 
         const sweepGasReason = isSameWallet ? 'same-wallet' : (!receivedAmount || receivedAmount <= 0) ? 'fee-free (no admin fee)' : '';
-        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency} (transfer gas ${merchantTransferGas}${skipSweepGas ? ` [sweep gas SKIPPED — ${sweepGasReason}]` : ` + sweep gas ${estimatedSweepGas}`} = ${totalGasDeduction} deducted from merchant)`);
+        cronLogger.info(`[settleCryptoTransaction] Account chain ${currency}: Merchant gets ${merchantSendAmount} ${currency}${isSameWallet ? ' [combined]' : ''} (transfer gas ${merchantTransferGas}${skipSweepGas ? ` [sweep gas SKIPPED — ${sweepGasReason}]` : ` + sweep gas ${estimatedSweepGas}`} = ${totalGasDeduction} deducted from ${effectiveNativeBase})`);
 
         // Retry merchant transfer for account chains (ETH, TRX, SOL, XRP, POLYGON)
         merchantTransactionDetails = await withRetry(
@@ -3872,7 +3895,9 @@ const settleCryptoTransaction = async ({
       userTransactionDetails: null,  // No separate user tx needed
       sendAmount: merchantSendAmount,
       blockchainFee: totalBlockchainFee,
-      adminFeeRetained: Number(receivedAmount),  // Track admin fee for sweep
+      // FIX (2026-04-10): In same-wallet combined mode, admin fee is included in the single TX
+      // → nothing left on temp address to sweep. Otherwise, admin fee stays for sweep as before.
+      adminFeeRetained: (isSameWallet && receivedAmount && receivedAmount > 0) ? 0 : Number(receivedAmount),
       gasFunded: gasFundingResult.amount || 0,  // SmartGas: amount of TRX/ETH funded
       gasFundingTxId: gasFundingResult.txId || null,  // SmartGas: gas funding TX hash
     };
@@ -4885,11 +4910,15 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
         // the function exited before reaching recordTransactionVolume → balance never decremented
         // → system still thought user was a new merchant with $0 volume.
         // Now recording at payment confirmation time (crypto received) regardless of settlement outcome.
+        // FIX (2026-04-10): REVERSE if settlement fails. Otherwise fee-free balance is consumed
+        // on failed settlements (e.g., OUT_OF_ENERGY) and the user loses their promotion.
         const feeFreeUserId = customerData?.adm_id ? Number(customerData.adm_id) : null;
         const feeFreeAmountUsd = parseFloat(tempData?.base_amount_usd || '0') || receivedUSD;
+        let feeFreeRecorded = false;
         if (feeFreeUserId && feeFreeAmountUsd > 0) {
           try {
             const feeFreeResult = await recordTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
+            feeFreeRecorded = true;
             cronLogger.info(`[cryptoVerification] ✅ Fee-free volume recorded (pre-settlement): user ${feeFreeUserId}, $${feeFreeAmountUsd.toFixed(2)} USD. Remaining: $${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
             log(`[cryptoVerification] 💰 Fee-free recorded (pre-settlement): user=${feeFreeUserId}, amount=$${feeFreeAmountUsd.toFixed(2)}, remaining=$${feeFreeResult?.fee_free_remaining_usd ?? 'N/A'}`);
           } catch (feeFreeError: any) {
@@ -4898,18 +4927,34 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           }
         }
 
-        const adminTransferResult = await settleCryptoTransaction({
-          tempAddressData: tempAddressData,
-          receivedAmount: Number(adminAmountToSend),
-          currency: tempCurrency,
-          transactionId,
-          ...(userAmountToSend > 0 && {
-            userAmount: Number(userAmountToSend),
-            userAddress: walletData.dataValues.wallet_address,
-          }),
-          merchantDestinationTag: walletData.dataValues.destination_tag || null,
-          isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
-        });
+        let adminTransferResult;
+        try {
+          adminTransferResult = await settleCryptoTransaction({
+            tempAddressData: tempAddressData,
+            receivedAmount: Number(adminAmountToSend),
+            currency: tempCurrency,
+            transactionId,
+            ...(userAmountToSend > 0 && {
+              userAmount: Number(userAmountToSend),
+              userAddress: walletData.dataValues.wallet_address,
+            }),
+            merchantDestinationTag: walletData.dataValues.destination_tag || null,
+            isMerchantPool: String(tempData.is_merchant_pool) === "true",  // Pass merchant pool flag as boolean
+          });
+        } catch (settlementError: any) {
+          // FIX (2026-04-10): Reverse fee-free volume on settlement failure.
+          // Without this, OUT_OF_ENERGY and other settlement failures consume the user's
+          // fee-free balance ($33 in this case) even though no tokens were transferred.
+          if (feeFreeRecorded && feeFreeUserId && feeFreeAmountUsd > 0) {
+            try {
+              const reverseResult = await reverseTransactionVolume(feeFreeUserId, feeFreeAmountUsd);
+              cronLogger.info(`[cryptoVerification] ↩️ Fee-free volume REVERSED after settlement failure: user ${feeFreeUserId}, +$${feeFreeAmountUsd.toFixed(2)}. Remaining: $${reverseResult?.fee_free_remaining_usd ?? 'N/A'}`);
+            } catch (reverseError: any) {
+              cronLogger.error(`[cryptoVerification] ❌ Fee-free reversal FAILED: user=${feeFreeUserId}, amount=$${feeFreeAmountUsd.toFixed(2)}, err=${reverseError.message}`);
+            }
+          }
+          throw settlementError; // Re-throw so existing error handling continues
+        }
 
         // ── DEFENSE-IN-DEPTH: If idempotency guard returned 'already_settled' but
         // no sendAmount was provided, the original TX may have failed on-chain.

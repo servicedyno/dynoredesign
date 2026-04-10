@@ -59,6 +59,8 @@ const FALLBACK = {
 export interface TronNetworkParams {
   energyPriceSun: number;
   bandwidthPriceSun: number;
+  /** Dynamic Energy Model max multiplier (e.g. 3.4 means actual price can be 3.4× base) */
+  dynamicEnergyMaxFactor: number;
   totalEnergyLimit: number;
   totalEnergyWeight: number;
   totalBandwidthLimit: number;
@@ -115,6 +117,7 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
 
     let energyPriceSun = FALLBACK.ENERGY_PRICE_SUN;
     let bandwidthPriceSun = FALLBACK.BANDWIDTH_PRICE_SUN;
+    let dynamicEnergyMaxFactorRaw = 10000; // 10000 = 1.0x (no multiplier)
 
     const params = chainParamsRes.data?.chainParameter || [];
     for (const p of params) {
@@ -124,6 +127,12 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
       if (p.key === "getTransactionFee") {
         bandwidthPriceSun = p.value;
       }
+      // FIX (2026-04-10): Fetch Dynamic Energy Model (DEM) max factor.
+      // getDynamicEnergyMaxFactor = 34000 means actual energy price can be 3.4× the base.
+      // Without this, feeLimit was calculated from BASE price only → OUT_OF_ENERGY during congestion.
+      if (p.key === "getDynamicEnergyMaxFactor") {
+        dynamicEnergyMaxFactorRaw = p.value;
+      }
     }
 
     // Override from env if explicitly set
@@ -131,9 +140,13 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
       energyPriceSun = parseInt(process.env.TRON_ENERGY_PRICE_SUN);
     }
 
+    // Convert raw factor (34000 → 3.4). Minimum 1.0 (no multiplier).
+    const dynamicEnergyMaxFactor = Math.max(1, dynamicEnergyMaxFactorRaw / 10000);
+
     const result: TronNetworkParams = {
       energyPriceSun,
       bandwidthPriceSun,
+      dynamicEnergyMaxFactor,
       totalEnergyLimit: 0,
       totalEnergyWeight: 0,
       totalBandwidthLimit: 0,
@@ -148,7 +161,7 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
       // Non-critical
     }
 
-    cronLogger.info(`[TronEnergy] 📊 Network params: Energy=${energyPriceSun} SUN/unit, Bandwidth=${bandwidthPriceSun} SUN/point`);
+    cronLogger.info(`[TronEnergy] 📊 Network params: Energy=${energyPriceSun} SUN/unit, Bandwidth=${bandwidthPriceSun} SUN/point, DEM max=${dynamicEnergyMaxFactor}x`);
     return result;
 
   } catch (error: unknown) {
@@ -157,6 +170,7 @@ export const getTronNetworkParams = async (): Promise<TronNetworkParams> => {
     return {
       energyPriceSun: FALLBACK.ENERGY_PRICE_SUN,
       bandwidthPriceSun: FALLBACK.BANDWIDTH_PRICE_SUN,
+      dynamicEnergyMaxFactor: 3.4, // Conservative fallback: assume max DEM multiplier
       totalEnergyLimit: 0,
       totalEnergyWeight: 0,
       totalBandwidthLimit: 0,
@@ -385,8 +399,14 @@ export const calculateOptimalFeeLimit = async (
   // Energy deficit = what must be burned as TRX
   const energyDeficit = Math.max(0, energyNeeded - senderResources.availableEnergy);
 
-  // Cost of energy deficit in SUN, then convert to TRX
-  const energyCostSun = energyDeficit * networkParams.energyPriceSun;
+  // FIX (2026-04-10): Apply DEM multiplier to energy cost.
+  // TRON's Dynamic Energy Model can increase the actual energy price up to dynamicEnergyMaxFactor × base.
+  // feeLimit is a MAXIMUM (unused portion is NOT charged), so using worst-case is safe.
+  // Without this: feeLimit was calculated from base price (100 SUN) but actual price during
+  // congestion could be 200-340 SUN → OUT_OF_ENERGY failures.
+  const demMultiplier = networkParams.dynamicEnergyMaxFactor || 1;
+  const effectiveEnergyPrice = networkParams.energyPriceSun * demMultiplier;
+  const energyCostSun = energyDeficit * effectiveEnergyPrice;
 
   // Bandwidth cost — check if free bandwidth covers it
   let bandwidthCostSun = 0;
@@ -397,9 +417,10 @@ export const calculateOptimalFeeLimit = async (
   const totalCostSun = energyCostSun + bandwidthCostSun;
   const estimatedCostTRX = totalCostSun / 1_000_000;
 
-  // feeLimit with 50% safety buffer (increased from 20% to prevent OUT_OF_ENERGY failures), minimum 5 TRX
-  const minFeeLimit = parseInt(process.env.TRON_MIN_FEE_LIMIT_TRX || "5");
-  const maxFeeLimit = parseInt(process.env.TRON_MAX_FEE_LIMIT_TRX || "30");
+  // feeLimit with 50% safety buffer, minimum 15 TRX (raised from 5 TRX on 2026-04-10)
+  // feeLimit is a CEILING — only actual energy consumed is charged, so higher limit is safe
+  const minFeeLimit = parseInt(process.env.TRON_MIN_FEE_LIMIT_TRX || "15");
+  const maxFeeLimit = parseInt(process.env.TRON_MAX_FEE_LIMIT_TRX || "50");
   const feeLimitTRX = Math.max(Math.ceil(estimatedCostTRX * 1.5), minFeeLimit);
   const finalFeeLimit = Math.min(feeLimitTRX, maxFeeLimit);
 
@@ -408,7 +429,8 @@ export const calculateOptimalFeeLimit = async (
   cronLogger.info(
     `[TronEnergy] 💡 Fee optimization: ` +
     `Energy needed=${energyNeeded}, available=${senderResources.availableEnergy}, deficit=${energyDeficit} | ` +
-    `Est. cost=${estimatedCostTRX.toFixed(2)} TRX | feeLimit=${finalFeeLimit} TRX (was 50, saving ${savingsPercent.toFixed(0)}%)`
+    `DEM max=${demMultiplier}x, effectivePrice=${effectiveEnergyPrice} SUN/unit | ` +
+    `Est. cost=${estimatedCostTRX.toFixed(2)} TRX | feeLimit=${finalFeeLimit} TRX (max=${maxFeeLimit})`
   );
 
   return {
@@ -470,8 +492,16 @@ export const calculateDynamicTRC20Fee = async (
     : TRC20_ENERGY.EXISTING_RECIPIENT; // 65,000
   const energyDeficit = Math.max(0, energyNeeded - availableEnergy);
 
+  // FIX (2026-04-10): Apply DEM multiplier for gas funding estimate.
+  // Gas funding = actual TRX sent to the sender address to cover fees.
+  // Unlike feeLimit (which is a ceiling), gas funding should be realistic but conservative.
+  // Use half the DEM max factor as a balanced estimate for funding.
+  const demMultiplier = networkParams.dynamicEnergyMaxFactor || 1;
+  const demFundingMultiplier = Math.max(1, (1 + demMultiplier) / 2); // Midpoint: e.g., (1+3.4)/2 = 2.2x
+  const effectiveEnergyPrice = networkParams.energyPriceSun * demFundingMultiplier;
+
   // Cost in TRX
-  const energyCostTRX = (energyDeficit * networkParams.energyPriceSun) / 1_000_000;
+  const energyCostTRX = (energyDeficit * effectiveEnergyPrice) / 1_000_000;
 
   // Bandwidth cost (~0.345 TRX in worst case at 1000 SUN/point)
   const bandwidthCostTRX = (TRC20_BANDWIDTH * networkParams.bandwidthPriceSun) / 1_000_000;
@@ -483,7 +513,7 @@ export const calculateDynamicTRC20Fee = async (
 
   cronLogger.info(
     `[TronEnergy] 📊 Dynamic TRC20 fee: ${fastFee} TRX ` +
-    `(energy: ${energyNeeded} needed [${isNewRecipient ? 'NEW' : 'ACTIVATED'}], ${availableEnergy} available, ${energyDeficit} deficit @ ${networkParams.energyPriceSun} SUN/unit)`
+    `(energy: ${energyNeeded} needed [${isNewRecipient ? 'NEW' : 'ACTIVATED'}], ${availableEnergy} available, ${energyDeficit} deficit @ ${Math.round(effectiveEnergyPrice)} effective SUN/unit [DEM ${demFundingMultiplier.toFixed(1)}x])`
   );
 
   return {

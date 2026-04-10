@@ -168,8 +168,67 @@ export const recordTransactionVolume = async (
   }
 };
 
+/**
+ * Reverse a previously recorded fee-free volume deduction.
+ * Called when settlement fails AFTER recordTransactionVolume was called.
+ * Atomic: restores fee_free_remaining_usd and decrements cumulative_volume_usd.
+ * Also restores "trial" tier if the user was prematurely graduated to "standard".
+ */
+export const reverseTransactionVolume = async (
+  userId: number,
+  amountUsd: number
+): Promise<FeeFreeStatus | null> => {
+  const t = await sequelize.transaction();
+
+  try {
+    await userModel.update(
+      {
+        cumulative_volume_usd: sequelize.literal(
+          `GREATEST(0, COALESCE("cumulative_volume_usd", 0) - ${amountUsd})`
+        ),
+        fee_free_remaining_usd: sequelize.literal(
+          `LEAST(${FREE_TRIAL_VOLUME_USD}, COALESCE("fee_free_remaining_usd", 0) + ${amountUsd})`
+        ),
+      },
+      {
+        where: { user_id: userId },
+        transaction: t,
+      }
+    );
+
+    // If the tier was prematurely switched to "standard" by the original record,
+    // restore it to "trial" if remaining is now > 0
+    const updated = await userModel.findByPk(userId, {
+      attributes: ["fee_free_remaining_usd", "fee_tier"],
+      transaction: t,
+    });
+
+    if (updated) {
+      const remaining = parseFloat((updated as any).fee_free_remaining_usd || "0");
+      const currentTier = (updated as any).fee_tier;
+
+      if (remaining > 0 && currentTier === "standard") {
+        await userModel.update(
+          { fee_tier: "trial" },
+          { where: { user_id: userId }, transaction: t }
+        );
+        log(`[FeeFree] User ${userId} fee-free balance restored ($${remaining}). Tier: standard → trial`, "info");
+      }
+    }
+
+    await t.commit();
+    log(`[FeeFree] ↩️ User ${userId} REVERSED $${amountUsd} fee-free volume (settlement failed)`, "info");
+    return getFeeFreeStatus(userId);
+  } catch (error: any) {
+    await t.rollback();
+    log(`[FeeFree] Error reversing volume for user ${userId}: ${error.message}`, "error");
+    return null;
+  }
+};
+
 export default {
   getFeeFreeStatus,
   calculateFeeFreeDiscount,
   recordTransactionVolume,
+  reverseTransactionVolume,
 };
