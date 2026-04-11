@@ -7,10 +7,11 @@ import CustomButton from "@/Components/UI/Buttons";
 import useIsMobile from "@/hooks/useIsMobile";
 import { useWalletData } from "@/hooks/useWalletData";
 import { theme } from "@/styles/theme";
-import { pageProps } from "@/utils/types";
+import { pageProps, rootReducer } from "@/utils/types";
 import {
   AddRounded,
   ArrowOutward as ArrowOutwardIcon,
+  BusinessRounded,
 } from "@mui/icons-material";
 import { Box, Typography } from "@mui/material";
 import Head from "next/head";
@@ -18,6 +19,7 @@ import Image from "next/image";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 
 const WalletPage = ({
   setPageName,
@@ -55,9 +57,12 @@ const WalletPage = ({
   }, []);
 
   const { walletWarning, cryptocurrencies, walletLoading } = useWalletData();
+  const companyState = useSelector((state: rootReducer) => state.companyReducer);
+  const hasCompany = (companyState.companyList ?? []).length > 0;
   // Hide "Add Wallet" when all supported crypto types already have wallets
   // Also hide during loading to prevent flash of the button
-  const canAddMoreWallets = !walletLoading && cryptocurrencies.length > 0;
+  // Also hide when no company exists (wallet requires company)
+  const canAddMoreWallets = !walletLoading && cryptocurrencies.length > 0 && hasCompany;
 
   useEffect(() => {
     if (setPageName && setPageDescription) {
@@ -99,7 +104,54 @@ const WalletPage = ({
     if (!setPageWarning) return;
     setPageWarning(
       <>
-        {walletWarning && (
+        {!hasCompany && (
+          <SetupWarnnigContainer
+            onClick={() => router.push("/create-pay-link")}
+            sx={{ cursor: "pointer", "&:hover": { opacity: 0.85 } }}
+          >
+            <WarningIconContainer>
+              <BusinessRounded sx={{ fontSize: 16 }} />
+            </WarningIconContainer>
+            <Box>
+              <Typography
+                sx={{
+                  fontFamily: "UrbanistSemibold",
+                  fontWeight: "600",
+                  fontSize: isMobile ? "10px" : "15px",
+                  lineHeight: "130%",
+                  letterSpacing: 0,
+                }}
+              >
+                Create a company first
+              </Typography>
+              <Typography
+                sx={{
+                  fontFamily: "UrbanistMedium",
+                  fontWeight: "500",
+                  fontSize: isMobile ? "10px" : "15px",
+                  lineHeight: "130%",
+                  letterSpacing: 0,
+                }}
+              >
+                You need to{" "}
+                <Typography
+                  component="span"
+                  sx={{
+                    fontFamily: "UrbanistSemibold",
+                    fontWeight: "600",
+                    fontSize: isMobile ? "10px" : "15px",
+                    lineHeight: "130%",
+                    letterSpacing: 0,
+                  }}
+                >
+                  create a company profile
+                </Typography>
+                {" "}before adding wallet addresses. Tap here to get started.
+              </Typography>
+            </Box>
+          </SetupWarnnigContainer>
+        )}
+        {hasCompany && walletWarning && (
           <SetupWarnnigContainer>
             <WarningIconContainer>
               <Image
@@ -165,7 +217,7 @@ const WalletPage = ({
       </>,
     );
     return () => setPageWarning(null);
-  }, [setPageWarning, isMobile, t, walletWarning]);
+  }, [setPageWarning, isMobile, t, walletWarning, hasCompany, router]);
 
   useEffect(() => {
     if (!setPageAction) return;

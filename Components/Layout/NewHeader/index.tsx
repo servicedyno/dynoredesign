@@ -6,6 +6,7 @@ import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import ThemeToggle from "@/Components/UI/ThemeToggle";
 import UserMenu from "@/Components/UI/UserMenu";
 import { useWalletData } from "@/hooks/useWalletData";
+import { rootReducer } from "@/utils/types";
 import { useTheme as useMuiTheme } from "@mui/material";
 import InfoIcon from "@mui/icons-material/Info";
 import ArrowOutwardIcon from "@mui/icons-material/ArrowOutward";
@@ -14,6 +15,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/router";
 import { useCallback, useEffect, useState } from "react";
+import { useSelector } from "react-redux";
 import { useTranslation } from "react-i18next";
 import axiosBaseApi from "@/axiosConfig";
 import {
@@ -40,6 +42,13 @@ const NewHeader = () => {
     [t],
   );
   const { walletWarning } = useWalletData();
+  const companyState = useSelector((state: rootReducer) => state.companyReducer);
+  const hasCompany = (companyState.companyList ?? []).length > 0;
+  const companyFetched = companyState.fetched;
+  // Show company warning only after company data has been fetched
+  const showCompanyWarning = companyFetched && !hasCompany;
+  // Show wallet warning only if company exists (wallet depends on company)
+  const showWalletWarning = walletWarning && hasCompany;
   const [kycRequired, setKycRequired] = useState(false);
   const [kycLoading, setKycLoading] = useState(false);
 
@@ -139,7 +148,29 @@ const NewHeader = () => {
               </Box>
             )}
 
-            {walletWarning && (
+            {showCompanyWarning && (
+              <Box sx={{ order: { lg: 1, xl: 2 } }}>
+                <Link href="/create-pay-link">
+                  <RequiredKYC>
+                    <InfoIcon
+                      sx={{ fontSize: 20, color: muiTheme.palette.error.main }}
+                    />
+                    <RequiredKYCText
+                      sx={{ display: { lg: "none", xl: "block" } }}
+                    >
+                      Complete company setup
+                    </RequiredKYCText>
+                    <RequiredKYCText
+                      sx={{ display: { lg: "block", xl: "none" } }}
+                    >
+                      Company setup
+                    </RequiredKYCText>
+                  </RequiredKYC>
+                </Link>
+              </Box>
+            )}
+
+            {showWalletWarning && (
               <Box sx={{ order: { lg: 1, xl: 2 } }}>
                 <Link href="/wallet">
                   <RequiredKYC>

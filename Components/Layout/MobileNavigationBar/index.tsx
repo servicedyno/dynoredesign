@@ -25,6 +25,7 @@ import { HeaderDivider } from "@/Components/UI/LanguageSwitcher/styled";
 import axiosBaseApi from "@/axiosConfig";
 import SidebarIcon from "@/utils/customIcons/sidebar-icons";
 import { useTranslation } from "react-i18next";
+import { useSelector } from "react-redux";
 import {
   AlertBanner,
   AlertText,
@@ -51,6 +52,11 @@ const MobileNavigationBar = () => {
   const [kycRequired, setKycRequired] = useState(false);
   const [kycLoading, setKycLoading] = useState(false);
   const { walletWarning } = useWalletData();
+  const companyState = useSelector((state: any) => state.companyReducer);
+  const hasCompany = (companyState?.companyList ?? []).length > 0;
+  const companyFetched = companyState?.fetched;
+  const showCompanyWarning = companyFetched && !hasCompany;
+  const showWalletWarning = walletWarning && hasCompany;
 
   useEffect(() => {
     const token = typeof window !== "undefined" ? localStorage.getItem("token") : null;
@@ -391,7 +397,20 @@ const MobileNavigationBar = () => {
             </ExpandedContent>
           )}
 
-          {walletWarning && (
+          {showCompanyWarning && (
+            <ExpandedContent isExpanding={isExpanded}>
+              <Link href="/create-pay-link" onClick={() => setIsExpanded(false)}>
+                <AlertBanner>
+                  <ErrorIcon
+                    sx={{ color: theme.palette.error.main, fontSize: "20px" }}
+                  />
+                  <AlertText>Complete company setup</AlertText>
+                </AlertBanner>
+              </Link>
+            </ExpandedContent>
+          )}
+
+          {showWalletWarning && (
             <ExpandedContent isExpanding={isExpanded}>
               <Link href="/wallet" onClick={() => setIsExpanded(false)}>
                 <AlertBanner>
