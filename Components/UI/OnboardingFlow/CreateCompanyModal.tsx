@@ -35,12 +35,14 @@ interface CreateCompanyModalProps {
   open: boolean;
   onSuccess: () => void;
   onClose?: () => void;
+  closeLabel?: string;
 }
 
 const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
   open,
   onSuccess,
   onClose,
+  closeLabel = "I'll do this later",
 }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
@@ -469,7 +471,7 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
         {onClose && (
           <CustomButton
             data-testid="cancel-company-btn"
-            label="Cancel"
+            label={closeLabel}
             variant="secondary"
             size={isMobile ? "small" : "medium"}
             fullWidth

@@ -11,6 +11,8 @@ import StepIndicator from "./StepIndicator";
 
 type OnboardingPhase = "loading" | "company" | "wallet" | "celebration" | "done";
 
+const ONBOARDING_DISMISSED_KEY = "onboarding_dismissed";
+
 const OnboardingFlow: React.FC = () => {
   const dispatch = useDispatch();
   const [phase, setPhase] = useState<OnboardingPhase>("loading");
@@ -55,6 +57,12 @@ const OnboardingFlow: React.FC = () => {
     // Now data has actually been fetched
     decisionMade.current = true;
 
+    // If user previously dismissed onboarding this session, skip
+    if (typeof window !== "undefined" && sessionStorage.getItem(ONBOARDING_DISMISSED_KEY)) {
+      setPhase("done");
+      return;
+    }
+
     if (!hasCompany) {
       setPhase("company");
     } else if (!hasWallet) {
@@ -80,11 +88,23 @@ const OnboardingFlow: React.FC = () => {
   // Called when wallet is successfully added
   const handleWalletAdded = useCallback(() => {
     dispatch(WalletAction(WALLET_FETCH));
+    // Clear dismissal flag since user completed onboarding
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem(ONBOARDING_DISMISSED_KEY);
+    }
     setPhase("celebration");
   }, [dispatch]);
 
   // Called when celebration is dismissed
   const handleCelebrationDismiss = useCallback(() => {
+    setPhase("done");
+  }, []);
+
+  // Called when user skips onboarding ("I'll do this later")
+  const handleSkipOnboarding = useCallback(() => {
+    if (typeof window !== "undefined") {
+      sessionStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+    }
     setPhase("done");
   }, []);
 
@@ -96,13 +116,12 @@ const OnboardingFlow: React.FC = () => {
       <CreateCompanyModal
         open={phase === "company"}
         onSuccess={handleCompanyCreated}
+        onClose={handleSkipOnboarding}
       />
 
       <AddWalletModal
         open={phase === "wallet"}
-        onClose={() => {
-          setPhase("done");
-        }}
+        onClose={handleSkipOnboarding}
         onWalletAdded={handleWalletAdded}
         headerExtra={<StepIndicator currentStep={2} totalSteps={2} />}
       />
