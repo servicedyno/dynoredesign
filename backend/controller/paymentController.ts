@@ -5532,6 +5532,16 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
             `total_fee=${autoConvertEnabled ? (adminAmountToSend - originalUserAmount) : adminAmountToSend}, ` +
             `fee_payer=${tempData?.fee_payer || customerData?.fee_payer || 'company'}` +
             `${autoConvertEnabled ? `, auto_convert=${autoConvertTargetCurrency}` : ''}`);
+          
+          // FIX (2026-04-12): Set dedup flag so webhookProcessor.ts doesn't send payment.settled again.
+          // The 2026-04-02 fix removed the settled webhook from here but forgot to signal
+          // webhookProcessor via the confirmed-webhook-sent-{paymentId} Redis key.
+          // Without this, webhookProcessor falls through to its own payment.settled send path.
+          const settledDedupPaymentId = paymentId || tempData?.unique_tx_id || tempData?.ref || "unknown";
+          const settledDedupKey = `confirmed-webhook-sent-${settledDedupPaymentId}`;
+          await setRedisItem(settledDedupKey, { sent: true, sentAt: new Date().toISOString(), source: "cryptoVerification-skip" });
+          await setRedisTTL(settledDedupKey, 86400); // 24 hours
+          cronLogger.info(`[cryptoVerification] Set dedup key ${settledDedupKey} to prevent duplicate payment.settled from webhookProcessor`);
         } else {
           let resData;
           if (customerData?.redirect_uri) {
