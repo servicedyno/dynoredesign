@@ -83,7 +83,17 @@ This sets the dedup flag that `webhookProcessor.ts` checks, preventing the dupli
 - `callMerchantWebhook` first attempt timed out at 08:22:49 (30s exceeded)
 - Merchant server at `nomadlynew-production.up.railway.app` was slow
 - Retry succeeded — no data loss
-- **Recommendation**: Monitor this merchant's webhook endpoint response times
+- **BUT**: The `await callMerchantWebhook()` call was **blocking settlement** — the 30s timeout delayed `cryptoVerification` by ~30s
+
+### Fix Applied (Anomaly #2)
+**Files**: `backend/webhooks/index.ts`, `backend/services/webhookProcessor.ts`
+
+1. **Timeout reduced**: 30s → 15s (`webhooks/index.ts` line 300)
+2. **Non-blocking pre-settlement webhooks** (`webhookProcessor.ts`):
+   - `payment.pending` webhook (line ~819): `await callMerchantWebhook(...)` → fire-and-forget with `.catch()` error logging
+   - `payment.confirmed` webhook (line ~988): `await callMerchantWebhook(...)` → fire-and-forget with `.then()/.catch()` logging
+   - Settlement (`cryptoVerification`) now starts **immediately** without waiting for merchant webhook delivery
+   - Post-settlement webhooks (`payment.settled`, `payment.failed`, crash-recovery) remain `await` — they don't block any critical path
 
 ### ⚠️ Tatum UTXO API Fallback
 
@@ -131,6 +141,7 @@ This sets the dedup flag that `webhookProcessor.ts` checks, preventing the dupli
 ## 4. Recommendations
 
 1. **Top up fee wallets** — especially POLYGON ($0.31) and TRX ($12.27)
-2. **Monitor merchant webhook latency** — nomadlynew endpoint timed out on first attempt
+2. **Verify fixes in production** — next BTC payment should:
+   - Show `confirmed-webhook-sent-{paymentId}` dedup key (fix #1: no duplicate `payment.settled`)
+   - Show settlement starting immediately without webhook timeout delay (fix #2: non-blocking)
 3. **Consider UTXO fallback chain** — add blockstream.info as third option after Tatum + mempool.space
-4. **Verify fix in production** — next BTC payment should show `payment.settled` dedup key being set by `cryptoVerification`, preventing the duplicate webhook
