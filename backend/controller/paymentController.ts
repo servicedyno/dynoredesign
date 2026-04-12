@@ -5537,7 +5537,7 @@ const cryptoVerification = async (address, webhook = true, overrideRedisKey?: st
           // The 2026-04-02 fix removed the settled webhook from here but forgot to signal
           // webhookProcessor via the confirmed-webhook-sent-{paymentId} Redis key.
           // Without this, webhookProcessor falls through to its own payment.settled send path.
-          const settledDedupPaymentId = paymentId || tempData?.unique_tx_id || tempData?.ref || "unknown";
+          const settledDedupPaymentId = tempData?.payment_id || tempData?.unique_tx_id || tempData?.ref || "unknown";
           const settledDedupKey = `confirmed-webhook-sent-${settledDedupPaymentId}`;
           await setRedisItem(settledDedupKey, { sent: true, sentAt: new Date().toISOString(), source: "cryptoVerification-skip" });
           await setRedisTTL(settledDedupKey, 86400); // 24 hours
