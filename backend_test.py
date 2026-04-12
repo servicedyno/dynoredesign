@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """
 DynoPay Backend API Testing Script
-Testing after webhook delivery improvements:
-- Webhook timeout reduced from 30s to 15s
-- Pre-settlement merchant webhooks (payment.pending + payment.confirmed) made non-blocking
-- Prevents settlement delays from webhook delivery issues
+Testing after bot protection enhancement:
+- Middleware now blocks ALL .php requests and MCP/SSE probes
+- Bot protection should not interfere with legitimate /api/* traffic
+- All API endpoints should return their normal status codes (no 500 errors)
 
 Target: https://setup-guide-76.preview.emergentagent.com/api
 """
@@ -177,15 +177,15 @@ def test_send_payment_link_email():
 
 def main():
     print("=" * 80)
-    print("DynoPay Backend API Testing - Webhook Delivery Improvements Verification")
+    print("DynoPay Backend API Testing - Bot Protection Enhancement Verification")
     print("=" * 80)
     print(f"Target URL: {BASE_URL}")
     print(f"Test Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')} UTC")
     print()
-    print("Testing after webhook delivery improvements:")
-    print("- Webhook timeout reduced from 30s to 15s")
-    print("- Pre-settlement merchant webhooks (payment.pending + payment.confirmed) made non-blocking")
-    print("- Prevents settlement delays from webhook delivery issues")
+    print("Testing after bot protection enhancement:")
+    print("- Middleware now blocks ALL .php requests and MCP/SSE probes")
+    print("- Bot protection should not interfere with legitimate /api/* traffic")
+    print("- All API endpoints should return their normal status codes (no 500 errors)")
     print()
     print("Expected behaviors:")
     print("1. GET /api/ — Health check, should return 200 with status 'operational'")
@@ -259,20 +259,20 @@ def main():
         print("❌ Security configuration may need attention")
     
     if all_core_working and all_auth_working:
-        print("✅ No 500 errors detected - backend appears stable after webhook improvements")
-        print("✅ Webhook delivery improvements appear successful")
-        print("✅ Core functionality unaffected by webhook timeout and non-blocking changes")
+        print("✅ No 500 errors detected - backend appears stable after bot protection enhancement")
+        print("✅ Bot protection enhancement appears successful")
+        print("✅ Core functionality unaffected by bot protection middleware changes")
     
     print()
     
     if passed == total:
-        print("🎉 ALL TESTS PASSED - Webhook delivery improvements verification complete")
-        print("✅ Backend API fully operational after webhook improvements")
-        print("✅ Existing endpoints still work after webhook timeout and non-blocking changes")
+        print("🎉 ALL TESTS PASSED - Bot protection enhancement verification complete")
+        print("✅ Backend API fully operational after bot protection enhancement")
+        print("✅ Existing endpoints still work after bot protection middleware changes")
         return 0
     else:
         print(f"⚠️  {total - passed} TEST(S) FAILED")
-        print("❌ Webhook improvements may have introduced issues that need attention")
+        print("❌ Bot protection enhancement may have introduced issues that need attention")
         return 1
 
 if __name__ == "__main__":

@@ -28,20 +28,20 @@ const SCANNER_PATH_PATTERNS: RegExp[] = [
   /\/wlwmanifest\.xml/i,
   /\/wp-cron\.php/i,
 
-  // PHP/CMS probes
+  // PHP catch-all: This is a Node.js app — NO legitimate .php endpoints exist.
+  // Blocks random .php probes (cilus.php, Geforce.php, fetch.php, *default.php, etc.)
+  // that bypass the specific WordPress patterns above.
+  /\.php(\?|$)/i,
+
+  // PHP/CMS probes (kept for UA-based detection / logging clarity)
   /\/phpmyadmin/i,
   /\/pma\//i,
-  /\/phpinfo\.php/i,
-  /\/admin\.php/i,
   /\/administrator/i,
   /\/cgi-bin\//i,
   /\/\.env/,
   /\/\.git/,
   /\/\.htaccess/,
   /\/\.htpasswd/,
-  /\/config\.php/i,
-  /\/setup\.php/i,
-  /\/install\.php/i,
 
   // Common CMS paths
   /\/joomla/i,
@@ -58,6 +58,11 @@ const SCANNER_PATH_PATTERNS: RegExp[] = [
   /\.\.\//,
   /\/etc\/passwd/,
   /\/proc\/self/,
+
+  // AI agent / MCP probes (automated API discovery)
+  /^\/mcp$/i,
+  /^\/sse$/i,
+  /^\/.well-known\/mcp/i,
 ];
 
 /** User-Agent patterns that indicate bots/scanners */
