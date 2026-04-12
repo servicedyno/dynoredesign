@@ -815,7 +815,8 @@ async function handleNewTransaction(
 
       const linkIdPending = customerData?.link_id || null;
       const paymentTypePending = linkIdPending ? "payment_link" : "direct_api";
-      await callMerchantWebhook(customerData, {
+      // FIX (2026-04-12): Fire-and-forget — don't block settlement waiting for merchant server
+      callMerchantWebhook(customerData, {
         event: "payment.pending",
         payment_type: paymentTypePending,
         address, txId: payload.txId,
@@ -835,6 +836,8 @@ async function handleNewTransaction(
         meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
         created_at: new Date().toISOString(),
         timestamp: new Date().toISOString(),
+      }).catch(pendingWebhookErr => {
+        webhookLogs.error("[WebhookProcessor] payment.pending webhook failed (non-blocking):", pendingWebhookErr);
       });
     } catch (notifError) {
       webhookLogs.error("[WebhookProcessor] Error sending pending notification:", notifError);
@@ -977,37 +980,38 @@ async function handleNewTransaction(
 
   // ── Send payment.confirmed webhook — crypto IS on-chain, BEFORE settlement ──
   // This is distinct from payment.settled (which means delivered to merchant wallet)
+  // FIX (2026-04-12): Fire-and-forget — don't block settlement waiting for merchant server.
+  // Previously, a 30s timeout on this call would delay settlement by 30s+.
   if (customerData && (customerData.webhook_url || customerData.callback_url)) {
-    try {
-      const receivedLinkId = customerData?.link_id || items?.link_id || null;
-      const receivedPaymentType = receivedLinkId ? "payment_link" : "direct_api";
-      await callMerchantWebhook(customerData, {
-        event: "payment.confirmed",
-        payment_type: receivedPaymentType,
-        address,
-        txId: payload.txId,
-        transaction_reference: payload.txId,
-        amount: finalReceivedAmount,
-        currency: items?.currency || payload.asset,
-        payment_id: items?.payment_id || items?.unique_tx_id,
-        status: "confirmed",
-        payment_status: "confirmed",
-        base_amount: customerData?.base_amount || items?.base_amount_usd || null,
-        base_currency: customerData?.base_currency || "USD",
-        customer_name: customerData?.customer_name || null,
-        customer_email: customerData?.email || null,
-        description: customerData?.description || null,
-        link_id: receivedLinkId,
-        fee_payer: customerData?.fee_payer || items?.fee_payer || "company",
-        meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
-        created_at: new Date().toISOString(),
-        received_at: new Date().toISOString(),
-        note: "Payment confirmed on-chain. Settlement to merchant wallet in progress.",
-      });
+    const receivedLinkId = customerData?.link_id || items?.link_id || null;
+    const receivedPaymentType = receivedLinkId ? "payment_link" : "direct_api";
+    callMerchantWebhook(customerData, {
+      event: "payment.confirmed",
+      payment_type: receivedPaymentType,
+      address,
+      txId: payload.txId,
+      transaction_reference: payload.txId,
+      amount: finalReceivedAmount,
+      currency: items?.currency || payload.asset,
+      payment_id: items?.payment_id || items?.unique_tx_id,
+      status: "confirmed",
+      payment_status: "confirmed",
+      base_amount: customerData?.base_amount || items?.base_amount_usd || null,
+      base_currency: customerData?.base_currency || "USD",
+      customer_name: customerData?.customer_name || null,
+      customer_email: customerData?.email || null,
+      description: customerData?.description || null,
+      link_id: receivedLinkId,
+      fee_payer: customerData?.fee_payer || items?.fee_payer || "company",
+      meta_data: customerData?.meta_data ? (typeof customerData.meta_data === 'string' ? JSON.parse(customerData.meta_data) : customerData.meta_data) : null,
+      created_at: new Date().toISOString(),
+      received_at: new Date().toISOString(),
+      note: "Payment confirmed on-chain. Settlement to merchant wallet in progress.",
+    }).then(() => {
       webhookLogs.info(`[WebhookProcessor] ✅ payment.confirmed webhook sent for payment ${paymentId} — crypto confirmed on-chain before settlement`);
-    } catch (receivedWebhookErr) {
-      webhookLogs.error("[WebhookProcessor] Error sending payment.confirmed webhook:", receivedWebhookErr);
-    }
+    }).catch(confirmedWebhookErr => {
+      webhookLogs.error("[WebhookProcessor] payment.confirmed webhook failed (non-blocking):", confirmedWebhookErr);
+    });
   }
 
   try {
