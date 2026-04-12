@@ -3437,7 +3437,16 @@ const findUtxoOutputIndex = async (
         `Outputs: ${voutSummary.join(' | ')}`
       );
     } else {
-      cronLogger.warn(`[findUtxoOutputIndex] No vout data in tx ${txHash} for ${currency}`);
+      // Diagnostic logging (2026-04-12): Log exactly what Tatum returned so we can
+      // track whether this is indexer lag, null response, or changed API shape.
+      const txDataType = txData === null ? 'null' : txData === undefined ? 'undefined' : typeof txData;
+      const txDataKeys = txData && typeof txData === 'object' ? Object.keys(txData) : [];
+      const txDataSnippet = txData ? JSON.stringify(txData).substring(0, 500) : String(txData);
+      cronLogger.warn(
+        `[findUtxoOutputIndex] No vout data in tx ${txHash} for ${currency}. ` +
+        `Tatum response diagnostic: type=${txDataType}, keys=[${txDataKeys.join(',')}], ` +
+        `snippet=${txDataSnippet}`
+      );
 
       // Fallback chain for BTC: mempool.space → blockstream.info
       if (currency === 'BTC') {
