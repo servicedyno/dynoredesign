@@ -6,7 +6,7 @@ Testing after recent code changes in:
 - feeFreeService.ts (new reverseTransactionVolume function)
 - paymentController.ts (settlement flow changes for same-wallet combine + fee-free rollback)
 
-Target: https://getting-started-206.preview.emergentagent.com/api
+Target: https://setup-guide-76.preview.emergentagent.com/api
 """
 
 import requests
@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 
 # Test configuration from review request
-BASE_URL = "https://getting-started-206.preview.emergentagent.com/api"
+BASE_URL = "https://setup-guide-76.preview.emergentagent.com/api"
 
 # Test credentials from review request
 ADMIN_CREDENTIALS = {
