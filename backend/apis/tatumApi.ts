@@ -3363,6 +3363,25 @@ const findUtxoOutputIndex = async (
       txData = await tatumSdk.blockchain.bcash.bchGetRawTransaction(txHash) as typeof txData;
     }
 
+    // FIX (2026-04-12): Tatum SDK V4 returns `outputs` (not `vout`).
+    // Normalize: map outputs → vout so the matching logic below works unchanged.
+    const rawData = txData as Record<string, unknown> | null;
+    if (rawData && !rawData.vout && Array.isArray(rawData.outputs)) {
+      const outputs = rawData.outputs as Array<{ value?: string | number; address?: string; script?: string }>;
+      (txData as Record<string, unknown>).vout = outputs.map((o, i) => ({
+        value: o.value,
+        n: i,
+        scriptPubKey: {
+          address: o.address || undefined,
+          addresses: o.address ? [o.address] : [],
+          hex: o.script || undefined,
+        },
+      }));
+      cronLogger.info(
+        `[findUtxoOutputIndex] Normalized Tatum outputs→vout for ${currency} tx ${txHash}: ${outputs.length} outputs`
+      );
+    }
+
     if (txData?.vout) {
       // FIX BUG-9: Build comprehensive address variants for matching
       const addressLower = address.toLowerCase();
