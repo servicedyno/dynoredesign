@@ -85,26 +85,57 @@ const mailTransporter = async ({ to, subject, body, name, attachments }: mailOpt
     }));
   }
 
-  try {
-    const { data } = await axios.post(
-      "https://api.brevo.com/v3/smtp/email",
-      payload,
-      {
-        headers: {
-          "api-key": process.env.BREVO_API_KEY,
-        },
-        timeout: 15000,
+  // Retry Brevo with short exponential backoff to absorb transient 5xx / network
+  // blips. Most Brevo "invalid_request 500" events we've seen recover within
+  // <1s, so 3 attempts at 300ms/900ms/2700ms is enough without noticeable delay.
+  const MAX_ATTEMPTS = 3;
+  const BACKOFF_MS = [300, 900, 2700];
+  let lastError: any;
+
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const { data } = await axios.post(
+        "https://api.brevo.com/v3/smtp/email",
+        payload,
+        {
+          headers: {
+            "api-key": process.env.BREVO_API_KEY,
+          },
+          timeout: 15000,
+        }
+      );
+      if (attempt > 1) {
+        log(`[Email] Sent to ${to} (attempt ${attempt}/${MAX_ATTEMPTS}): ${subject}`);
+      } else {
+        log(`[Email] Sent to ${to}: ${subject}${attachments ? ` (with ${attachments.length} attachment(s))` : ''}`);
       }
-    );
-    log(`[Email] Sent to ${to}: ${subject}${attachments ? ` (with ${attachments.length} attachment(s))` : ''}`);
-    return data;
-  } catch (apiError) {
-    // Capture Brevo-specific error details for diagnostics
-    captureError(apiError, 'email', {
-      extraContext: `Brevo API call | to=${to} | subject=${subject.substring(0, 60)} | payloadSize=${JSON.stringify(payload).length}`,
-    });
-    throw apiError;
+      return data;
+    } catch (apiError: any) {
+      lastError = apiError;
+      const status = apiError?.response?.status;
+      // Only retry on 5xx / network errors. 4xx (bad payload) is permanent.
+      const isRetryable =
+        !status ||                    // network error (ECONNRESET, timeout, etc.)
+        status >= 500 ||
+        apiError?.code === 'ECONNABORTED' ||
+        apiError?.code === 'ETIMEDOUT' ||
+        apiError?.code === 'ECONNRESET';
+
+      if (!isRetryable || attempt === MAX_ATTEMPTS) {
+        // Final failure — capture and rethrow
+        captureError(apiError, 'email', {
+          extraContext: `Brevo API call | to=${to} | subject=${subject.substring(0, 60)} | payloadSize=${JSON.stringify(payload).length} | attempts=${attempt}/${MAX_ATTEMPTS}`,
+        });
+        throw apiError;
+      }
+
+      // Retryable — wait and try again (don't spam captureError for transient 5xx)
+      await new Promise((r) => setTimeout(r, BACKOFF_MS[attempt - 1]));
+    }
   }
+
+  // Unreachable, but keeps TS happy
+  throw lastError;
 };
 
 export default mailTransporter;

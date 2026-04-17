@@ -233,11 +233,22 @@ export const captureError = (
     // Persist buffer to Redis (survives restarts)
     persistBufferToRedis().catch(() => {}); // fire-and-forget
 
-    // Immediate alert for critical or high errors
+    // Immediate alert for critical or high errors.
+    // Guard: if we're currently trying to send an immediate alert and THIS
+    // error is from the email layer, do NOT re-enter — otherwise a Brevo
+    // outage cascades into an infinite loop (captureError → sendImmediateAlert
+    // → mailTransporter → captureError → ...). The error is still buffered
+    // for the next 15-min digest.
     if (severity === "critical" || severity === "high") {
-      sendImmediateAlert(entry).catch((e) => {
-        cronLogger.error(`[ErrorMonitor] Failed to send immediate alert: ${(e as Error).message}`);
-      });
+      if (immediateAlertInFlight && component === "email") {
+        cronLogger.warn(
+          `[ErrorMonitor] Suppressing nested email immediate-alert (provider outage suspected) — error buffered for digest`
+        );
+      } else {
+        sendImmediateAlert(entry).catch((e) => {
+          cronLogger.error(`[ErrorMonitor] Failed to send immediate alert: ${(e as Error).message}`);
+        });
+      }
     }
   } catch (captureErr) {
     // Never let monitoring itself crash the app
@@ -247,13 +258,20 @@ export const captureError = (
 
 /**
  * Infer severity from component type and HTTP status.
+ *
+ * NOTE: For component==='email', we deliberately NEVER escalate to 'high' on
+ * 5xx status codes. Upstream mail-provider (Brevo/SMTP) 5xx responses are
+ * transient and must not trigger an immediate-alert email — doing so would
+ * recursively retry email through the same failing provider.
+ * Email failures are always captured at 'medium' so they roll up in the 15-min
+ * digest instead of the real-time alert path.
  */
 const inferSeverity = (component: ErrorComponent, statusCode?: number): ErrorSeverity => {
   if (component === "uncaught" || component === "unhandled-rejection") return "critical";
+  if (component === "email") return "medium"; // MUST be before the generic 5xx escalation
   if (component === "database" || component === "redis") return "high";
   if (statusCode && statusCode >= 500) return "high";
   if (component === "payment" || component === "blockchain") return "high";
-  if (component === "email") return "medium";
   if (component === "cron") return "medium";
   return "low";
 };
@@ -567,12 +585,17 @@ export const sendErrorDigest = async (): Promise<void> => {
     const htmlBody = formatDigestEmail(digest, totalRaw);
 
     const transporter = await getMailTransporter();
-    await transporter({
-      to: adminEmail,
-      name: "DynoPay Admin",
-      subject,
-      body: htmlBody,
-    });
+    immediateAlertInFlight = true;
+    try {
+      await transporter({
+        to: adminEmail,
+        name: "DynoPay Admin",
+        subject,
+        body: htmlBody,
+      });
+    } finally {
+      immediateAlertInFlight = false;
+    }
 
     cronLogger.info(`[ErrorMonitor] ✅ Digest sent to ${adminEmail}: ${totalRaw} errors, ${digest.length} unique`);
     lastDigestSent = new Date();
@@ -590,6 +613,20 @@ export const sendErrorDigest = async (): Promise<void> => {
     }
   }
 };
+
+/**
+ * Re-entrancy guard for sendImmediateAlert.
+ *
+ * sendImmediateAlert uses mailTransporter, and mailTransporter calls
+ * captureError('email', ...) on Brevo failure. Without this guard, a Brevo
+ * outage causes infinite recursion: captureError → sendImmediateAlert →
+ * mailTransporter → captureError → ...
+ *
+ * While an immediate alert is in-flight, any additional 'email'-component
+ * errors are still recorded in the buffer (for the 15-min digest) but do NOT
+ * trigger another immediate-alert attempt.
+ */
+let immediateAlertInFlight = false;
 
 /**
  * Send immediate alert for critical errors.
@@ -623,12 +660,17 @@ const sendImmediateAlert = async (entry: ErrorEntry): Promise<void> => {
     const htmlBody = formatImmediateAlertEmail(entry);
 
     const transporter = await getMailTransporter();
-    await transporter({
-      to: adminEmail,
-      name: "DynoPay Admin",
-      subject,
-      body: htmlBody,
-    });
+    immediateAlertInFlight = true;
+    try {
+      await transporter({
+        to: adminEmail,
+        name: "DynoPay Admin",
+        subject,
+        body: htmlBody,
+      });
+    } finally {
+      immediateAlertInFlight = false;
+    }
 
     cronLogger.info(`[ErrorMonitor] 🔴 Immediate alert sent to ${adminEmail}: ${entry.message.substring(0, 100)}`);
   } catch (sendErr) {
