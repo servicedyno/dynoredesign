@@ -24,7 +24,19 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - **DO Valkey**: Redis migrated from local to DigitalOcean Managed Valkey (`rediss://…:25061`, TLS). `webhookQueue.ts` `parseRedisUrl()` updated to detect `rediss://` and enable TLS for BullMQ/ioredis
 - **Custom domains attached**: `api.dynopay.com`, `checkout.dynopay.com`, `dynopay.com`, `www.dynopay.com` (pending DNS verification)
 - **Live URL (pre-DNS)**: https://dynopay.onrender.com — `/health` returns `database=connected, redis=connected, tatum=operational, binance_websocket=connected`, admin login returns JWT ✅
-- **Old service**: `DynoRedesign` (Node buildpack, free tier) is still running broken — safe to delete once DNS is cut over
+- **Old service**: `DynoRedesign` (Node buildpack, free tier) DELETED
+- **Custom domains verified & LIVE** (2026-04-18):
+  - `https://api.dynopay.com` — backend API (`/health` returns healthy, admin login works)
+  - `https://checkout.dynopay.com` — checkout page (HTTP 200)
+  - `https://dynopay.com` — main frontend (HTTP 200, 172KB landing page)
+  - `https://www.dynopay.com` — 301 redirect → apex
+- **Cloudflare DNS updated** via API (zone `7dff9c723838c34337b6f8aa54aef88e`):
+  - `api.dynopay.com` CNAME → `dynopay.onrender.com` (DNS-only)
+  - `checkout.dynopay.com` CNAME → `dynopay.onrender.com` (DNS-only, was proxied)
+  - `dynopay.com` apex CNAME → `dynopay.onrender.com` (DNS-only, CNAME flattening) — *NOTE: A record to 216.24.57.1 was tried first but Cloudflare error 1011 "prohibited IP" blocked it because the IP is in Cloudflare's range; CNAME flattening bypasses this since it resolves to non-blocked Render CDN IPs (216.24.57.251 / 216.24.57.7)*
+  - `www.dynopay.com` CNAME → `dynopay.onrender.com` (DNS-only, newly created)
+  - Old `_railway-verify` TXT records cleaned up
+- All SSL certs auto-provisioned by Render via Let's Encrypt
 
 ### 2026-03-25 — Critical Bug Fix: Double SUN→TRX Conversion (Fee Wallet Drain)
 - **Root Cause**: `tatumApi.getAddressBalance()` was fixed on ~March 15 to convert SUN→TRX (÷1M), but 4 caller sites still had their own ÷1M, making TRX balances appear 1,000,000× smaller
