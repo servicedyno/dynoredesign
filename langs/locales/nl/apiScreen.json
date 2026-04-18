@@ -1,0 +1,75 @@
+{
+  "apiKeysTitle": "API-sleutels",
+  "apiKeysDescription": "Beheer API-sleutels voor het integreren van Dynopay in uw applicaties",
+  "createNewKey": "Nieuwe sleutel aanmaken",
+  "createKeyMobile": "Aanmaken",
+  "documentation": {
+    "title": "API-documentatie",
+    "description": "Leer hoe u Dynopay integreert in uw applicatie met onze volledige API-documentatie",
+    "viewDocumentation": "Documentatie bekijken",
+    "infoIconAlt": "Informatie"
+  },
+  "icons": {
+    "copyAlt": "Kopiëren",
+    "eyeAlt": "Bekijken",
+    "trashAlt": "Verwijderen"
+  },
+  "status": {
+    "active": "Actief"
+  },
+  "createdOn": "Aangemaakt op {{date}} om {{time}}",
+  "validation": {
+    "selectCompany": "Selecteer een bedrijf"
+  },
+  "company": {
+    "selectCompany": "Bedrijf selecteren",
+    "label": "Bedrijfsnaam"
+  },
+  "currency": {
+    "baseCurrency": "Basisvaluta"
+  },
+  "toast": {
+    "copied": "Gekopieerd!"
+  },
+  "delete": {
+    "title": "API-sleutel verwijderen",
+    "confirmMessage": "Weet u zeker dat u deze API-sleutel wilt verwijderen? Applicaties die deze sleutel gebruiken, hebben geen toegang meer tot de API. Deze actie kan niet ongedaan worden gemaakt.",
+    "confirmButton": "Verwijderen"
+  },
+  "security": {
+    "title": "Beveiligings-best practices:",
+    "description": "Bewaar uw API-sleutels veilig en deel ze nooit openbaar. Als u vermoedt dat een sleutel is gecompromitteerd, verwijder deze dan onmiddellijk en maak een nieuwe aan."
+  },
+  "generate": {
+    "modalTitle": "Nieuwe API-sleutel aanmaken",
+    "modalSubtitle": "Genereer een nieuwe API-sleutel om Dynopay te integreren in uw app",
+    "submit": "Genereren",
+    "keyName": "Sleutelnaam",
+    "keyNamePlaceholder": "bijv.: App Productie",
+    "baseCurrency": "Basisvaluta",
+    "baseCurrencyPlaceholder": "Basisvaluta invoeren",
+    "keyNameDescription": "Sleutelmachtigingen",
+    "keyNameDescription1": "Betalingsverzoeken aanmaken en beheren",
+    "keyNameDescription2": "Transactiegeschiedenis bekijken",
+    "keyNameDescription3": "Webhook-meldingen ontvangen",
+    "keyNameDescription4": "Wallet-informatie opvragen",
+    "successTitle": "API-sleutel gegenereerd",
+    "successSubtitle": "Sla deze sleutel nu op - u kunt deze niet opnieuw bekijken",
+    "yourKey": "API",
+    "adminToken": "Admin-token",
+    "securityTitle": "Belangrijke beveiligingsmelding",
+    "securityMessage": "Kopieer nu uw API-sleutel. Om veiligheidsredenen tonen we deze niet opnieuw. Bewaar deze veilig en deel deze nooit openbaar."
+  },
+  "withdrawalWhitelist": {
+    "title": "Opname-whitelist",
+    "description": "Wanneer ingeschakeld, kan uw account alleen opnemen naar adressen op uw whitelist.",
+    "addressManagement": "Adresbeheer",
+    "off": "UIT",
+    "enable": "Inschakelen"
+  },
+  "actions": {
+    "cancel": "Annuleren",
+    "generate": "Sleutel genereren",
+    "done": "Klaar"
+  }
+}

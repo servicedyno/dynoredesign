@@ -1,0 +1,75 @@
+{
+  "apiKeysTitle": "API-Schlüssel",
+  "apiKeysDescription": "Verwalten Sie API-Schlüssel für die Integration von Dynopay in Ihre Anwendungen",
+  "createNewKey": "Neuen Schlüssel erstellen",
+  "createKeyMobile": "Erstellen",
+  "documentation": {
+    "title": "API-Dokumentation",
+    "description": "Erfahren Sie, wie Sie Dynopay mit unserer vollständigen API-Dokumentation in Ihre Anwendung integrieren",
+    "viewDocumentation": "Dokumentation anzeigen",
+    "infoIconAlt": "Information"
+  },
+  "icons": {
+    "copyAlt": "Kopieren",
+    "eyeAlt": "Anzeigen",
+    "trashAlt": "Löschen"
+  },
+  "status": {
+    "active": "Aktiv"
+  },
+  "createdOn": "Erstellt am {{date}} um {{time}}",
+  "validation": {
+    "selectCompany": "Bitte wählen Sie ein Unternehmen aus"
+  },
+  "company": {
+    "selectCompany": "Unternehmen auswählen",
+    "label": "Firmenname"
+  },
+  "currency": {
+    "baseCurrency": "Basiswährung"
+  },
+  "toast": {
+    "copied": "Kopiert!"
+  },
+  "delete": {
+    "title": "API-Schlüssel löschen",
+    "confirmMessage": "Sind Sie sicher, dass Sie diesen API-Schlüssel löschen möchten? Anwendungen, die diesen Schlüssel verwenden, können nicht mehr auf die API zugreifen. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirmButton": "Löschen"
+  },
+  "security": {
+    "title": "Sicherheits-Best-Practices:",
+    "description": "Bewahren Sie Ihre API-Schlüssel sicher auf und teilen Sie sie niemals öffentlich. Wenn Sie vermuten, dass ein Schlüssel kompromittiert wurde, löschen Sie ihn sofort und erstellen Sie einen neuen."
+  },
+  "generate": {
+    "modalTitle": "Neuen API-Schlüssel erstellen",
+    "modalSubtitle": "Generieren Sie einen neuen API-Schlüssel zur Integration von Dynopay in Ihre App",
+    "submit": "Generieren",
+    "keyName": "Schlüsselname",
+    "keyNamePlaceholder": "z.B.: App Produktion",
+    "baseCurrency": "Basiswährung",
+    "baseCurrencyPlaceholder": "Basiswährung eingeben",
+    "keyNameDescription": "Schlüsselberechtigungen",
+    "keyNameDescription1": "Zahlungsanfragen erstellen und verwalten",
+    "keyNameDescription2": "Transaktionshistorie anzeigen",
+    "keyNameDescription3": "Webhook-Benachrichtigungen empfangen",
+    "keyNameDescription4": "Wallet-Informationen abrufen",
+    "successTitle": "API-Schlüssel generiert",
+    "successSubtitle": "Speichern Sie diesen Schlüssel jetzt - Sie können ihn nicht erneut anzeigen",
+    "yourKey": "API",
+    "adminToken": "Admin-Token",
+    "securityTitle": "Wichtiger Sicherheitshinweis",
+    "securityMessage": "Kopieren Sie Ihren API-Schlüssel jetzt. Aus Sicherheitsgründen zeigen wir ihn nicht erneut an. Bewahren Sie ihn sicher auf und teilen Sie ihn niemals öffentlich."
+  },
+  "withdrawalWhitelist": {
+    "title": "Auszahlungs-Whitelist",
+    "description": "Wenn aktiviert, kann Ihr Konto nur an Adressen auf Ihrer Whitelist auszahlen.",
+    "addressManagement": "Adressverwaltung",
+    "off": "AUS",
+    "enable": "Aktivieren"
+  },
+  "actions": {
+    "cancel": "Abbrechen",
+    "generate": "Schlüssel generieren",
+    "done": "Fertig"
+  }
+}

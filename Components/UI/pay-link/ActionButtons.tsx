@@ -1,0 +1,65 @@
+import CustomButton from "@/Components/UI/Buttons";
+import { theme } from "@/styles/theme";
+import { ActionButtonsProps } from "@/utils/types/create-pay-link";
+import { useRouter } from "next/router";
+import React from "react";
+
+const ActionButtons: React.FC<ActionButtonsProps> = ({
+  hasPaymentLinkData,
+  disabled,
+  tPaymentLink,
+  handleCreatePaymentLink,
+  paymentSettingsErrors,
+  paymentSettings,
+  isCreating,
+}) => {
+  const router = useRouter();
+
+  return (
+    <>
+      {hasPaymentLinkData && (
+        <CustomButton
+          label={disabled ? tPaymentLink("back") : tPaymentLink("cancel")}
+          variant={disabled ? "primary" : "outlined"}
+          size="medium"
+          fullWidth={true}
+          onClick={() => router.back()}
+          sx={{
+            [theme.breakpoints.down("md")]: {
+              height: "32px",
+              fontSize: "13px",
+            },
+          }}
+        />
+      )}
+      {!disabled && (
+        <CustomButton
+          label={isCreating ? tPaymentLink("creating") || "Creating..." : tPaymentLink(hasPaymentLinkData ? "saveChanges" : "createPaymentLink")}
+          variant="primary"
+          size="medium"
+          fullWidth={true}
+          onClick={handleCreatePaymentLink}
+          disabled={
+            isCreating ||
+            Boolean(paymentSettingsErrors.value) ||
+            Boolean(paymentSettingsErrors.currency) ||
+            Boolean(paymentSettingsErrors.description) ||
+            !paymentSettings.value ||
+            paymentSettings.value.trim() === "" ||
+            !paymentSettings.currency ||
+            !paymentSettings.acceptedCryptoCurrency ||
+            paymentSettings.acceptedCryptoCurrency.length === 0
+          }
+          sx={{
+            [theme.breakpoints.down("md")]: {
+              height: "32px",
+              fontSize: "13px",
+            },
+          }}
+        />
+      )}
+    </>
+  );
+};
+
+export default ActionButtons;

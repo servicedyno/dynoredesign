@@ -1,0 +1,225 @@
+import express from "express";
+import axios from "axios";
+import { apiLogger } from "../utils/loggers";
+import userRouter from "./userRouter";
+import eventsRouter from "./eventsRouter";
+import analyticsRouter from "./analyticsRouter";
+import companyRouter from "./companyRouter";
+import walletRouter from "./walletRouter";
+import taxRouter from "./taxRouter";
+import dashboardRouter from "./dashboardRouter";
+import notificationRouter from "./notificationRouter";
+import invoiceRouter from "./invoiceRouter";
+import kycRouter from "./kycRouter";
+import statusRouter from "./statusRouter";
+import subscriptionRouter from "./subscriptionRouter";
+import testRouter from "./testRouter";
+import referralRouter from "./referralRouter";
+import knowledgeBaseRouter from "./knowledgeBaseRouter";
+import merchantApiRouter from "./merchantApiRouter";
+import trackRouter from "./trackRouter";
+
+import {
+  authMiddleware,
+  walletMiddleware,
+} from "../middleware";
+import emailVerifiedMiddleware from "../middleware/emailVerifiedMiddleware";
+// ITatumWebHook, IWebHook imports removed - not used
+import { webhookRateLimiter } from "../middleware/rateLimitMiddleware";
+import apiRouter from "./apiRouter";
+import paymentRouter from "./paymentRouter";
+import {
+  flutterwaveWebHook,
+  tatumCryptoWebHook,
+  tatumWebHook,
+} from "../webhooks";
+import crypto from "crypto";
+import adminRouter from "./adminRouter";
+import { logWebhookValidationFailure } from "../utils/securityLogger";
+
+/**
+ * Tatum webhook HMAC signature verification middleware.
+ * If TATUM_WEBHOOK_SECRET is configured, validates the x-payload-hash header.
+ * If not configured, logs a warning and allows the request (backward compatible).
+ *
+ * FIX: For unsigned webhooks (legacy subscriptions), restrict to known Tatum IP ranges
+ * and rate-limit unsigned requests to mitigate spoofing risk.
+ */
+
+// Known Tatum IP ranges (from their documentation, observed traffic, and production logs)
+const TATUM_KNOWN_IPS = new Set([
+  '167.82.142.41', '167.82.142.42', '167.82.142.43', '167.82.142.44',
+  '18.213.36.109', '18.213.36.110', // Tatum US-East
+  '3.209.96.0', '3.209.96.1', // Tatum AWS
+  // FIX BUG-8: Google Cloud IPs observed sending Tatum webhooks in production
+  '34.82.77.148',    // GCP us-west1 — confirmed Tatum webhook source
+  '35.185.216.99',   // GCP us-central1 — confirmed Tatum webhook source
+  '34.83.123.121',   // GCP us-west1 — confirmed Tatum webhook source (Railway log 2026-02-24)
+  '34.82.0.0',       // GCP us-west1 range (Tatum infrastructure)
+  '35.185.0.0',      // GCP us-central1 range (Tatum infrastructure)
+  '34.107.0.0',      // GCP additional webhook IPs
+]);
+
+// Track unsigned webhook counts per IP (sliding window)
+const unsignedWebhookCounts = new Map<string, { count: number; resetAt: number }>();
+const UNSIGNED_RATE_LIMIT = 100; // max unsigned webhooks per IP per hour
+const UNSIGNED_RATE_WINDOW = 3600000; // 1 hour in ms
+const UNSIGNED_CLEANUP_INTERVAL = 600000; // Clean up stale entries every 10 minutes
+
+// Periodic cleanup to prevent memory leak from accumulating IPs
+setInterval(() => {
+  const now = Date.now();
+  for (const [ip, entry] of unsignedWebhookCounts) {
+    if (entry.resetAt <= now) {
+      unsignedWebhookCounts.delete(ip);
+    }
+  }
+}, UNSIGNED_CLEANUP_INTERVAL);
+
+const verifyTatumWebhookSource = (req: express.Request, res: express.Response, next: express.NextFunction) => {
+  const secret = process.env.TATUM_WEBHOOK_SECRET;
+  if (!secret) {
+    // No secret configured — skip verification (backward compatible)
+    return next();
+  }
+
+  const signature = req.headers["x-payload-hash"] as string;
+  if (!signature) {
+    // Legacy subscription without HMAC — apply IP check and rate limiting
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim() || req.ip || 'unknown';
+    // Check exact match only against known Tatum IPs (no loose prefix matching)
+    const isTatumIp = TATUM_KNOWN_IPS.has(clientIp);
+
+    // Rate-limit unsigned webhooks per IP
+    const now = Date.now();
+    const counter = unsignedWebhookCounts.get(clientIp);
+    if (counter && counter.resetAt > now) {
+      counter.count++;
+      if (counter.count > UNSIGNED_RATE_LIMIT) {
+        apiLogger.warn(`[WebhookAuth] Rate-limited unsigned webhook from ${clientIp} (${counter.count} in window)`);
+        logWebhookValidationFailure('tatum', clientIp, 'Unsigned webhook rate limit exceeded');
+        return res.status(429).json({ error: "Too many unsigned requests" });
+      }
+    } else {
+      unsignedWebhookCounts.set(clientIp, { count: 1, resetAt: now + UNSIGNED_RATE_WINDOW });
+    }
+
+    if (isTatumIp) {
+      apiLogger.info(`[WebhookAuth] Unsigned webhook from known Tatum IP ${clientIp} — allowing (legacy)`);
+    } else {
+      apiLogger.warn(`[WebhookAuth] Unsigned webhook from UNKNOWN IP ${clientIp} — allowing but flagged for review`);
+      logWebhookValidationFailure('tatum', clientIp, 'Missing x-payload-hash from non-Tatum IP');
+    }
+    return next();
+  }
+
+  const rawBody = JSON.stringify(req.body);
+  const expectedSignature = crypto.createHmac("sha512", secret).update(rawBody).digest("hex");
+
+  if (signature !== expectedSignature) {
+    apiLogger.warn(`[WebhookAuth] Invalid webhook signature from ${req.ip}`);
+    logWebhookValidationFailure('tatum', req.ip || 'unknown', 'Invalid HMAC signature');
+    return res.status(401).json({ error: "Invalid webhook signature" });
+  }
+
+  next();
+};
+
+const router = express.Router();
+
+// Base API route - Returns API status and available endpoints
+router.get("/", (_req: express.Request, res: express.Response) => {
+  res.status(200).json({
+    status: "operational",
+    service: "Dynopay API",
+    version: "1.0.0",
+    api_version: "v1",
+    timestamp: new Date().toISOString(),
+    documentation: "/api/docs",
+    versioning: {
+      current: "v1",
+      base_url: "/api",
+      versioned_url: "/api/v1",
+      note: "Both /api/* and /api/v1/* are supported. Use /api/v1/* for explicit version pinning."
+    },
+    endpoints: {
+      authentication: "/api/user",
+      admin: "/api/admin",
+      companies: "/api/company",
+      apiKeys: "/api/userApi",
+      wallets: "/api/wallet",
+      payments: "/api/pay",
+      tax: "/api/tax",
+      dashboard: "/api/dashboard",
+      notifications: "/api/notifications",
+      kyc: "/api/kyc",
+      status: "/api/status",
+      subscriptions: "/api/subscriptions",
+      referrals: "/api/referral",
+      knowledgeBase: "/api/kb",
+      invoices: "/api/invoices"
+    }
+  });
+});
+
+router.use("/user", userRouter);
+
+// Geo-detection endpoint — called by frontend for IP-based language auto-detection
+// This proxies the request server-side to avoid HTTPS→HTTP mixed-content browser blocks
+router.get("/geo-detect", async (req: express.Request, res: express.Response) => {
+  try {
+    const clientIp = (req.headers['x-forwarded-for'] as string)?.split(',')[0]?.trim()
+      || req.headers['x-real-ip'] as string
+      || req.ip
+      || '';
+    
+    // Don't send localhost/private IPs to ip-api
+    const cleanIp = clientIp.replace(/^::ffff:/, ''); // Strip IPv6-mapped prefix
+    const isPrivateIp = !cleanIp || cleanIp === '127.0.0.1' || cleanIp === '::1' || cleanIp.startsWith('10.') || cleanIp.startsWith('192.168.') || cleanIp.startsWith('172.');
+    const url = isPrivateIp
+      ? 'http://ip-api.com/json/?fields=status,country,countryCode'
+      : `http://ip-api.com/json/${cleanIp}?fields=status,country,countryCode`;
+    
+    const response = await axios.get(url, { timeout: 3000 });
+    
+    if (response.data?.status === 'success') {
+      return res.json({
+        status: 'success',
+        country: response.data.country,
+        countryCode: response.data.countryCode,
+      });
+    }
+    
+    return res.json({ status: 'fail', countryCode: 'US', country: 'Unknown' });
+  } catch (err: any) {
+    apiLogger.warn(`[GeoDetect] IP geolocation failed: ${err?.message}`);
+    return res.json({ status: 'fail', countryCode: 'US', country: 'Unknown' });
+  }
+});
+// Merchant API routes (unified) — supports both OLD and NEW auth flows
+router.use("/user", merchantApiRouter);
+router.use("/admin", adminRouter);
+router.use("/company", authMiddleware, emailVerifiedMiddleware, companyRouter);
+router.use("/userApi", apiRouter);
+router.use("/wallet", authMiddleware, walletMiddleware, emailVerifiedMiddleware, walletRouter);
+router.use("/pay", paymentRouter);
+router.use("/tax", taxRouter);
+router.use("/dashboard", authMiddleware, emailVerifiedMiddleware, dashboardRouter);
+router.use("/notifications", notificationRouter);
+router.use("/kyc", kycRouter);
+router.use("/status", statusRouter); // Public status page endpoints
+router.use("/subscriptions", subscriptionRouter); // Subscription management
+router.use("/test", testRouter); // Test endpoints for development
+router.use("/referral", referralRouter); // Referral system endpoints
+router.use("/kb", knowledgeBaseRouter); // Knowledge Base endpoints
+router.use("/events", eventsRouter); // SSE real-time events
+router.use("/track", trackRouter); // Visitor tracking (public, rate-limited)
+router.use("/admin/analytics", analyticsRouter); // Admin analytics (revenue, cohorts, funnels)
+router.use("/", invoiceRouter); // Invoice routes (transactions/:id/invoice, invoices, invoices/:id)
+
+router.post("/webhook", webhookRateLimiter, flutterwaveWebHook);
+router.post("/failed_webhook", webhookRateLimiter, flutterwaveWebHook);
+router.post("/tatum-webhook", webhookRateLimiter, verifyTatumWebhookSource, tatumWebHook);
+router.post("/tatum-crypto-webhook", webhookRateLimiter, verifyTatumWebhookSource, tatumCryptoWebHook);
+
+export default router;

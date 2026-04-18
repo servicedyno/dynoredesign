@@ -1,0 +1,40 @@
+import React from "react";
+import { IconButton, Tooltip } from "@mui/material";
+import DarkModeOutlinedIcon from "@mui/icons-material/DarkModeOutlined";
+import LightModeOutlinedIcon from "@mui/icons-material/LightModeOutlined";
+import { useThemeMode } from "@/contexts/ThemeContext";
+
+interface ThemeToggleProps {
+  size?: "small" | "medium";
+  sx?: any;
+}
+
+const ThemeToggle: React.FC<ThemeToggleProps> = ({ size = "medium", sx }) => {
+  const { isDark, toggleTheme } = useThemeMode();
+
+  return (
+    <Tooltip title={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}>
+      <IconButton
+        onClick={toggleTheme}
+        size={size}
+        sx={{
+          color: isDark ? "#FFD54F" : "#676768",
+          transition: "all 0.3s ease",
+          "&:hover": {
+            backgroundColor: isDark ? "rgba(255, 213, 79, 0.1)" : "rgba(0, 4, 255, 0.06)",
+            transform: "rotate(30deg)",
+          },
+          ...sx,
+        }}
+      >
+        {isDark ? (
+          <LightModeOutlinedIcon fontSize={size === "small" ? "small" : "medium"} />
+        ) : (
+          <DarkModeOutlinedIcon fontSize={size === "small" ? "small" : "medium"} />
+        )}
+      </IconButton>
+    </Tooltip>
+  );
+};
+
+export default ThemeToggle;

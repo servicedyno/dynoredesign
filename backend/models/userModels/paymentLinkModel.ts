@@ -1,0 +1,166 @@
+import { DataTypes } from "sequelize";
+import sequelize from "../../utils/dbInstance";
+import crypto from "crypto";
+
+const paymentLinkModel = sequelize.define(
+  "Payment_Link",
+  {
+    link_id: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    transaction_id: {
+      type: DataTypes.STRING,
+    },
+    wallet_id: {
+      type: DataTypes.INTEGER,
+      references: {
+        model: "tbl_user_wallet",
+        key: "wallet_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
+    },
+    user_id: {
+      type: DataTypes.INTEGER,
+      allowNull: false,
+      references: {
+        model: "tbl_user",
+        key: "user_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "CASCADE",
+    },
+    company_id: {
+      type: DataTypes.INTEGER,
+      allowNull: true,
+      references: {
+        model: "tbl_company",
+        key: "company_id",
+      },
+      onUpdate: "CASCADE",
+      onDelete: "SET NULL",
+    },
+    base_amount: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    base_currency: {
+      type: DataTypes.STRING,
+      defaultValue: "USD",
+    },
+    paid_amount: {
+      type: DataTypes.FLOAT,
+      defaultValue: 0,
+    },
+    paid_currency: {
+      type: DataTypes.STRING,
+    },
+    transaction_reference: {
+      type: DataTypes.STRING,
+    },
+    status: {
+      type: DataTypes.STRING,
+      defaultValue: "pending",
+    },
+    email: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    payment_link: {
+      type: DataTypes.TEXT,
+      allowNull: false,
+    },
+    allowedModes: {
+      type: DataTypes.TEXT,
+    },
+    payment_mode: {
+      type: DataTypes.STRING,
+    },
+    description: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+    },
+    expires_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    times_used: {
+      type: DataTypes.INTEGER,
+      defaultValue: 0,
+    },
+    callback_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    redirect_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    webhook_url: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    // Fee payer - who pays blockchain fees: 'customer' or 'company'
+    fee_payer: {
+      type: DataTypes.STRING(20),
+      defaultValue: 'company',
+      allowNull: true,
+    },
+    // Tax settings - merchant can enable tax calculation based on customer location
+    // Tax is OFF by default - merchant must explicitly enable it
+    apply_tax: {
+      type: DataTypes.BOOLEAN,
+      defaultValue: false,
+      allowNull: false,
+    },
+    // Accepted cryptocurrencies for this payment link
+    // If null/empty, all configured wallets are available
+    // Format: comma-separated string e.g., "BTC,ETH,USDT-TRC20"
+    accepted_currencies: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+      comment: "Comma-separated list of accepted cryptocurrencies. If null, all configured wallets are accepted.",
+    },
+    // Payment link reminder tracking
+    reminder_1_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    reminder_2_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    final_reminder_sent_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Unsubscribe functionality
+    unsubscribe_token: {
+      type: DataTypes.STRING(64),
+      allowNull: true,
+      defaultValue: () => crypto.randomBytes(32).toString('hex'),
+    },
+    unsubscribed_at: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
+    // Customer name - optional field to identify who the payment is for
+    customer_name: {
+      type: DataTypes.STRING(255),
+      allowNull: true,
+      comment: "Name of the customer this payment link is created for",
+    },
+  },
+  {
+    tableName: "tbl_payment_link",
+  }
+);
+
+// paymentLinkModel
+//   .sync({ alter: false })
+//   .then(() => console.log("tbl_payment_link created"));
+
+export default paymentLinkModel;

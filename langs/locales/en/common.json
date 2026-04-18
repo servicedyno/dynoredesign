@@ -1,0 +1,317 @@
+{
+  "language": "Language",
+  "english": "English",
+  "spanish": "Spanish",
+  "homePageName": "Home",
+  "homeHeading": "Hi there!",
+  "homeTagline": "Manage your money securely with BozzWallet.",
+  "copiedToClipboard": "Copied to Clipboard",
+  "yourReferralCode": "Your referral code",
+  "helpSupport": "Help & Support",
+  "transactionsNotAvailable": "Transactions Not Available",
+  "EmptyTransactionTitle": "There is no transactions",
+  "EmptyTransactionDescription": "Start accepting payments to see transactions",
+  "createPaymentLink": "Create Payment Link",
+  "EmptyWalletTitle": "There are no wallets",
+  "EmptyWalletDescription": "Let’s add the first one",
+  "addWallet": "Add wallet",
+  "EmptyApiKeyTitle": "There is no API keys",
+  "EmptyApiKeyDescription": "Let’s create the first one",
+  "createNewKey": "Create New Key",
+  "EmptyPaymentLinkTitle": "There is no payment links",
+  "EmptyPaymentLinkDescription": "Let’s create the first one",
+  "header": {
+    "wallet": "Dynopay Wallet",
+    "language": "EN"
+  },
+  "checkout": {
+    "title": "Review Your Order",
+    "titleCheckout": "Checkout",
+    "titleComplete": "Complete Your Payment",
+    "subtitle": "Complete your payment to {{merchant}}",
+    "subtitleDefault": "Complete your payment to finalize your order",
+    "toPay": "To Pay:",
+    "bankTransfer": "Bank Transfer",
+    "bank": "Bank",
+    "cryptocurrency": "Cryptocurrency",
+    "crypto": "Crypto",
+    "transactionIdNote": "If you need to continue later, save your Transaction ID:",
+    "loading": "Loading...",
+    "orderDetails": "ORDER DETAILS",
+    "invoice": "INVOICE",
+    "subtotal": "Subtotal",
+    "processingFee": "Processing Fee",
+    "processingFeesIncluded": "Processing fees included",
+    "merchantPaysFees": "Merchant pays processing fees",
+    "tax": "Tax",
+    "vatRate": "VAT ({{rate}}% - {{country}})",
+    "total": "Total",
+    "expiresIn": "Expires in",
+    "days": "d",
+    "hours": "h",
+    "minutes": "m",
+    "seconds": "s",
+    "securePayment": "Secure payment by Dynopay",
+    "copied": "Copied!",
+    "copyInvoice": "Copy Invoice Number",
+    "remainingBalance": "Remaining Balance",
+    "invoiceExpiresIn": "invoice expires in:",
+    "validPaymentLinkRequired": "Please use a valid payment link to proceed with checkout.",
+    "goToHomepage": "Go to Homepage",
+    "paymentLinkExpired": "This payment link has expired. Please contact the merchant for a new link.",
+    "memoTag": "Memo / Tag"
+  },
+  "crypto": {
+    "title": "Cryptocurrency",
+    "preferredCrypto": "Preferred Crypto",
+    "preferredNetwork": "Preferred Network",
+    "sendToAddress": "Send {{crypto}} ({{network}}) to This Address",
+    "sendToAddressSimple": "Send {{crypto}} to This Address",
+    "sendOnlyWarning": "Send only {{crypto}} in {{network}} network to this address, or your funds will be lost.",
+    "sendOnlyWarningSimple": "Send only {{crypto}} to this address, or your funds will be lost.",
+    "paymentDetected": "Payment detected, awaiting confirmation...",
+    "paymentDetectedDesc": "We detected your payment in the blockchain. Waiting for {{confirmations}} confirmation...",
+    "paymentDetectedToast": "Payment detected! Waiting for blockchain confirmation...",
+    "paymentConfirmed": "Payment Confirmed!",
+    "goToWebsite": "Go to Website",
+    "selectCrypto": "Select Crypto",
+    "selectCryptoType": "Select Crypto Type",
+    "selectNetwork": "Select Network",
+    "scanQrCode": "Scan QR Code",
+    "orCopyAddress": "or copy address below",
+    "addressCopied": "Address copied!",
+    "amountCopied": "Amount copied to clipboard!",
+    "networkFee": "Network fee applies",
+    "loadingCurrencies": "Loading currencies...",
+    "noCurrenciesConfigured": "No currencies configured. Please contact support.",
+    "noCryptoAvailable": "No cryptocurrencies available for payment.",
+    "noUsdtNetworks": "No USDT networks configured. Please select another cryptocurrency.",
+    "gettingRates": "Getting exchange rates...",
+    "creatingPayment": "Creating payment...",
+    "loading": "Loading...",
+    "pleaseWait": "Please wait",
+    "monitoringPayment": "Monitoring for incoming payment...",
+    "remainingBalance": "Remaining Balance",
+    "paymentExpired": "Payment window has expired. Please try again.",
+    "paymentFailed": "Payment processing failed. Please try again.",
+    "paymentLinkExpired": "This payment link has expired.",
+    "paymentError": "An error occurred with your payment.",
+    "memoTag": "MEMO / DESTINATION TAG",
+    "copyMemo": "Copy Memo",
+    "memoCopied": "Memo/Tag copied to clipboard",
+    "memoWarning": "You MUST include this memo/tag or your funds may be lost",
+    "noRlusdNetworks": "No RLUSD networks configured"
+  },
+  "underpayment": {
+    "title": "Partial Payment Received",
+    "subtitle": "Almost there! Please complete the payment.",
+    "paymentProgress": "Payment Progress",
+    "complete": "{{percent}}% Complete",
+    "graceWarning": "Complete payment within {{minutes}} minutes to use the same address.",
+    "paid": "Paid:",
+    "payRemainingCrypto": "Pay Remaining with Crypto"
+  },
+  "overpayment": {
+    "title": "Overpayment Received",
+    "subtitle": "Thanks! You've paid a bit extra.",
+    "totalDue": "Total Due:",
+    "excess": "Excess:",
+    "refundNotice": "Excess amount will be refunded to your Wallet of the store you purchased from."
+  },
+  "expired": {
+    "title": "Payment Link Expired",
+    "message": "This payment link has expired. Please contact the merchant to request a new payment link.",
+    "merchant": "Merchant",
+    "goBack": "Go Back"
+  },
+  "failed": {
+    "title": "Payment Failed",
+    "message": "There was an issue processing your payment. Please try again or contact support if the problem persists.",
+    "merchant": "Merchant",
+    "tryAgain": "Try Again",
+    "goBack": "Go Back"
+  },
+  "success": {
+    "paymentSuccessful": "Payment Successful",
+    "paidTo": "{{amount}} paid to {{merchant}}",
+    "paidAmount": "{{amount}} paid",
+    "transactionId": "Transaction",
+    "saveForRecords": "Save this for your records",
+    "confirmationSent": "Confirmation sent to {{email}}",
+    "redirectingTo": "Redirecting to {{merchant}}...",
+    "redirectingIn": "Redirecting in {{seconds}}s",
+    "returnTo": "Return to {{merchant}}",
+    "clickIfNotRedirected": "Click here if not redirected",
+    "done": "Done",
+    "thankYou": "Thank you for your payment",
+    "fundsReceived": "Funds Received",
+    "cryptoReceived": "Crypto Received",
+    "transferExpected": "Transfer Expected",
+    "paymentConfirmed": "Your payment has been confirmed.",
+    "transferPending": "If you've completed the transfer, no further action is needed. We'll confirm your payment as soon as it arrives."
+  },
+  "currency": {
+    "USD": "United States Dollar (USD)",
+    "EUR": "Euro (EUR)",
+    "GBP": "British Pound (GBP)",
+    "AUD": "Australian Dollar (AUD)",
+    "CAD": "Canadian Dollar (CAD)",
+    "CHF": "Swiss Franc (CHF)",
+    "CNY": "Chinese Yuan (CNY)",
+    "JPY": "Japanese Yen (JPY)",
+    "HKD": "Hong Kong Dollar (HKD)",
+    "NZD": "New Zealand Dollar (NZD)",
+    "SGD": "Singapore Dollar (SGD)",
+    "BRL": "Brazilian Real (BRL)",
+    "ARS": "Argentine Peso (ARS)",
+    "COP": "Colombian Peso (COP)",
+    "CLP": "Chilean Peso (CLP)",
+    "PEN": "Peruvian Sol (PEN)",
+    "MXN": "Mexican Peso (MXN)",
+    "VES": "Venezuelan Bolívar (VES)",
+    "UYU": "Uruguayan Peso (UYU)",
+    "NGN": "Nigerian Naira (NGN)",
+    "ZAR": "South African Rand (ZAR)",
+    "KES": "Kenyan Shilling (KES)",
+    "GHS": "Ghanaian Cedi (GHS)",
+    "TZS": "Tanzanian Shilling (TZS)",
+    "XAF": "CFA Franc - Central Africa (XAF)",
+    "XOF": "CFA Franc - West Africa (XOF)",
+    "EGP": "Egyptian Pound (EGP)",
+    "MAD": "Moroccan Dirham (MAD)",
+    "UGX": "Ugandan Shilling (UGX)",
+    "RWF": "Rwandan Franc (RWF)",
+    "ETB": "Ethiopian Birr (ETB)",
+    "ZMW": "Zambian Kwacha (ZMW)",
+    "BWP": "Botswanan Pula (BWP)",
+    "MUR": "Mauritian Rupee (MUR)",
+    "AOA": "Angolan Kwanza (AOA)",
+    "MZN": "Mozambican Metical (MZN)",
+    "CDF": "Congolese Franc (CDF)"
+  },
+  "footer": {
+    "termsOfService": "Terms Of Service",
+    "amlPolicy": "AML Policy"
+  },
+  "common": {
+    "copy": "Copy",
+    "back": "Back",
+    "continue": "Continue",
+    "submit": "Submit",
+    "cancel": "Cancel"
+  },
+  "terms": {
+    "title": "Terms of Service",
+    "lastUpdated": "Last Updated",
+    "intro": "Welcome to Dynopay. By accessing or using our services, you agree to be bound by the following Terms of Service. Please read them carefully.",
+    "sections": {
+      "overview": {
+        "title": "1. Overview",
+        "content": "Dynopay is a digital payment platform that provides wallet-based balance management, bank transfers, and cryptocurrency transactions. These Terms govern your use of our website, platform, and services."
+      },
+      "eligibility": {
+        "title": "2. Eligibility",
+        "content": "To use Dynopay, you must:\n • At least 18 years old\n • Capable of entering into a legally binding agreement\n • Not located in a restricted or sanctioned jurisdiction\n\nWe reserve the right to reject or terminate any account that violates these requirements."
+      },
+      "userAccount": {
+        "title": "3. User Account",
+        "content": "To access certain features, you may be required to register an account. You agree to:\n • Provide accurate and complete information\n • Keep your login credentials confidential\n • Be fully responsible for all activity under your account\n\nDynopay is not liable for any unauthorized access resulting from your failure to secure your account."
+      },
+      "permittedUse": {
+        "title": "4. Permitted Use",
+        "content": "You agree to use Dynopay only for lawful purposes and in compliance with all applicable laws. Prohibited uses include, but are not limited to:\n • Money laundering, terrorist financing, or fraud\n • Using stolen or unauthorized payment methods\n • Engaging in activities that violate sanctions or embargoes\n • Attempting to bypass identity verification or security measures"
+      },
+      "paymentsFees": {
+        "title": "5. Payments & Fees",
+        "content": "• Wallet Balance: You may top up your wallet via supported payment methods.\n• Bank Transfers: Subject to processing time and applicable fees.\n• Crypto Payments: Only supported cryptocurrencies are accepted. We are not responsible for incorrect addresses or network delays.\n• Fees and exchange rates may apply and are visible before confirming any transaction."
+      },
+      "riskDisclosure": {
+        "title": "6. Risk Disclosure",
+        "content": "Using cryptocurrencies carries inherent risks including volatility, network errors, and regulatory changes. You acknowledge and accept these risks when using Dynopay.\nWe do not offer investment advice or financial guarantees."
+      },
+      "amlKyc": {
+        "title": "7. AML & KYC",
+        "content": "All users must comply with our AML Policy. We may request verification documents at any time and may freeze or terminate accounts for suspicious activity."
+      },
+      "suspension": {
+        "title": "8. Account Suspension & Termination",
+        "content": "We may suspend or terminate your access to Dynopay without notice if:\n • You breach these Terms\n • We suspect unauthorized or unlawful activity\n • Required by law enforcement or regulators\n\nUpon termination, we may restrict access to funds pending investigation."
+      },
+      "intellectualProperty": {
+        "title": "9. Intellectual Property",
+        "content": "All content, logos, trademarks, and code on the Dynopay platform are the property of Dynopay or its licensors. You may not copy, distribute, or reverse engineer any part of the service without permission."
+      },
+      "disclaimer": {
+        "title": "10. Disclaimer of Warranties",
+        "content": "Dynopay is provided \"as is\" without warranties of any kind. We do not guarantee:\n • Continuous or error-free service\n • That any transaction will be completed\n • Accuracy of third-party data (e.g., exchange rates)"
+      },
+      "liability": {
+        "title": "11. Limitation of Liability",
+        "content": "To the maximum extent permitted by law, Dynopay is not liable for:\n • Indirect or consequential losses\n • Loss of funds due to user error (e.g., wrong wallet address)\n • Network failures or force majeure events"
+      },
+      "modifications": {
+        "title": "12. Modifications",
+        "content": "We reserve the right to modify these Terms at any time. If material changes are made, we will notify users via email or on-platform notice. Continued use of the service constitutes acceptance of the updated Terms."
+      },
+      "governingLaw": {
+        "title": "13. Governing Law",
+        "content": "These Terms are governed by the laws of Portugal. Any disputes shall be subject to the exclusive jurisdiction of the courts in that jurisdiction."
+      },
+      "contact": {
+        "title": "14. Contact Us",
+        "content": "If you have any questions regarding these Terms, please contact us at:\nsupport@dynopay.com"
+      }
+    }
+  },
+  "aml": {
+    "title": "Anti-Money Laundering (AML) Policy",
+    "lastUpdated": "Last Updated",
+    "intro": "At Dynopay, we are committed to upholding the highest standards in preventing money laundering and the financing of terrorism. This Anti-Money Laundering (AML) Policy outlines the measures and procedures we have implemented to detect, prevent, and report any suspicious activity across our services, including:",
+    "services": {
+      "wallet": "Wallet balance management",
+      "bank": "Bank transfers",
+      "crypto": "Cryptocurrency payments"
+    },
+    "sections": {
+      "purpose": {
+        "title": "1. Purpose",
+        "content": "The purpose of this policy is to ensure that Dynopay complies with all applicable AML and Counter-Terrorist Financing (CTF) laws and regulations. We are dedicated to identifying and mitigating risks associated with money laundering and to protecting our platform from being used for illicit purposes."
+      },
+      "riskBased": {
+        "title": "2. Risk-Based Approach",
+        "content": "Dynopay follows a risk-based approach in assessing its clients and transactions. Based on the level of risk, we apply appropriate levels of due diligence and monitoring."
+      },
+      "kyc": {
+        "title": "3. Know Your Customer (KYC)",
+        "content": "We have established a comprehensive KYC (Know Your Customer) program to verify the identity of our users. Depending on the account type and transaction volume, KYC requirements may include:\n • Full name and date of birth\n • Government-issued identification\n • Proof of address\n • Source of funds (for higher-risk activities)\n\nKYC procedures apply to both fiat and crypto-related operations."
+      },
+      "monitoring": {
+        "title": "4. Ongoing Monitoring",
+        "content": "All transactions processed through Dynopay are subject to ongoing monitoring to detect unusual or suspicious behavior. This includes, but is not limited to:\n • Unusual movement of funds\n • Use of high-risk jurisdictions\n • Use of anonymizing services or tools\n\nWe reserve the right to delay, block, or refuse transactions that raise red flags during monitoring."
+      },
+      "reporting": {
+        "title": "5. Reporting Suspicious Activities",
+        "content": "In accordance with applicable AML laws, Dynopay is obligated to report any suspected money laundering or suspicious activity to the relevant authorities. Users are not notified when such reports are made, in compliance with legal requirements."
+      },
+      "training": {
+        "title": "6. Employee Training",
+        "content": "Our staff receives regular training in AML procedures, red flag indicators, and legal responsibilities. This ensures our team is equipped to recognize and respond to suspicious activity appropriately."
+      },
+      "records": {
+        "title": "7. Record Keeping",
+        "content": "Dynopay maintains detailed records of all user identification data, transactions, and AML reviews for a minimum period of 5 years, or as otherwise required by law."
+      },
+      "crypto": {
+        "title": "8. Cryptocurrency-Specific Measures",
+        "content": "Given the unique nature of digital assets, Dynopay implements enhanced due diligence and blockchain analysis tools to monitor the flow of crypto assets. We do not support or tolerate the use of our platform for mixing/tumbling services or privacy coins designed to obscure the source of funds."
+      },
+      "userResponsibility": {
+        "title": "9. User Responsibility",
+        "content": "By using Dynopay, users agree to comply with this AML Policy and cooperate with any compliance-related requests. Failure to do so may result in account suspension, reporting to authorities, or permanent termination."
+      }
+    }
+  },
+  "myProfile": "My Profile",
+  "logout": "Logout",
+  "hello": "Hello"
+}

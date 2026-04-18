@@ -1,0 +1,84 @@
+{
+  "mode": {
+    "add": {
+      "title": "Neues Unternehmen hinzufügen",
+      "subtitle": "Erstellen Sie ein neues Unternehmensprofil zur Verwaltung von Kryptowährungs-Zahlungen",
+      "primaryButton": "Unternehmen erstellen"
+    },
+    "edit": {
+      "title": "Unternehmen bearbeiten",
+      "subtitle": "Unternehmensprofil-Informationen aktualisieren",
+      "primaryButton": "Aktualisieren"
+    }
+  },
+  "fields": {
+    "companyName": {
+      "label": "Firmenname*",
+      "placeholder": "Firmennamen eingeben"
+    },
+    "website": {
+      "label": "Website (optional)",
+      "placeholder": "https://beispiel.de"
+    },
+    "email": {
+      "label": "E-Mail*",
+      "placeholder": "kontakt@beispiel.de"
+    },
+    "mobile": {
+      "label": "Mobil*",
+      "placeholder": "Ihre Mobilnummer eingeben"
+    },
+    "brandLogo": {
+      "label": "Firmenlogo",
+      "uploadCta": "Klicken zum Hochladen oder per Drag & Drop",
+      "uploadHint": "SVG, PNG, JPG (max. 2MB)"
+    },
+    "country": {
+      "label": "Land*",
+      "placeholder": "Land auswählen"
+    },
+    "state": {
+      "label": "Bundesland*",
+      "placeholder": "Bundesland auswählen"
+    },
+    "city": {
+      "label": "Stadt*",
+      "placeholder": "Stadt auswählen"
+    },
+    "addressLine1": {
+      "label": "Adresszeile 1*",
+      "placeholder": "Adresszeile 1 eingeben"
+    },
+    "addressLine2": {
+      "label": "Adresszeile 2 (optional)",
+      "placeholder": "Adresszeile 2 eingeben"
+    },
+    "zipCode": {
+      "label": "Postleitzahl*",
+      "placeholder": "Postleitzahl eingeben"
+    },
+    "vatNumber": {
+      "label": "USt-IdNr. (optional)",
+      "placeholder": "USt-IdNr. eingeben"
+    }
+  },
+  "actions": {
+    "cancel": "Abbrechen"
+  },
+  "validation": {
+    "companyNameRequired": "Firmenname ist erforderlich",
+    "emailInvalid": "Bitte geben Sie eine gültige E-Mail ein",
+    "emailRequired": "E-Mail ist erforderlich",
+    "mobileRequired": "Mobilnummer ist erforderlich",
+    "mobileMin": "Mindestens 10 Ziffern erforderlich",
+    "mobileMax": "Maximal 14 Ziffern erlaubt",
+    "countryRequired": "Land ist erforderlich",
+    "stateRequired": "Bundesland ist erforderlich",
+    "cityRequired": "Stadt ist erforderlich",
+    "addressLine1Required": "Adresszeile 1 ist erforderlich",
+    "zipCodeRequired": "Postleitzahl ist erforderlich"
+  },
+  "mobilePlaceholder": "Ihre Mobilnummer eingeben",
+  "vatNumber": "USt-IdNr. (optional)",
+  "vatVerify": "USt-IdNr. verifiziert"
+}

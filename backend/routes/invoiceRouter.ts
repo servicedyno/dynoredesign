@@ -1,0 +1,49 @@
+import express from "express";
+import invoiceController from "../controller/invoiceController";
+import authMiddleware from "../middleware/authMiddleware";
+
+const invoiceRouter = express.Router();
+
+// Get invoice for a specific transaction
+invoiceRouter.get(
+  "/transactions/:id/invoice",
+  authMiddleware,
+  invoiceController.getTransactionInvoice
+);
+
+// Get all invoices for user
+invoiceRouter.get(
+  "/invoices",
+  authMiddleware,
+  invoiceController.getAllInvoices
+);
+
+// Get tax report (aggregated)
+invoiceRouter.get(
+  "/invoices/tax-report",
+  authMiddleware,
+  invoiceController.getTaxReport
+);
+
+// Export tax report as CSV
+invoiceRouter.get(
+  "/invoices/tax-report/csv",
+  authMiddleware,
+  invoiceController.exportTaxReportCSV
+);
+
+// Get specific invoice by invoice ID
+invoiceRouter.get(
+  "/invoices/:id",
+  authMiddleware,
+  invoiceController.getInvoiceById
+);
+
+// Download invoice as PDF
+invoiceRouter.get(
+  "/invoices/:id/pdf",
+  authMiddleware,
+  invoiceController.downloadInvoicePDF
+);
+
+export default invoiceRouter;

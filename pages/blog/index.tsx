@@ -1,0 +1,266 @@
+import React from "react";
+import { Box, Typography, useTheme, Grid } from "@mui/material";
+import { useRouter } from "next/router";
+import Head from "next/head";
+import { blogPosts } from "@/utils/blogData";
+import useIsMobile from "@/hooks/useIsMobile";
+// HomeHeader is rendered by HomeLayout in _app.tsx
+
+const categoryColors: Record<string, string> = {
+  "Integration Guide": "#0004FF",
+  "Business Strategy": "#10B981",
+  "Cost Analysis": "#F59E0B",
+  "Developer Guide": "#7C3AED",
+};
+
+const BlogPage = () => {
+  const theme = useTheme();
+  const router = useRouter();
+  const isMobile = useIsMobile("md");
+  const isDark = theme.palette.mode === "dark";
+
+  return (
+    <>
+      <Head>
+        <title>Dynopay Blog — Crypto Payment Insights for Merchants</title>
+        <meta
+          name="description"
+          content="Learn how to accept crypto payments, reduce fees, protect revenue with stablecoin settlement, and grow your business with cryptocurrency."
+        />
+        <meta property="og:title" content="Dynopay Blog — Crypto Payment Insights" />
+        <meta
+          property="og:description"
+          content="Guides, strategies, and insights for merchants accepting cryptocurrency payments."
+        />
+        <meta property="og:type" content="website" />
+        <link rel="canonical" href="https://dynopay.com/blog" />
+      </Head>
+
+      {/* HomeHeader is rendered by HomeLayout */}
+
+      <Box
+        sx={{
+          pt: isMobile ? 12 : 16,
+          pb: isMobile ? 6 : 10,
+          px: isMobile ? 2 : 4,
+          maxWidth: 1280,
+          mx: "auto",
+          minHeight: "100vh",
+        }}
+      >
+        {/* Header */}
+        <Box sx={{ textAlign: "center", mb: isMobile ? 5 : 8 }}>
+          <Box
+            sx={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
+              px: 2,
+              py: 0.75,
+              borderRadius: "20px",
+              bgcolor: `${theme.palette.primary.main}0A`,
+              border: `1px solid ${theme.palette.primary.main}18`,
+              mb: 2,
+            }}
+          >
+            <Typography
+              sx={{
+                fontSize: "12px",
+                fontFamily: "OutfitSemiBold",
+                fontWeight: 600,
+                color: theme.palette.primary.main,
+                textTransform: "uppercase",
+                letterSpacing: "1.5px",
+              }}
+            >
+              Blog
+            </Typography>
+          </Box>
+          <Typography
+            sx={{
+              fontSize: isMobile ? "32px" : "48px",
+              fontFamily: "OutfitSemiBold",
+              fontWeight: 700,
+              color: theme.palette.text.primary,
+              lineHeight: 1.15,
+              mb: 2,
+            }}
+          >
+            Crypto Payment{" "}
+            <Box component="span" sx={{ color: theme.palette.primary.main }}>
+              Insights
+            </Box>
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: isMobile ? "15px" : "18px",
+              fontFamily: "OutfitMedium",
+              color: theme.palette.text.secondary,
+              maxWidth: 600,
+              mx: "auto",
+              lineHeight: 1.6,
+            }}
+          >
+            Guides, strategies, and developer resources to help you accept crypto and grow your business
+          </Typography>
+        </Box>
+
+        {/* Blog grid */}
+        <Grid container spacing={isMobile ? 2 : 3}>
+          {blogPosts.map((post) => {
+            const catColor = categoryColors[post.category] || theme.palette.primary.main;
+            return (
+              <Grid item xs={12} md={6} key={post.slug}>
+                <Box
+                  onClick={() => router.push(`/blog/${post.slug}`)}
+                  sx={{
+                    cursor: "pointer",
+                    p: isMobile ? 2.5 : 3.5,
+                    borderRadius: "20px",
+                    bgcolor: isDark ? "rgba(255,255,255,0.025)" : "#FAFAFA",
+                    border: `1px solid ${isDark ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.06)"}`,
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    transition: "all 0.3s ease",
+                    "&:hover": {
+                      transform: "translateY(-4px)",
+                      borderColor: isDark ? "rgba(0,4,255,0.25)" : "rgba(0,4,255,0.12)",
+                      boxShadow: isDark
+                        ? "0 16px 48px rgba(0,4,255,0.1)"
+                        : "0 16px 48px rgba(0,0,0,0.06)",
+                    },
+                  }}
+                >
+                  {/* Category + Read time */}
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2 }}>
+                    <Box
+                      sx={{
+                        px: 1.5,
+                        py: 0.4,
+                        borderRadius: "8px",
+                        bgcolor: `${catColor}15`,
+                        border: `1px solid ${catColor}30`,
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: "11px",
+                          fontFamily: "OutfitSemiBold",
+                          fontWeight: 600,
+                          color: catColor,
+                          textTransform: "uppercase",
+                          letterSpacing: "0.5px",
+                        }}
+                      >
+                        {post.category}
+                      </Typography>
+                    </Box>
+                    <Typography
+                      sx={{
+                        fontSize: "12px",
+                        fontFamily: "OutfitMedium",
+                        color: theme.palette.text.secondary,
+                      }}
+                    >
+                      {post.readTime}
+                    </Typography>
+                  </Box>
+
+                  {/* Title */}
+                  <Typography
+                    sx={{
+                      fontSize: isMobile ? "18px" : "22px",
+                      fontFamily: "OutfitSemiBold",
+                      fontWeight: 600,
+                      color: theme.palette.text.primary,
+                      lineHeight: 1.3,
+                      mb: 1.5,
+                    }}
+                  >
+                    {post.title}
+                  </Typography>
+
+                  {/* Excerpt */}
+                  <Typography
+                    sx={{
+                      fontSize: isMobile ? "13px" : "14px",
+                      fontFamily: "OutfitMedium",
+                      color: theme.palette.text.secondary,
+                      lineHeight: 1.6,
+                      mb: 3,
+                      flex: 1,
+                    }}
+                  >
+                    {post.excerpt}
+                  </Typography>
+
+                  {/* Footer */}
+                  <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                      <Box
+                        sx={{
+                          width: 28,
+                          height: 28,
+                          borderRadius: "50%",
+                          bgcolor: `${catColor}20`,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: "13px",
+                          fontFamily: "OutfitSemiBold",
+                          color: catColor,
+                        }}
+                      >
+                        {post.author.name.charAt(0)}
+                      </Box>
+                      <Box>
+                        <Typography
+                          sx={{
+                            fontSize: "12px",
+                            fontFamily: "OutfitSemiBold",
+                            color: theme.palette.text.primary,
+                            lineHeight: 1.2,
+                          }}
+                        >
+                          {post.author.name}
+                        </Typography>
+                        <Typography
+                          sx={{
+                            fontSize: "11px",
+                            fontFamily: "OutfitMedium",
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          {new Date(post.publishedAt).toLocaleDateString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            year: "numeric",
+                          })}
+                        </Typography>
+                      </Box>
+                    </Box>
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        fontFamily: "OutfitSemiBold",
+                        color: theme.palette.primary.main,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 0.5,
+                      }}
+                    >
+                      Read more &rarr;
+                    </Typography>
+                  </Box>
+                </Box>
+              </Grid>
+            );
+          })}
+        </Grid>
+      </Box>
+    </>
+  );
+};
+
+export default BlogPage;

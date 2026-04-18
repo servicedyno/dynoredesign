@@ -1,0 +1,84 @@
+{
+  "mode": {
+    "add": {
+      "title": "Nieuw bedrijf toevoegen",
+      "subtitle": "Maak een nieuw bedrijfsprofiel aan om cryptocurrency-betalingen te beheren",
+      "primaryButton": "Bedrijf starten"
+    },
+    "edit": {
+      "title": "Bedrijf bewerken",
+      "subtitle": "Bedrijfsprofielinformatie bijwerken",
+      "primaryButton": "Bijwerken"
+    }
+  },
+  "fields": {
+    "companyName": {
+      "label": "Bedrijfsnaam*",
+      "placeholder": "Bedrijfsnaam invoeren"
+    },
+    "website": {
+      "label": "Website (optioneel)",
+      "placeholder": "https://voorbeeld.nl"
+    },
+    "email": {
+      "label": "E-mail*",
+      "placeholder": "contact@voorbeeld.nl"
+    },
+    "mobile": {
+      "label": "Mobiel*",
+      "placeholder": "Voer uw mobiel nummer in"
+    },
+    "brandLogo": {
+      "label": "Bedrijfslogo",
+      "uploadCta": "Klik om te uploaden of sleep en laat los",
+      "uploadHint": "SVG, PNG, JPG (max. 2MB)"
+    },
+    "country": {
+      "label": "Land*",
+      "placeholder": "Land selecteren"
+    },
+    "state": {
+      "label": "Provincie*",
+      "placeholder": "Provincie selecteren"
+    },
+    "city": {
+      "label": "Stad*",
+      "placeholder": "Stad selecteren"
+    },
+    "addressLine1": {
+      "label": "Adresregel 1*",
+      "placeholder": "Adresregel 1 invoeren"
+    },
+    "addressLine2": {
+      "label": "Adresregel 2 (optioneel)",
+      "placeholder": "Adresregel 2 invoeren"
+    },
+    "zipCode": {
+      "label": "Postcode*",
+      "placeholder": "Postcode invoeren"
+    },
+    "vatNumber": {
+      "label": "BTW-nummer (optioneel)",
+      "placeholder": "BTW-nummer invoeren"
+    }
+  },
+  "actions": {
+    "cancel": "Annuleren"
+  },
+  "validation": {
+    "companyNameRequired": "Bedrijfsnaam is verplicht",
+    "emailInvalid": "Voer een geldig e-mailadres in",
+    "emailRequired": "E-mail is verplicht",
+    "mobileRequired": "Mobiel nummer is verplicht",
+    "mobileMin": "Minimaal 10 cijfers vereist",
+    "mobileMax": "Maximaal 14 cijfers toegestaan",
+    "countryRequired": "Land is verplicht",
+    "stateRequired": "Provincie is verplicht",
+    "cityRequired": "Stad is verplicht",
+    "addressLine1Required": "Adresregel 1 is verplicht",
+    "zipCodeRequired": "Postcode is verplicht"
+  },
+  "mobilePlaceholder": "Voer uw mobiel nummer in",
+  "vatNumber": "BTW-nummer (optioneel)",
+  "vatVerify": "BTW-nummer geverifieerd"
+}

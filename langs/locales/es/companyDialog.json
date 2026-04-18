@@ -1,0 +1,84 @@
+{
+  "mode": {
+    "add": {
+      "title": "Agregar nueva empresa",
+      "subtitle": "Crea un nuevo perfil empresarial para administrar pagos en criptomonedas",
+      "primaryButton": "Crear una empresa"
+    },
+    "edit": {
+      "title": "Editar empresa",
+      "subtitle": "Actualizar información del perfil de la empresa",
+      "primaryButton": "Actualizar"
+    }
+  },
+  "fields": {
+    "companyName": {
+      "label": "Nombre de la empresa*",
+      "placeholder": "Ingresa el nombre de la empresa"
+    },
+    "website": {
+      "label": "Sitio web (opcional)",
+      "placeholder": "https://ejemplo.com"
+    },
+    "email": {
+      "label": "Correo electrónico*",
+      "placeholder": "contacto@ejemplo.com"
+    },
+    "mobile": {
+      "label": "Móvil*",
+      "placeholder": "Ingresa tu número de móvil"
+    },
+    "brandLogo": {
+      "label": "Logo de marca",
+      "uploadCta": "Haz clic para subir o arrastra y suelta",
+      "uploadHint": "SVG, PNG, JPG (máx. 2MB)"
+    },
+    "country": {
+      "label": "País*",
+      "placeholder": "Selecciona el país"
+    },
+    "state": {
+      "label": "Estado/Región*",
+      "placeholder": "Selecciona el estado/región"
+    },
+    "city": {
+      "label": "Ciudad*",
+      "placeholder": "Selecciona la ciudad"
+    },
+    "addressLine1": {
+      "label": "Dirección, Línea 1*",
+      "placeholder": "Ingresa la dirección línea 1"
+    },
+    "addressLine2": {
+      "label": "Dirección, Línea 2 (opcional)",
+      "placeholder": "Ingresa la dirección línea 2"
+    },
+    "zipCode": {
+      "label": "Código Postal*",
+      "placeholder": "Ingresa el código postal"
+    },
+    "vatNumber": {
+      "label": "Número de IVA (opcional)",
+      "placeholder": "Ingresa el número de IVA"
+    }
+  },
+  "actions": {
+    "cancel": "Cancelar"
+  },
+  "validation": {
+    "companyNameRequired": "El nombre de la empresa es obligatorio",
+    "emailInvalid": "Por favor, ingresa un correo electrónico válido",
+    "emailRequired": "El correo electrónico es obligatorio",
+    "mobileRequired": "El número de móvil es obligatorio",
+    "mobileMin": "Se requieren mínimo 10 dígitos",
+    "mobileMax": "Se permiten máximo 14 dígitos",
+    "countryRequired": "El país es obligatorio",
+    "stateRequired": "El estado/región es obligatorio",
+    "cityRequired": "La ciudad es obligatoria",
+    "addressLine1Required": "La dirección línea 1 es obligatoria",
+    "zipCodeRequired": "El código postal es obligatorio"
+  },
+  "mobilePlaceholder": "Ingresa tu número de móvil",
+  "vatNumber": "Número de IVA (opcional)",
+  "vatVerify": "Número de IVA verificado"
+}

@@ -1,0 +1,84 @@
+{
+  "mode": {
+    "add": {
+      "title": "Add new company",
+      "subtitle": "Create a new business profile to manage cryptocurrency payments",
+      "primaryButton": "Start a company"
+    },
+    "edit": {
+      "title": "Edit company",
+      "subtitle": "Update company profile information",
+      "primaryButton": "Update"
+    }
+  },
+  "fields": {
+    "companyName": {
+      "label": "Company name*",
+      "placeholder": "Enter company name"
+    },
+    "website": {
+      "label": "Website (optional)",
+      "placeholder": "https://example.com"
+    },
+    "email": {
+      "label": "E-mail*",
+      "placeholder": "contact@example.com"
+    },
+    "mobile": {
+      "label": "Mobile*",
+      "placeholder": "Enter your mobile number"
+    },
+    "brandLogo": {
+      "label": "Brand logo",
+      "uploadCta": "Click to upload or drag and drop",
+      "uploadHint": "SVG, PNG, JPG (max. 2MB)"
+    },
+    "country": {
+      "label": "Country*",
+      "placeholder": "Select country"
+    },
+    "state": {
+      "label": "State*",
+      "placeholder": "Select state"
+    },
+    "city": {
+      "label": "City*",
+      "placeholder": "Select city"
+    },
+    "addressLine1": {
+      "label": "Address, Line 1*",
+      "placeholder": "Enter address line 1"
+    },
+    "addressLine2": {
+      "label": "Address, Line 2 (optional)",
+      "placeholder": "Enter address line 2"
+    },
+    "zipCode": {
+      "label": "Zip Code*",
+      "placeholder": "Enter zip code"
+    },
+    "vatNumber": {
+      "label": "VAT Number (optional)",
+      "placeholder": "Enter VAT number"
+    }
+  },
+  "actions": {
+    "cancel": "Cancel"
+  },
+  "validation": {
+    "companyNameRequired": "Company name is required",
+    "emailInvalid": "Please enter a valid email",
+    "emailRequired": "Email is required",
+    "mobileRequired": "Mobile number is required",
+    "mobileMin": "Minimum 10 digits are required",
+    "mobileMax": "Maximum 14 digits are allowed",
+    "countryRequired": "Country is required",
+    "stateRequired": "State is required",
+    "cityRequired": "City is required",
+    "addressLine1Required": "Address line 1 is required",
+    "zipCodeRequired": "Zip code is required"
+  },
+  "mobilePlaceholder": "Enter your mobile number",
+  "vatNumber": "VAT Number (optional)",
+  "vatVerify": "VAT Number verified"
+}

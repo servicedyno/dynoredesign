@@ -1,0 +1,448 @@
+import crypto from 'crypto';
+import { apiLogger } from "../utils/loggers";
+import { Op } from 'sequelize';
+import User from '../models/userModels/userModel';
+import RefereeCode from '../models/referralModels/refereeCodeModel';
+import Referral from '../models/referralModels/referralModel';
+// companyModel import removed - not used
+
+// ============================================
+// REFEREE CODE SERVICE (Type 2 - Payment Link)
+// ============================================
+
+/**
+ * Generate unique referee code
+ * Format: REF-XXXXXXXX (8 random chars)
+ */
+export const generateRefereeCode = (): string => {
+  const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `REF-${randomPart}`;
+};
+
+/**
+ * Check if customer email already has a Dynopay account
+ */
+export const checkEmailHasAccount = async (email: string): Promise<boolean> => {
+  const user = await User.findOne({
+    where: { email: email.toLowerCase() },
+  });
+  return !!user;
+};
+
+/**
+ * Check if referee code was already sent to this email
+ */
+export const checkRefereeCodeSent = async (email: string): Promise<boolean> => {
+  const existingCode = await RefereeCode.findOne({
+    where: { 
+      customer_email: email.toLowerCase(),
+      status: { [Op.in]: ['sent', 'used'] },
+    },
+  });
+  return !!existingCode;
+};
+
+/**
+ * Create referee code for payment link email
+ * Returns null if:
+ * - Email already has an account
+ * - Referee code already sent to this email
+ */
+export const createRefereeCode = async (params: {
+  customerEmail: string;
+  referrerCompanyId: number;
+  referrerUserId: number;
+  paymentLinkId?: number;
+}): Promise<{ code: string; discount: number; duration: number } | null> => {
+  const { customerEmail, referrerCompanyId, referrerUserId, paymentLinkId } = params;
+  const email = customerEmail.toLowerCase();
+
+  // Check if email already has account
+  const hasAccount = await checkEmailHasAccount(email);
+  if (hasAccount) {
+    apiLogger.info(`[RefereeCode] Skipping - ${email} already has an account`);
+    return null;
+  }
+
+  // Check if code already sent to this email
+  const codeSent = await checkRefereeCodeSent(email);
+  if (codeSent) {
+    apiLogger.info(`[RefereeCode] Skipping - code already sent to ${email}`);
+    return null;
+  }
+
+  // Generate unique code
+  let code = generateRefereeCode();
+  let attempts = 0;
+  while (attempts < 10) {
+    const exists = await RefereeCode.findOne({ where: { code } });
+    if (!exists) break;
+    code = generateRefereeCode();
+    attempts++;
+  }
+
+  // Create referee code (expires in 30 days)
+  const expiresAt = new Date();
+  expiresAt.setDate(expiresAt.getDate() + 30);
+
+  const refereeCode = await RefereeCode.create({
+    code,
+    customer_email: email,
+    referrer_company_id: referrerCompanyId,
+    referrer_user_id: referrerUserId,
+    payment_link_id: paymentLinkId,
+    status: 'sent',
+    discount_percent: 50,
+    discount_duration_days: 90,
+    sent_at: new Date(),
+    expires_at: expiresAt,
+  } as Record<string, unknown>);
+
+  apiLogger.info(`[RefereeCode] Created code ${code} for ${email}`);
+
+  return {
+    code: refereeCode.code,
+    discount: refereeCode.discount_percent,
+    duration: refereeCode.discount_duration_days,
+  };
+};
+
+/**
+ * Validate and redeem referee code during signup
+ * Returns discount info if valid, null if invalid
+ */
+export const redeemRefereeCode = async (params: {
+  code: string;
+  userEmail: string;
+  userId: number;
+}): Promise<{
+  success: boolean;
+  discountPercent?: number;
+  discountDays?: number;
+  expiresAt?: Date;
+  referrerUserId?: number;
+  message: string;
+}> => {
+  const { code, userId } = params;
+
+  // Find the referee code
+  const refereeCode = await RefereeCode.findOne({
+    where: { code: code.toUpperCase() },
+  });
+
+  if (!refereeCode) {
+    return { success: false, message: 'Invalid referee code' };
+  }
+
+  // Check if code is expired
+  if (new Date() > refereeCode.expires_at) {
+    await refereeCode.update({ status: 'expired' });
+    return { success: false, message: 'Referee code has expired' };
+  }
+
+  // Check if code is already used
+  if (refereeCode.status === 'used') {
+    return { success: false, message: 'Referee code has already been used' };
+  }
+
+  // Check if code was sent to a different email (optional - can be relaxed)
+  // For now, allow any email to use the code
+
+  // Mark code as used
+  await refereeCode.update({
+    status: 'used',
+    used_by_user_id: userId,
+    used_at: new Date(),
+  });
+
+  // Calculate discount expiry date
+  const discountExpiresAt = new Date();
+  discountExpiresAt.setDate(discountExpiresAt.getDate() + refereeCode.discount_duration_days);
+
+  // Apply discount to new user
+  await User.update(
+    {
+      fee_discount_percent: refereeCode.discount_percent,
+      fee_discount_expires_at: discountExpiresAt,
+      fee_discount_reason: 'referee_code',
+      referred_by_referee_code: refereeCode.code,
+    },
+    { where: { user_id: userId } }
+  );
+
+  // Apply reward to referrer (10% for 30 days)
+  const referrerDiscountExpiresAt = new Date();
+  referrerDiscountExpiresAt.setDate(referrerDiscountExpiresAt.getDate() + 30);
+
+  // Check if referrer already has a better discount
+  const referrer = await User.findByPk(refereeCode.referrer_user_id);
+  const referrerData = referrer as unknown as Record<string, unknown> | null;
+  const currentDiscount = Number(referrerData?.fee_discount_percent || 0);
+  const currentExpiry = referrerData?.fee_discount_expires_at as Date | null;
+
+  // Stack discounts or extend - use the better deal
+  if (!currentExpiry || new Date() > currentExpiry || currentDiscount < 10) {
+    await User.update(
+      {
+        fee_discount_percent: 10,
+        fee_discount_expires_at: referrerDiscountExpiresAt,
+        fee_discount_reason: 'referrer_reward',
+      },
+      { where: { user_id: refereeCode.referrer_user_id } }
+    );
+  }
+
+  // Increment referrer's referral count
+  await User.increment(
+    { referral_count: 1 },
+    { where: { user_id: refereeCode.referrer_user_id } }
+  );
+
+  apiLogger.info(`[RefereeCode] Code ${code} redeemed by user ${userId}`);
+  apiLogger.info(`[RefereeCode] Referrer ${refereeCode.referrer_user_id} rewarded with 10% off for 30 days`);
+
+  return {
+    success: true,
+    discountPercent: refereeCode.discount_percent,
+    discountDays: refereeCode.discount_duration_days,
+    expiresAt: discountExpiresAt,
+    referrerUserId: refereeCode.referrer_user_id,
+    message: `Welcome! You have ${refereeCode.discount_percent}% off fees for ${refereeCode.discount_duration_days} days`,
+  };
+};
+
+// ============================================
+// USER REFERRAL CODE SERVICE (Type 1 - Organic)
+// ============================================
+
+/**
+ * Generate user referral code
+ * Format: DYNO2026JOHXXXXXXXX
+ */
+export const generateUserReferralCode = (_userId: number, userName: string): string => {
+  const prefix = 'DYNO';
+  const year = new Date().getFullYear();
+  const userPart = (userName || 'USR').substring(0, 3).toUpperCase().replace(/[^A-Z]/g, 'X');
+  const randomPart = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `${prefix}${year}${userPart}${randomPart}`;
+};
+
+/**
+ * Redeem user referral code during signup
+ * Both referrer and referee get 50% off for 30 days
+ */
+export const redeemUserReferralCode = async (params: {
+  referralCode: string;
+  newUserId: number;
+}): Promise<{
+  success: boolean;
+  message: string;
+  discountPercent?: number;
+  discountDays?: number;
+}> => {
+  const { referralCode, newUserId } = params;
+
+  // Find referrer by referral code
+  const referrer = await User.findOne({
+    where: { referral_code: referralCode },
+  });
+
+  if (!referrer) {
+    return { success: false, message: 'Invalid referral code' };
+  }
+
+  const referrerId = (referrer as unknown as { user_id: number }).user_id;
+
+  // Check if user is trying to refer themselves
+  if (referrerId === newUserId) {
+    return { success: false, message: 'You cannot refer yourself' };
+  }
+
+  // Check if referral already exists
+  const existingReferral = await Referral.findOne({
+    where: {
+      referrer_user_id: referrerId,
+      referred_user_id: newUserId,
+    },
+  });
+
+  if (existingReferral) {
+    return { success: false, message: 'Referral already applied' };
+  }
+
+  // Create referral record (status: pending - activated after first $100 transaction)
+  await Referral.create({
+    referrer_user_id: referrerId,
+    referred_user_id: newUserId,
+    referral_code: referralCode,
+    status: 'pending',
+    activation_requirement: 'first_transaction_100',
+    bonus_amount: 0, // Fee discount instead of bonus
+    bonus_currency: 'USD',
+    referee_discount_percent: 50,
+    referee_discount_duration_days: 30,
+    referred_at: new Date(),
+    expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days to complete qualifying transaction
+  } as Record<string, unknown>);
+
+  // Apply immediate discount to referee (50% for 30 days)
+  const refereeDiscountExpiry = new Date();
+  refereeDiscountExpiry.setDate(refereeDiscountExpiry.getDate() + 30);
+
+  await User.update(
+    {
+      fee_discount_percent: 50,
+      fee_discount_expires_at: refereeDiscountExpiry,
+      fee_discount_reason: 'user_referral_referee',
+      referred_by_code: referralCode,
+    },
+    { where: { user_id: newUserId } }
+  );
+
+  // Increment referrer's referral count
+  await User.increment(
+    { referral_count: 1 },
+    { where: { user_id: referrerId } }
+  );
+
+  apiLogger.info(`[UserReferral] New user ${newUserId} referred by ${referrerId}`);
+
+  return {
+    success: true,
+    message: 'Referral code applied! You have 50% off fees for 30 days',
+    discountPercent: 50,
+    discountDays: 30,
+  };
+};
+
+/**
+ * Process referrer reward when referee completes qualifying transaction ($100+)
+ * Called from payment completion flow
+ */
+export const processReferrerReward = async (params: {
+  refereeUserId: number;
+  transactionAmount: number;
+}): Promise<boolean> => {
+  const { refereeUserId, transactionAmount } = params;
+
+  // Check minimum transaction amount
+  if (transactionAmount < 100) {
+    return false;
+  }
+
+  // Find pending referral for this user
+  const referral = await Referral.findOne({
+    where: {
+      referred_user_id: refereeUserId,
+      status: 'pending',
+    },
+  });
+
+  if (!referral) {
+    return false; // No pending referral
+  }
+
+  // Activate referral
+  await referral.update({
+    status: 'active',
+    activated_at: new Date(),
+  });
+
+  // Apply discount to referrer (50% for 30 days)
+  const referrerDiscountExpiry = new Date();
+  referrerDiscountExpiry.setDate(referrerDiscountExpiry.getDate() + 30);
+
+  // Check if referrer has existing discount
+  const referrer = await User.findByPk(referral.referrer_user_id);
+  const referrerData = referrer as unknown as Record<string, unknown> | null;
+  const currentExpiry = referrerData?.fee_discount_expires_at as Date | null;
+
+  // Only apply if no current discount or current discount expired
+  if (!currentExpiry || new Date() > currentExpiry) {
+    await User.update(
+      {
+        fee_discount_percent: 50,
+        fee_discount_expires_at: referrerDiscountExpiry,
+        fee_discount_reason: 'user_referral_referrer',
+      },
+      { where: { user_id: referral.referrer_user_id } }
+    );
+  }
+
+  // Mark referral as rewarded
+  await referral.update({
+    status: 'rewarded',
+    rewarded_at: new Date(),
+  });
+
+  apiLogger.info(`[UserReferral] Referrer ${referral.referrer_user_id} rewarded - 50% off for 30 days`);
+
+  return true;
+};
+
+// ============================================
+// FEE DISCOUNT CALCULATION
+// ============================================
+
+/**
+ * Get user's current fee discount
+ * Returns discount percentage if valid, 0 if no discount or expired
+ */
+export const getUserFeeDiscount = async (userId: number): Promise<{
+  discountPercent: number;
+  reason: string | null;
+  expiresAt: Date | null;
+}> => {
+  const user = await User.findByPk(userId, {
+    attributes: ['fee_discount_percent', 'fee_discount_expires_at', 'fee_discount_reason'],
+  });
+
+  if (!user) {
+    return { discountPercent: 0, reason: null, expiresAt: null };
+  }
+
+  const discountPercent = (user as { fee_discount_percent?: number }).fee_discount_percent || 0;
+  const expiresAt = (user as { fee_discount_expires_at?: Date }).fee_discount_expires_at;
+  const reason = (user as { fee_discount_reason?: string }).fee_discount_reason;
+
+  // Check if discount has expired
+  if (!expiresAt || new Date() > expiresAt) {
+    // Clear expired discount
+    await User.update(
+      {
+        fee_discount_percent: 0,
+        fee_discount_expires_at: null,
+        fee_discount_reason: null,
+      },
+      { where: { user_id: userId } }
+    );
+    return { discountPercent: 0, reason: null, expiresAt: null };
+  }
+
+  return { discountPercent, reason, expiresAt };
+};
+
+/**
+ * Calculate discounted fee
+ */
+export const calculateDiscountedFee = (originalFee: number, discountPercent: number): number => {
+  if (discountPercent <= 0) return originalFee;
+  const discount = (originalFee * discountPercent) / 100;
+  return Math.max(0, originalFee - discount);
+};
+
+export default {
+  // Referee Code (Type 2)
+  generateRefereeCode,
+  checkEmailHasAccount,
+  checkRefereeCodeSent,
+  createRefereeCode,
+  redeemRefereeCode,
+  // User Referral (Type 1)
+  generateUserReferralCode,
+  redeemUserReferralCode,
+  processReferrerReward,
+  // Fee Discount
+  getUserFeeDiscount,
+  calculateDiscountedFee,
+};

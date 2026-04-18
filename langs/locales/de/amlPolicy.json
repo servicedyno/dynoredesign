@@ -1,0 +1,13 @@
+{
+  "title": "Anti-Geldwäsche-Richtlinie",
+  "lastUpdated": "Zuletzt aktualisiert",
+  "introduction": "Einführung",
+  "introductionText": "Dynopay verpflichtet sich zur Einhaltung aller geltenden Anti-Geldwäsche- (AML) und Geldtransfervorschriften. Diese Richtlinie beschreibt unsere Verfahren zur Erkennung und Verhinderung von Geldwäsche und Terrorismusfinanzierung.",
+  "kycTitle": "Kennen Sie Ihren Kunden (KYC)",
+  "kycText": "Wir verlangen eine Identitätsverifizierung aller Benutzer. Dies beinhaltet die Überprüfung eines amtlichen Lichtbildausweises und eines Adressnachweises.",
+  "monitoringTitle": "Transaktionsüberwachung",
+  "monitoringText": "Wir überwachen alle Transaktionen auf verdächtige Aktivitäten mithilfe fortschrittlicher Analysetools und manueller Überprüfung.",
+  "reportingTitle": "Meldung verdächtiger Aktivitäten",
+  "reportingText": "Alle verdächtigen Aktivitäten werden umgehend den zuständigen Behörden gemeldet.",
+  "backToHome": "Zurück zur Startseite"
+}

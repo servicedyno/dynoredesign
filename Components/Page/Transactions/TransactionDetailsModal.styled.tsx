@@ -1,0 +1,331 @@
+import { Box, Typography } from "@mui/material";
+import { styled } from "@mui/material/styles";
+
+export const HeaderTitleRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  gap: "100px",
+  alignItems: "center",
+  [theme.breakpoints.down("md")]: {
+    gap: "50px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "25px",
+  },
+}));
+
+export const TitleColumn = styled(Box)(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "12px",
+  [theme.breakpoints.down("md")]: {
+    gap: "8px",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gap: "6px",
+  },
+}));
+
+export const TitleLabel = styled(Typography)(({ theme }) => ({
+  fontSize: "15px",
+  fontWeight: 500,
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.secondary,
+  lineHeight: "1.2",
+  [theme.breakpoints.down("md")]: {
+    fontSize: "13px",
+  },
+}));
+
+export const TitleValue = styled(Typography)(({ theme }) => ({
+  fontSize: "20px",
+  fontWeight: 500,
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.primary,
+  lineHeight: "1.2",
+  [theme.breakpoints.down("md")]: {
+    fontSize: "15px",
+  },
+}));
+
+export const SectionTitleWithIcon = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  "& img": {
+    width: "    ",
+    height: "15px",
+    objectFit: "contain",
+    filter:
+      "brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)",
+  },
+});
+
+export const SectionTitle = styled(Typography)(({ theme }) => ({
+  fontSize: "20px",
+  fontWeight: 500,
+  lineHeight: "1.2",
+  letterSpacing: "-0.02em",
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.primary,
+  [theme.breakpoints.down("md")]: {
+    fontSize: "15px",
+  },
+}));
+
+export const SectionDivider = styled(Box)(({ theme }) => ({
+  width: "100%",
+  height: "1px",
+  backgroundColor: theme.palette.border.main,
+  margin: "24px 0",
+  [theme.breakpoints.down("md")]: {
+    margin: "12px 0",
+  },
+}));
+
+export const DetailRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+}));
+
+export const DetailLabel = styled(Typography)(({ theme }) => ({
+  fontSize: "14px",
+  fontWeight: 500,
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.secondary,
+  [theme.breakpoints.down("md")]: {
+    fontSize: "13px",
+  },
+}));
+
+export const DetailValue = styled(Typography)(({ theme }) => ({
+  fontSize: "15px",
+  fontWeight: 500,
+  fontFamily: "UrbanistMedium",
+  color: theme.palette.text.primary,
+  [theme.breakpoints.down("md")]: {
+    fontSize: "14px",
+  },
+}));
+
+export const StatusBadge = styled(Box)<{
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
+}>(({ theme, status }) => {
+  const statusColors = {
+    done: {
+      bg: theme.palette.success.main,
+      border: theme.palette.success.light,
+    },
+    pending: {
+      bg: "#FFEDD7",
+      border: "#FFE3C0",
+    },
+    failed: {
+      bg: "#FFEBE5",
+      border: "#FFC9CA",
+    },
+  };
+
+  const colors = statusColors[status];
+
+  return {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    padding: "9px 8px",
+    borderRadius: "50px",
+    backgroundColor: colors.bg,
+    border: `1px solid ${colors.border}`,
+    fontSize: "13px",
+    fontWeight: 500,
+    fontFamily: "UrbanistMedium",
+    width: "fit-content",
+    [theme.breakpoints.down("md")]: {
+      padding: "6px 7px",
+    },
+  };
+});
+
+export const StatusIconWrapper = styled(Box)(({ theme }) => {
+  return {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    flexShrink: 0,
+    "& img": {
+      width: "14px",
+      height: "14px",
+    },
+    [theme.breakpoints.down("md")]: {
+      "& img": {
+        width: "10px",
+        height: "10px",
+      },
+    },
+  };
+});
+
+export const StatusText = styled(Typography)<{
+  status: "pending" | "confirmed" | "settled" | "failed" | "processing";
+}>(({ status, theme }) => {
+  const statusColors = {
+    done: {
+      textColor: theme.palette.success.dark,
+    },
+    pending: {
+      textColor: "#F57C00",
+    },
+    failed: {
+      textColor: theme.palette.error.main,
+    },
+  };
+
+  return {
+    fontSize: "13px",
+    fontWeight: 500,
+    color: statusColors[status].textColor,
+    fontFamily: "UrbanistMedium",
+    textTransform: "capitalize",
+    lineHeight: 1.2,
+    [theme.breakpoints.down("md")]: {
+      fontSize: "10px",
+      lineHeight: "100%",
+    },
+  };
+});
+
+export const CryptoIconWrapper = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "32px",
+  height: "32px",
+  borderRadius: "50%",
+  backgroundColor: theme.palette.secondary.light,
+  border: `1px solid ${theme.palette.border.main}`,
+  padding: "4px",
+  "& img": {
+    width: "24px",
+    height: "24px",
+    objectFit: "contain",
+  },
+}));
+
+export const HashRow = styled(Box)(({ theme }) => ({
+  display: "flex",
+  alignItems: "flex-end",
+  gap: "12px",
+  [theme.breakpoints.down("sm")]: {
+    gap: "8px",
+  },
+}));
+
+export const HashInputBox = styled(Box)(({ theme }) => ({
+  flex: 1,
+  minWidth: 0,
+  padding: "10px 12px",
+  backgroundColor: theme.palette.secondary.light,
+  borderRadius: "6px",
+  border: `1px solid ${theme.palette.border.main}`,
+  fontSize: "13px",
+  fontWeight: 400,
+  fontFamily: "UrbanistRegular",
+  color: theme.palette.text.primary,
+  wordBreak: "break-all",
+  lineHeight: "1.5",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+}));
+
+export const HashValue = styled(Typography)(({ theme }) => ({
+  fontSize: "13px",
+  fontWeight: 400,
+  fontFamily: "UrbanistRegular",
+  color: theme.palette.text.primary,
+  wordBreak: "break-all",
+  lineHeight: "1.5",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  display: "-webkit-box",
+  WebkitLineClamp: 2,
+  WebkitBoxOrient: "vertical",
+}));
+
+export const ActionButtonGroup = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  flexShrink: 0,
+});
+
+export const CopyButton = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "40px",
+  height: "40px",
+  padding: "8px",
+  borderRadius: "6px",
+  border: `1px solid ${theme.palette.primary.main}`,
+  backgroundColor: theme.palette.background.paper,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  "&:hover": {
+    backgroundColor: theme.palette.primary.light,
+  },
+  "&:active": {
+    transform: "scale(0.95)",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "32px",
+    height: "32px",
+    padding: "6px",
+  },
+}));
+
+export const ExplorerButton = styled("button")(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  width: "40px",
+  height: "40px",
+  padding: "8px",
+  borderRadius: "6px",
+  border: `1px solid ${theme.palette.text.primary}`,
+  backgroundColor: theme.palette.background.paper,
+  cursor: "pointer",
+  transition: "all 0.2s ease",
+  color: theme.palette.text.primary,
+  "&:hover": {
+    backgroundColor: theme.palette.background.paper,
+    color: theme.palette.text.primary,
+  },
+  "&:active": {
+    transform: "scale(0.95)",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "32px",
+    height: "32px",
+    padding: "6px",
+  },
+}));
+
+export const WebhookResponseBox = styled(Box)(({ theme }) => ({
+  margin: "11px 8px 11px 14px",
+  backgroundColor: theme.palette.background.paper,
+  maxHeight: "150px",
+  overflowY: "auto",
+  scrollbarWidth: "none",
+  "& pre": {
+    color: theme.palette.text.primary,
+    fontSize: "13px",
+    fontWeight: 500,
+    fontFamily: "UrbanistMedium",
+  },
+  [theme.breakpoints.down("md")]: {
+    margin: "10px",
+  },
+}));
