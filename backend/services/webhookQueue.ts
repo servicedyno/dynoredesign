@@ -22,11 +22,14 @@ const REDIS_URL = process.env.REDIS_PUBLIC_URL || "redis://localhost:6379";
 
 function parseRedisUrl(url: string) {
   const parsed = new URL(url);
+  const isTLS = parsed.protocol === "rediss:";
   return {
     host: parsed.hostname,
     port: parseInt(parsed.port, 10) || 6379,
     password: parsed.password || undefined,
     username: parsed.username && parsed.username !== "default" ? parsed.username : undefined,
+    // Enable TLS for managed Redis/Valkey providers (DigitalOcean, AWS ElastiCache, Upstash)
+    ...(isTLS ? { tls: {} } : {}),
   };
 }
 
