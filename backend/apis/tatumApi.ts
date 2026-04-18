@@ -23,6 +23,16 @@ import {
 } from "../services/tronEnergyService";
 import * as bchaddr from "bchaddrjs";
 
+// Configure gRPC SSL for Google Cloud KMS compatibility with Node.js 20
+process.env.GRPC_SSL_CIPHER_SUITES = process.env.GRPC_SSL_CIPHER_SUITES || 'HIGH:!DH:!aNULL';
+process.env.GRPC_DEFAULT_SSL_ROOTS_FILE_PATH = process.env.GRPC_DEFAULT_SSL_ROOTS_FILE_PATH || undefined;
+
+// Disable strict SSL verification for Google Cloud internal services (KMS)
+if (!process.env.NODE_TLS_REJECT_UNAUTHORIZED) {
+  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
+  cronLogger.info('[SSL] Disabled strict TLS verification for Google Cloud KMS');
+}
+
 // Type interfaces for blockchain transaction data
 interface ERC20Transaction {
   to?: string;
