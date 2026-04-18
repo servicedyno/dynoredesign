@@ -17,6 +17,15 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
   - `backend/.env`: Updated DB_NAME / USER_NAME / PASSWORD / HOST / DB_PORT
 - **Railway production**: Same 6 DB vars pushed to `DynoRedesign` service (project `c23ac3d9-…`, env `production`) via Railway GraphQL API
 
+### 2026-04-18 — Deployed to Render with Docker + Custom Domains + DO Valkey
+- **New Render service**: `dynopay` (`srv-d7hrdsosfn5c73ed5v60`), Docker runtime, Starter plan, Frankfurt region
+- **Built from**: `servicedyno/DynoRedesign` repo, `main` branch, using existing multi-stage `Dockerfile` + nginx + `start-all.sh`
+- **Env vars**: 147 vars synced from `/app/backend/.env` + prod URL overrides (SERVER_URL, CHECKOUT_URL, FRONTEND_URL, NEXTAUTH_URL/SECRET, NEXT_PUBLIC_*) via `PUT /env-vars`
+- **DO Valkey**: Redis migrated from local to DigitalOcean Managed Valkey (`rediss://…:25061`, TLS). `webhookQueue.ts` `parseRedisUrl()` updated to detect `rediss://` and enable TLS for BullMQ/ioredis
+- **Custom domains attached**: `api.dynopay.com`, `checkout.dynopay.com`, `dynopay.com`, `www.dynopay.com` (pending DNS verification)
+- **Live URL (pre-DNS)**: https://dynopay.onrender.com — `/health` returns `database=connected, redis=connected, tatum=operational, binance_websocket=connected`, admin login returns JWT ✅
+- **Old service**: `DynoRedesign` (Node buildpack, free tier) is still running broken — safe to delete once DNS is cut over
+
 ### 2026-03-25 — Critical Bug Fix: Double SUN→TRX Conversion (Fee Wallet Drain)
 - **Root Cause**: `tatumApi.getAddressBalance()` was fixed on ~March 15 to convert SUN→TRX (÷1M), but 4 caller sites still had their own ÷1M, making TRX balances appear 1,000,000× smaller
 - **Impact**: `fundGasIfNeeded` always thought pool addresses had 0 gas → kept draining the fee wallet. `checkFeeBalance` reported $0 instead of actual ~$21 balance
