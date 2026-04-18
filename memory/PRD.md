@@ -5,6 +5,18 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-04-18 — DB Migration from Railway → DigitalOcean Managed PostgreSQL
+- **Trigger**: Railway PostgreSQL instance was lost
+- **New DB**: DigitalOcean Managed PostgreSQL in FRA1 region
+  - Host: `db-postgresql-fra1-93644-do-user-19053663-0.k.db.ondigitalocean.com:25060`
+  - Database: `dynopay`, User: `doadmin`, SSL required
+- **Schema**: All 40 tables recreated via per-model sync script (`database/migrate_per_model.ts`) — handles FK forward-refs via multi-pass sync
+- **Admin user**: `tbl_admin` reseeded with `moxxcompany@gmail.com` (bcrypt hashed)
+- **Code changes**:
+  - `utils/dbInstance.ts`: Now auto-enables SSL for non-localhost HOST in individual-var connection path (DigitalOcean requires SSL)
+  - `backend/.env`: Updated DB_NAME / USER_NAME / PASSWORD / HOST / DB_PORT
+- **Railway production**: Same 6 DB vars pushed to `DynoRedesign` service (project `c23ac3d9-…`, env `production`) via Railway GraphQL API
+
 ### 2026-03-25 — Critical Bug Fix: Double SUN→TRX Conversion (Fee Wallet Drain)
 - **Root Cause**: `tatumApi.getAddressBalance()` was fixed on ~March 15 to convert SUN→TRX (÷1M), but 4 caller sites still had their own ÷1M, making TRX balances appear 1,000,000× smaller
 - **Impact**: `fundGasIfNeeded` always thought pool addresses had 0 gas → kept draining the fee wallet. `checkFeeBalance` reported $0 instead of actual ~$21 balance

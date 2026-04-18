@@ -70,6 +70,20 @@ const sequelize = process.env.DATABASE_URL
         dialectOptions: {
           keepAlive: true,
           keepAliveInitialDelayMillis: 10000,
+          // Enable SSL for remote hosts (DigitalOcean, Railway, etc.)
+          // Skip SSL only for true localhost connections
+          ...(
+            (() => {
+              const host = process.env.HOST || '';
+              const isLocal = ['localhost', '127.0.0.1', '::1', ''].includes(host);
+              return !isLocal ? {
+                ssl: {
+                  require: true,
+                  rejectUnauthorized: process.env.DB_SSL_REJECT_UNAUTHORIZED !== 'false',
+                },
+              } : {};
+            })()
+          ),
         },
         logging: false,
         pool: poolConfig,
