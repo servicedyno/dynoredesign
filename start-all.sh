@@ -15,6 +15,8 @@ sed "s/NGINX_PORT/$NGINX_PORT/g" /etc/nginx/nginx.conf.template > /etc/nginx/ngi
 # Start Express backend (port 3300)
 echo "[start-all] Starting Express backend on port $BACKEND_PORT..."
 cd /app/backend
+export NODE_OPTIONS="--openssl-legacy-provider"
+export GRPC_SSL_CIPHER_SUITES="HIGH:!DH:!aNULL"
 PORT=$BACKEND_PORT node dist/server.js &
 BACKEND_PID=$!
 
