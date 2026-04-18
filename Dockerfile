@@ -1,7 +1,7 @@
 ##############################################
 # Stage 1: Frontend deps
 ##############################################
-FROM node:18-alpine AS frontend-deps
+FROM node:20-alpine AS frontend-deps
 
 WORKDIR /app
 
@@ -14,7 +14,7 @@ RUN yarn install --frozen-lockfile || yarn install
 ##############################################
 # Stage 2: Build Next.js frontend
 ##############################################
-FROM node:18-alpine AS frontend-builder
+FROM node:20-alpine AS frontend-builder
 
 WORKDIR /app
 
@@ -61,7 +61,7 @@ RUN yarn build
 ##############################################
 # Stage 3: Build Express backend
 ##############################################
-FROM node:18-alpine AS backend-builder
+FROM node:20-alpine AS backend-builder
 
 WORKDIR /app
 
@@ -86,7 +86,7 @@ RUN yarn install --ignore-engines --production=true && yarn cache clean
 ##############################################
 # Stage 4: Runner — combined production image
 ##############################################
-FROM node:18-alpine AS runner
+FROM node:20-alpine AS runner
 
 WORKDIR /app
 
