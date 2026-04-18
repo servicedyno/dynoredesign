@@ -27,14 +27,17 @@ export const getTransactionFee = async () => {
   const admin_fee = await getRedisItem("admin_fee");
   let transaction_fee;
   if (!admin_fee?.transaction_fee) {
-    const { fee } = await (
-      await feesModel.findOne({
-        where: {
-          feeType: "TRANSACTION_FEE",
-        },
-      })
-    ).dataValues;
-    transaction_fee = fee;
+    const feeRecord = await feesModel.findOne({
+      where: {
+        feeType: "TRANSACTION_FEE",
+      },
+    });
+    
+    if (!feeRecord) {
+      throw new Error("TRANSACTION_FEE not found in database");
+    }
+    
+    transaction_fee = feeRecord.dataValues.fee;
     await setRedisItem("admin_fee", { transaction_fee });
   } else {
     transaction_fee = admin_fee?.transaction_fee;
@@ -94,14 +97,17 @@ export const getBlockchainFee = async () => {
   const admin_fee = await getRedisItem("admin_fee");
   let blockchain_fee;
   if (!admin_fee?.blockchain_fee) {
-    const { fee } = await (
-      await feesModel.findOne({
-        where: {
-          feeType: "BLOCKCHAIN_FEE",
-        },
-      })
-    ).dataValues;
-    blockchain_fee = fee;
+    const feeRecord = await feesModel.findOne({
+      where: {
+        feeType: "BLOCKCHAIN_FEE",
+      },
+    });
+    
+    if (!feeRecord) {
+      throw new Error("BLOCKCHAIN_FEE not found in database");
+    }
+    
+    blockchain_fee = feeRecord.dataValues.fee;
     await setRedisItem("admin_fee", { blockchain_fee });
   } else {
     blockchain_fee = admin_fee?.blockchain_fee;
