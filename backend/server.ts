@@ -1274,10 +1274,11 @@ process.on('unhandledRejection', (reason: unknown, promise: Promise<unknown>) =>
     log(`[Shutdown] Suppressed post-shutdown DB error: ${msg}`, 'warn');
     return;
   }
-  log(`Unhandled Promise Rejection at: ${promise}, reason: ${reason}`, 'error');
+  const stack = reason instanceof Error ? reason.stack : undefined;
+  log(`Unhandled Promise Rejection at: ${promise}, reason: ${reason}\nSTACK:\n${stack || '(no stack)'}`, 'error');
   captureError(reason, 'unhandled-rejection', {
     severity: 'critical',
-    extraContext: `Promise: ${String(promise)}`,
+    extraContext: `Promise: ${String(promise)} | Stack: ${stack ? stack.split('\n').slice(0, 8).join(' | ') : 'none'}`,
   });
   // Don't exit — log and continue
 });

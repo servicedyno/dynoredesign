@@ -492,6 +492,10 @@ export const setupRefereeCodeReminderCron = () => {
       
       for (const code of activeCodes) {
         try {
+          if (!code || !code.dataValues) {
+            log(`Skipping null/invalid referee code record`, "warn");
+            continue;
+          }
           const codeData = code.dataValues;
           const sentAt = new Date(codeData.sent_at);
           const expiresAt = new Date(codeData.expires_at);
@@ -549,7 +553,7 @@ export const setupRefereeCodeReminderCron = () => {
           }
         } catch (codeError: unknown) {
           const err = codeError as { message?: string };
-          log(`Error processing referee code ${code.dataValues.code}: ${err.message}`, "error");
+          log(`Error processing referee code ${code?.dataValues?.code || 'unknown'}: ${err.message}`, "error");
         }
       }
       
@@ -595,6 +599,10 @@ export const triggerRefereeCodeReminders = async () => {
   };
   
   for (const code of activeCodes) {
+    if (!code || !code.dataValues) {
+      log(`Skipping null/invalid referee code record in preview`, "warn");
+      continue;
+    }
     const codeData = code.dataValues;
     const sentAt = new Date(codeData.sent_at);
     const expiresAt = new Date(codeData.expires_at);
@@ -718,6 +726,10 @@ export const setupPaymentLinkReminderCron = () => {
       
       for (const link of pendingLinks) {
         try {
+          if (!link || !link.dataValues) {
+            log(`Skipping null/invalid payment link record`, "warn");
+            continue;
+          }
           const linkData = link.dataValues;
           const createdAt = new Date(linkData.createdAt);
           const expiresAt = linkData.expires_at ? new Date(linkData.expires_at) : null;
@@ -842,7 +854,7 @@ export const setupPaymentLinkReminderCron = () => {
           }
         } catch (linkError: unknown) {
           const err = linkError as { message?: string };
-          log(`Error processing payment link ${link.dataValues.link_id}: ${err.message}`, "error");
+          log(`Error processing payment link ${link?.dataValues?.link_id || 'unknown'}: ${err.message}`, "error");
         }
       }
       
@@ -891,6 +903,10 @@ export const triggerPaymentLinkReminders = async () => {
   };
   
   for (const link of pendingLinks) {
+    if (!link || !link.dataValues) {
+      log(`Skipping null/invalid payment link record in preview`, "warn");
+      continue;
+    }
     const linkData = link.dataValues;
     const createdAt = new Date(linkData.createdAt);
     const expiresAt = linkData.expires_at ? new Date(linkData.expires_at) : null;

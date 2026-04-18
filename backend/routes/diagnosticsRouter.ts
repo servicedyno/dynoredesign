@@ -1529,6 +1529,10 @@ router.post("/recover-excess-trx", adminAuthMiddleware, async (req: express.Requ
     let totalRecovered = 0;
 
     for (const addr of poolAddresses) {
+      if (!addr || !addr.dataValues) {
+        cronLogger.warn(`Skipping null/invalid pool address record`);
+        continue;
+      }
       const walletAddress = addr.dataValues.wallet_address;
       try {
         // Get TRX balance — try Tatum first, fall back to TronGrid if stale/0
