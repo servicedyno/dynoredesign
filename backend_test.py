@@ -6,7 +6,7 @@ Testing after bot protection enhancement:
 - Bot protection should not interfere with legitimate /api/* traffic
 - All API endpoints should return their normal status codes (no 500 errors)
 
-Target: https://first-launch-4.preview.emergentagent.com/api
+Target: https://quick-setup-78.preview.emergentagent.com/api
 """
 
 import requests
@@ -16,7 +16,7 @@ import time
 from datetime import datetime
 
 # Test configuration from review request
-BASE_URL = "https://first-launch-4.preview.emergentagent.com/api"
+BASE_URL = "https://quick-setup-78.preview.emergentagent.com/api"
 
 # Test credentials from review request
 ADMIN_CREDENTIALS = {
