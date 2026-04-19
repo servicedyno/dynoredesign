@@ -185,42 +185,73 @@ export async function directEvmSweep(params: {
       const nonce = await provider.getTransactionCount(params.fromAddress, "pending");
       cronLogger.info(`${LOG_PREFIX} Nonce: ${nonce}`);
 
-      // 2. Determine gas price
-      let gasPrice: bigint;
+      // 2. Determine EIP-1559 fee parameters (ETH & POLYGON are both EIP-1559 chains)
+      //
+      //    The old code used legacy `gasPrice` from `feeData.gasPrice`, which on
+      //    Ethereum mainnet is often BELOW the current block's baseFee — the RPC
+      //    accepts the TX, returns a valid hash, but the TX is then silently
+      //    dropped from mempool because maxFeePerGas < baseFee. Classic ghost TX.
+      //
+      //    Floors:
+      //      priority >= 1.5 Gwei on ETH / 30 Gwei on POLYGON (reliable inclusion)
+      //      maxFee   >= baseFee * 2 + priority, with absolute minimums of
+      //                  3 Gwei on ETH and 50 Gwei on POLYGON
+      const isPolygon = config.chain === "POLYGON";
+      const minPriorityFee = ethers.parseUnits(isPolygon ? "30" : "1.5", "gwei");
+      const minMaxFee = ethers.parseUnits(isPolygon ? "50" : "3", "gwei");
+
+      let maxPriorityFeePerGas: bigint;
+      let maxFeePerGas: bigint;
+
       if (params.gasPriceGwei && params.gasPriceGwei > 0) {
-        gasPrice = ethers.parseUnits(
+        // Caller-supplied override: interpret as maxFeePerGas with default priority
+        maxFeePerGas = ethers.parseUnits(
           Math.ceil(params.gasPriceGwei).toString(),
           "gwei"
         );
+        maxPriorityFeePerGas = minPriorityFee < maxFeePerGas
+          ? minPriorityFee
+          : maxFeePerGas;
       } else {
-        const feeData = await provider.getFeeData();
-        // If feeData.gasPrice is null, fetch current network gas price
-        if (!feeData.gasPrice) {
-          const currentGasPrice = await provider.send("eth_gasPrice", []);
-          gasPrice = BigInt(currentGasPrice);
-          cronLogger.info(`${LOG_PREFIX} Using network gas price: ${ethers.formatUnits(gasPrice, "gwei")} Gwei`);
-        } else {
-          gasPrice = feeData.gasPrice;
-        }
-        
-        // If still null or zero, use a reasonable default (0.5 Gwei for modern Ethereum)
-        if (!gasPrice || gasPrice === 0n) {
-          gasPrice = ethers.parseUnits("0.5", "gwei");
-          cronLogger.warn(`${LOG_PREFIX} Could not fetch gas price, using fallback: 0.5 Gwei`);
-        }
-      }
+        // Read live baseFee + priority suggestion from the node
+        const [latestBlock, feeData] = await Promise.all([
+          provider.getBlock("latest"),
+          provider.getFeeData(),
+        ]);
+        const baseFee = latestBlock?.baseFeePerGas ?? 0n;
 
-      // Cap gas price to prevent overpaying during spikes
-      const maxGas = ethers.parseUnits(config.maxGasPriceGwei.toString(), "gwei");
-      if (gasPrice > maxGas) {
-        cronLogger.warn(
-          `${LOG_PREFIX} Gas price ${ethers.formatUnits(gasPrice, "gwei")} Gwei exceeds cap ${config.maxGasPriceGwei}, capping`
+        const suggestedPriority = feeData.maxPriorityFeePerGas ?? 0n;
+        maxPriorityFeePerGas =
+          suggestedPriority > minPriorityFee ? suggestedPriority : minPriorityFee;
+
+        // 2x baseFee headroom covers several blocks of base-fee spikes
+        const computedMaxFee = baseFee * 2n + maxPriorityFeePerGas;
+        maxFeePerGas = computedMaxFee > minMaxFee ? computedMaxFee : minMaxFee;
+
+        cronLogger.info(
+          `${LOG_PREFIX} baseFee=${ethers.formatUnits(baseFee, "gwei")} Gwei, priority=${ethers.formatUnits(maxPriorityFeePerGas, "gwei")} Gwei, maxFee=${ethers.formatUnits(maxFeePerGas, "gwei")} Gwei`
         );
-        gasPrice = maxGas;
       }
 
-      const gasPriceStr = ethers.formatUnits(gasPrice, "gwei");
-      cronLogger.info(`${LOG_PREFIX} Gas price: ${gasPriceStr} Gwei`);
+      // Cap to prevent overpaying during spikes
+      const maxAllowed = ethers.parseUnits(
+        config.maxGasPriceGwei.toString(),
+        "gwei"
+      );
+      if (maxFeePerGas > maxAllowed) {
+        cronLogger.warn(
+          `${LOG_PREFIX} maxFeePerGas ${ethers.formatUnits(maxFeePerGas, "gwei")} Gwei exceeds cap ${config.maxGasPriceGwei} Gwei, capping`
+        );
+        maxFeePerGas = maxAllowed;
+        if (maxPriorityFeePerGas > maxFeePerGas) {
+          maxPriorityFeePerGas = maxFeePerGas;
+        }
+      }
+
+      const gasPriceStr = ethers.formatUnits(maxFeePerGas, "gwei");
+      cronLogger.info(
+        `${LOG_PREFIX} EIP-1559 fees: priority=${ethers.formatUnits(maxPriorityFeePerGas, "gwei")} Gwei / maxFee=${gasPriceStr} Gwei`
+      );
 
       const gasLimit = params.gasLimit || config.defaultGasLimit;
 
@@ -245,7 +276,9 @@ export async function directEvmSweep(params: {
           to: config.contractAddress,
           data,
           value: 0n,
-          gasPrice,
+          type: 2,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
           gasLimit,
           nonce,
         };
@@ -262,7 +295,9 @@ export async function directEvmSweep(params: {
         tx = {
           to: params.toAddress,
           value,
-          gasPrice,
+          type: 2,
+          maxFeePerGas,
+          maxPriorityFeePerGas,
           gasLimit,
           nonce,
         };
@@ -272,10 +307,39 @@ export async function directEvmSweep(params: {
         );
       }
 
-      // 4. Sign and broadcast
+      // 4. Sign and broadcast — then verify the TX actually reached the mempool.
+      //    `sendTransaction` returns a locally-computed hash as soon as the RPC
+      //    accepts the bytes. That hash is valid (derived from signed preimage)
+      //    but is NOT a guarantee the TX was propagated to other nodes — e.g.
+      //    if maxFeePerGas is below dynamic minimums, some clients accept the
+      //    submit and silently drop it. We do a best-effort re-query to catch
+      //    this before returning success to the caller.
       const txResponse = await wallet.sendTransaction(tx);
+      cronLogger.info(`${LOG_PREFIX} ✍️  Signed + submitted: ${txResponse.hash}`);
 
-      cronLogger.info(`${LOG_PREFIX} ✅ TX broadcast successfully: ${txResponse.hash}`);
+      // Best-effort mempool sanity check. We poll for up to ~10s asking the
+      // node whether it knows about this hash. If yes → broadcast confirmed.
+      // If not → try the next RPC (since this one accepted-but-dropped).
+      let accepted = false;
+      for (let i = 0; i < 5; i++) {
+        try {
+          const lookup = await provider.getTransaction(txResponse.hash);
+          if (lookup) {
+            accepted = true;
+            break;
+          }
+        } catch {
+          /* transient — keep polling */
+        }
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      if (!accepted) {
+        throw new Error(
+          `TX ${txResponse.hash} was submitted but not visible in mempool after 10s — likely dropped (underpriced or node rejection)`
+        );
+      }
+
+      cronLogger.info(`${LOG_PREFIX} ✅ TX accepted into mempool: ${txResponse.hash}`);
 
       return {
         txHash: txResponse.hash,
