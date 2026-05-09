@@ -412,6 +412,12 @@ export async function markSettlementCompleted(
 
 /**
  * Mark settlement as failed (allows retry).
+ *
+ * Releases BOTH idempotency keys:
+ *   - `settlement-lock-{paymentId}`  (status flag, TTL 600s in-progress / 300s on failure)
+ *   - `settlement-claim-{paymentId}` (atomic SETNX claim, TTL 600s — was leaked on failure
+ *     prior to this fix, blocking every retry for 10 min with
+ *     "Settlement idempotency returned settlement_in_progress but TX did not transfer funds")
  */
 export async function markSettlementFailed(paymentId: string, error: string): Promise<void> {
   const redisKey = `settlement-lock-${paymentId}`;
@@ -421,6 +427,15 @@ export async function markSettlementFailed(paymentId: string, error: string): Pr
     failedAt: Date.now(),
   });
   await setRedisTTL(redisKey, 300); // 5 min — allow retry after cooldown
+
+  // Critical: release the atomic claim acquired in checkSettlementIdempotency so
+  // legitimate retries (BullMQ + reconciliation) can proceed instead of being
+  // told the slot is still claimed.
+  try {
+    await deleteRedisItem(`settlement-claim-${paymentId}`);
+  } catch (e) {
+    cronLogger.warn(`[SettlementIdempotency] Failed to release settlement-claim for ${paymentId}: ${(e as Error).message}`);
+  }
 }
 
 

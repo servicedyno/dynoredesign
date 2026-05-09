@@ -1291,6 +1291,45 @@ async function handleNewTransaction(
       webhookLogs.error("[WebhookProcessor] Error sending payment.failed webhook:", webhookErr);
     }
 
+    // ── Email admin on settlement failure (deduped per payment, 24h TTL) ──
+    // Why: webhook notifications go to the merchant, not the platform operator.
+    // Without this alert, a $150 BTC stuck on-chain (like the 2026-05-09 incident)
+    // can sit unnoticed for hours. Dedupe via Redis so retries don't spam.
+    try {
+      const adminEmail = process.env.ADMIN_EMAIL;
+      if (adminEmail) {
+        const alertKey = `admin-alert-settlement-failed-${paymentId}`;
+        const alreadyAlerted = await getRedisItem(alertKey);
+        if (!alreadyAlerted) {
+          await setRedisItem(alertKey, { sent: true, sentAt: new Date().toISOString() });
+          await setRedisTTL(alertKey, 86400);
+          const { sendEmail } = require("./emailService");
+          const fmtAmount = `${incomingAmount} ${items?.currency || payload.asset || "?"}`;
+          await sendEmail(
+            adminEmail,
+            "DynoPay Admin",
+            `🔴 Settlement FAILED — payment ${paymentId} (${fmtAmount})`,
+            `<p><strong>A merchant payout has failed on the DynoPay platform.</strong> Funds were received on-chain but the merchant has NOT been credited. Manual recovery may be required.</p>
+             <table style="font-size:13px;border-collapse:collapse;margin:12px 0;">
+               <tr><td style="padding:4px 8px;color:#666;">Payment ID</td><td style="padding:4px 8px;font-family:monospace;">${paymentId}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Address</td><td style="padding:4px 8px;font-family:monospace;">${address}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Incoming TX</td><td style="padding:4px 8px;font-family:monospace;">${payload.txId}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Amount</td><td style="padding:4px 8px;">${fmtAmount}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Currency</td><td style="padding:4px 8px;">${items?.currency || payload.asset || "?"}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Company ID</td><td style="padding:4px 8px;">${items?.company_id || "?"}</td></tr>
+               <tr><td style="padding:4px 8px;color:#666;">Failed at</td><td style="padding:4px 8px;">${new Date().toISOString()}</td></tr>
+             </table>
+             <p><strong>Last error:</strong></p>
+             <pre style="background:#f4f4f4;padding:8px;border-radius:4px;font-size:12px;white-space:pre-wrap;">${(err.message || "Settlement failed").replace(/&/g,"&amp;").replace(/</g,"&lt;")}</pre>
+             <p style="font-size:12px;color:#888;">Dedupe: this alert is sent at most once per 24h per payment_id. Subsequent retries will not re-email.</p>`
+          );
+          webhookLogs.info(`[WebhookProcessor] 📧 Admin email alert sent for failed settlement ${paymentId}`);
+        }
+      }
+    } catch (adminEmailErr) {
+      webhookLogs.error("[WebhookProcessor] Failed to send admin settlement-failed email (non-blocking):", adminEmailErr);
+    }
+
     throw verifyError; // Let BullMQ retry the entire job
   }
 }

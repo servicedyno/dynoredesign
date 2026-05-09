@@ -1110,7 +1110,23 @@ const startServer = async () => {
     log(`🚀 Server is listening on port ${port}!`, 'info');
     log(`📚 Swagger docs available at /api/docs`, 'info');
     log(`❤️ Health check available at /health`, 'info');
-    
+
+    // KMS health probe — fails LOUDLY (and emails admin) if GCP billing/IAM is broken.
+    // Runs on every startup AND every 15 min. Never crashes the process.
+    import("./services/kmsHealthService")
+      .then(({ runKmsStartupProbe, runKmsScheduledProbe }) => {
+        runKmsStartupProbe().catch(() => { /* logged inside */ });
+        if (enableBackgroundJobs) {
+          // 15-minute periodic probe — uses standard cron expression, not setInterval,
+          // to align with the rest of the cron jobs in this app.
+          cron.schedule("*/15 * * * *", () => {
+            runKmsScheduledProbe().catch(() => { /* logged inside */ });
+          });
+          log("✅ KMS health probe scheduled (every 15 min)", "info");
+        }
+      })
+      .catch((err) => log(`⚠️ KMS health probe failed to load: ${err.message}`, "warn"));
+
     // Pre-populate background rate cache on startup (so first payment has fallback rates)
     refreshBackgroundRateCache().catch(err => {
       log(`Initial rate cache population failed: ${err.message}`, "error");
