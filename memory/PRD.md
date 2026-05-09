@@ -5,6 +5,25 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-05-09 — Emergent Dev Container Setup (Fork)
+- **Issue**: New fork landed with empty `node_modules` (frontend FATAL, backend Node never booted), and `.env` pointed to old Render Postgres + Redis that were no longer reachable from the container.
+- **Fixes applied**:
+  - Ran `yarn install` in `/app` and `/app/backend` to restore `next` + `ts-node` binaries.
+  - Switched DB/Redis to Railway-managed instances (per user-supplied creds):
+    - Postgres: `roundhouse.proxy.rlwy.net:23599/railway` (user `postgres`)
+    - Redis: `redis://default:***@nozomi.proxy.rlwy.net:15794`
+  - Updated TRX/ETH/Polygon fee wallets to current values per user-supplied env.
+  - `ENABLE_BACKGROUND_JOBS=true` (was false) so cron + reconciliation run.
+- **Code change**: `backend/utils/dbInstance.ts` — `isRemoteDB` regex extended from just `railway` to also match `render.com`, `ondigitalocean`, `amazonaws`, `herokuapp`, `neon.tech`, `supabase` so SSL is auto-enabled for any managed-Postgres hostname.
+- **Verification (https://setup-guide-95.preview.emergentagent.com)**:
+  - `GET /api/` → 200 (status: operational)
+  - `GET /api/pay/network-fees` → 200 (1886 bytes)
+  - `GET /api/geo-detect` → 200
+  - `GET /api/diagnostics/binance-ping` → 403 (auth protection working)
+  - `GET /api/diagnostics/volatility` → 403
+  - Frontend pages `/`, `/auth/login`, `/admin/login`, `/fees`, `/documentation` all → 200
+  - Webhook queue + reconciliation actively processing TRC20 jobs ✅
+
 ### 2026-04-18 — DB Migration from Railway → DigitalOcean Managed PostgreSQL
 - **Trigger**: Railway PostgreSQL instance was lost
 - **New DB**: DigitalOcean Managed PostgreSQL in FRA1 region
