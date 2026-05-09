@@ -24,7 +24,7 @@ import uuid
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 # Fallback to internal URL if env not set
 if not BASE_URL:
-    BASE_URL = "https://quick-setup-78.preview.emergentagent.com"
+    BASE_URL = "https://setup-guide-95.preview.emergentagent.com"
 
 # Test credentials
 TEST_EMAIL = "richard@dyno.pt"
