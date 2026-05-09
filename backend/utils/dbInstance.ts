@@ -18,8 +18,11 @@ const retryConfig = {
   max: 3,           // Retry up to 3 times on transient errors
 };
 
-// SSL + keepAlive for remote PostgreSQL connections (Railway, Heroku, etc.)
-const isRemoteDB = !!(process.env.DATABASE_URL && process.env.DATABASE_URL.includes('railway'));
+// SSL + keepAlive for remote PostgreSQL connections (Railway, Render, DigitalOcean, AWS RDS, Heroku, etc.)
+const isRemoteDB = !!(
+  process.env.DATABASE_URL &&
+  /(railway|render\.com|ondigitalocean|amazonaws|herokuapp|neon\.tech|supabase)/i.test(process.env.DATABASE_URL)
+);
 const isProduction = process.env.NODE_ENV === 'production';
 const useSSL = isProduction || isRemoteDB;
 
