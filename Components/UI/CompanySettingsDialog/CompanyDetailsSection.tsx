@@ -305,7 +305,7 @@ export default function CompanyDetailsSection({
                 mb: isMobile ? "6px" : "8px",
               }}
             >
-              {t("fields.mobile.label")}
+              {t("fields.mobile.label")} ({t("optional", { defaultValue: "optional" })})
             </Text>
             <CountryPhoneInput
               fullWidth

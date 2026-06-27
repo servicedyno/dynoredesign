@@ -173,9 +173,12 @@ export default function CompanySettingsDialog({
           .required(t("validation.emailRequired")),
         mobile: yup
           .string()
-          .required(t("validation.mobileRequired"))
-          .min(10, t("validation.mobileMin"))
-          .max(14, t("validation.mobileMax")),
+          .notRequired()
+          .test(
+            "mobile-len",
+            t("validation.mobileMin"),
+            (v) => !v || v.replace(/\D/g, "").length >= 10
+          ),
         website: yup.string().nullable(),
         country: yup.string().nullable(),
         state: yup.string().nullable(),

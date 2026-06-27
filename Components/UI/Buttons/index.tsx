@@ -21,6 +21,7 @@ export interface CustomButtonProps {
   showSuccessAnimation?: boolean;
   showErrorAnimation?: boolean;
   hideLabel?: boolean;
+  "data-testid"?: string;
 }
 
 const CustomButton: React.FC<CustomButtonProps> = ({
@@ -40,6 +41,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   showSuccessAnimation = false,
   showErrorAnimation = false,
   hideLabel = false,
+  "data-testid": dataTestId,
 }) => {
   const isMobile = useIsMobile("sm");
   const theme = useTheme();
@@ -147,6 +149,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
   return (
     <MuiButton
       type={type}
+      data-testid={dataTestId}
       disabled={disabled}
       fullWidth={fullWidth}
       onClick={onClick}

@@ -50,6 +50,7 @@ const Company = ({ setPageName }: pageProps) => {
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer
   );
+  const userState = useSelector((state: rootReducer) => state.userReducer);
   const fileRef = useRef<any>();
   const [mediaFile, setMediaFile] = useState<any>();
   const [fileName, setFileName] = useState<any>();
@@ -73,9 +74,12 @@ const Company = ({ setPageName }: pageProps) => {
       .required("email is required!"),
     mobile: yup
       .string()
-      .required("Mobile Number is required!")
-      .min(10, "Minimum 10 digits are required!")
-      .max(14, "Maximum 14 digits are allowed"),
+      .notRequired()
+      .test(
+        "mobile-len",
+        "Minimum 10 digits are required!",
+        (v) => !v || v.replace(/\D/g, "").length >= 10
+      ),
   });
 
   useEffect(() => {
@@ -224,7 +228,16 @@ const Company = ({ setPageName }: pageProps) => {
           <Button
             variant="rounded"
             sx={{ display: "flex", alignItems: "center" }}
-            onClick={() => setOpen(true)}
+            onClick={() => {
+              setID(0);
+              setImage(Dummy.src);
+              setInitialValue({
+                ...structuredClone(companyInitial),
+                email: userState.email || "",
+                mobile: userState.mobile || "",
+              });
+              setOpen(true);
+            }}
           >
             <AddCircleOutlineRounded fontSize="small" sx={{ mr: 0.5 }} />
             Add New
@@ -353,7 +366,7 @@ const Company = ({ setPageName }: pageProps) => {
                             textTransform: "capitalize",
                           }}
                         >
-                          Mobile
+                          Mobile (optional)
                         </Typography>
                         <MuiTelInput
                           fullWidth={true}
