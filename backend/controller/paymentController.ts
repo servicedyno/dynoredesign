@@ -1,5 +1,12 @@
 import express from "express";
-import { convertToUSD as convertToUSDUtil } from "../utils/currencyUtils";
+import {
+  PAYMENT_TIMING,
+  ADMIN_CONFIG,
+  RETRY_CONFIG,
+  TAX_DATA_API_URL,
+  TAX_DATA_API_KEY,
+} from "./payment/paymentConfig";
+import { convertToUSD, withRetry } from "./payment/paymentHelpers";
 import {
   currencyConvert,
   decrypt,
@@ -35,7 +42,6 @@ import {
   customerWalletModel,
   userModel,
   userWalletModel,
-  taxRateModel,
 } from "../models";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import {
@@ -101,249 +107,8 @@ import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
 // ============================================
 // All payment timing constants in one place for consistency
 // These can be overridden by merchant settings in tbl_company
-const PAYMENT_TIMING = {
-  // Crypto invoice window - time to complete payment after selecting currency
-  CRYPTO_INVOICE_MINUTES: 15,
-  
-  // Grace period for partial/underpayment completion
-  GRACE_PERIOD_MINUTES: 30,
-  
-  // Redis TTL for soft-deleted payment data (matches grace period)
-  REDIS_SOFT_DELETE_TTL_SECONDS: 30 * 60, // 1800 seconds
-  
-  // Default payment link expiry options
-  LINK_EXPIRY: {
-    '24h': 24 * 60,        // 24 hours in minutes
-    '7d': 7 * 24 * 60,     // 7 days in minutes (default)
-    '30d': 30 * 24 * 60,   // 30 days in minutes
-    'never': null,
-  },
-  
-  // Webhook/confirmation timeouts
-  TRANSACTION_CONFIRMATION_TIMEOUT_MS: 90000, // 90 seconds
-  
-  // SQL interval constants (for parameterized queries)
-  SQL_INTERVALS: {
-    GRACE_PERIOD: '30 minutes',
-    CRYPTO_INVOICE: '15 minutes', 
-    RECENT_TRANSACTIONS: '2 days',
-    MONTHLY_TRANSACTIONS: '30 days',
-  },
-};
 
-// ============================================
-// CENTRALIZED ADMIN CONFIGURATION
-// ============================================
-const ADMIN_CONFIG = {
-  // Admin email for notifications (from env, no hardcoded fallback exposed)
-  EMAIL: process.env.ADMIN_EMAIL || process.env.SMTP_USER || '',
-  
-  // JWT expiry times
-  JWT_EXPIRY: {
-    ADMIN: '30d',
-    USER: '7d',
-    API_KEY: '365d',
-    CHECKOUT: '1h',
-  },
-};
-
-// Retry configuration
-const RETRY_CONFIG = {
-  MAX_RETRIES: 3,
-  INITIAL_DELAY_MS: 2000,
-};
-
-
-/**
- * Convert crypto amount to USD
- * Used for displaying pending amounts in USD
- * Returns NaN on conversion failure so callers can detect and handle it
- */
-const convertToUSD = async (amount: number, currency: string): Promise<number> => {
-  try {
-    if (!amount || amount <= 0) return 0;
-    const result = await convertToUSDUtil(currency, amount);
-    if (result === undefined || result === null || isNaN(result)) {
-      cronLogger.error(`[convertToUSD] Conversion returned invalid value for ${amount} ${currency}: ${result}`);
-      return NaN;
-    }
-    return result;
-  } catch (error) {
-    cronLogger.error(`[convertToUSD] Failed to convert ${amount} ${currency} to USD:`, error);
-    return NaN;
-  }
-};
-
-/**
- * Retry helper with exponential backoff for blockchain operations
- */
-const withRetry = async <T>(
-  operation: () => Promise<T>,
-  operationName: string,
-  maxRetries: number = RETRY_CONFIG.MAX_RETRIES
-): Promise<T> => {
-  let lastError: Error = new Error('Operation failed');
-  
-  // Hard failures that should NOT be retried (invalid data, auth issues, permanent errors)
-  const NON_RETRYABLE_ERRORS = [
-    'invalid address',
-    'invalid private key',
-    'insufficient balance',
-    'insufficient funds',
-    'nonce too low',
-    'replacement transaction underpriced',
-    'already known',
-    'invalid signature',
-    'bad request',
-    'unauthorized',
-    'forbidden',
-    'not found',
-    '400',
-    '401', 
-    '403',
-    '404',
-  ];
-  
-  const isRetryable = (error: Error): boolean => {
-    const message = error.message?.toLowerCase() || '';
-    return !NON_RETRYABLE_ERRORS.some(pattern => message.includes(pattern.toLowerCase()));
-  };
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      return await operation();
-    } catch (error: unknown) {
-      lastError = error instanceof Error ? error : new Error(String(error));
-      const message = getErrorMessage(error);
-      
-      // Check if error is retryable (soft failure like network timeout, rate limit)
-      if (!isRetryable(lastError)) {
-        cronLogger.error(`[PaymentController] ❌ ${operationName} failed with non-retryable error: ${message}`);
-        throw lastError; // Don't retry hard failures
-      }
-      
-      if (attempt < maxRetries) {
-        const waitTime = RETRY_CONFIG.INITIAL_DELAY_MS * Math.pow(2, attempt - 1);
-        cronLogger.warn(`[PaymentController] ⚠️ ${operationName} failed (attempt ${attempt}/${maxRetries}): ${message}`);
-        cronLogger.warn(`[PaymentController] Retrying in ${waitTime}ms...`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-      } else {
-        cronLogger.error(`[PaymentController] ❌ ${operationName} failed after ${maxRetries} attempts: ${message}`);
-      }
-    }
-  }
-  
-  throw lastError;
-};
-
-// Tax calculation constants
-const TAX_DATA_API_URL = process.env.TAX_DATA_API_URL || "https://api.apilayer.com/tax_data";
-const TAX_DATA_API_KEY = process.env.TAX_DATA_API_KEY;
-
-import {
-  FALLBACK_TAX_RATES,
-  TAX_TYPE_ACRONYMS as TAX_ACRONYMS,
-  COUNTRY_NAMES,
-  EU_COUNTRIES,
-} from "../utils/taxData";
-
-/**
- * Calculate tax for checkout based on customer location
- * Called internally by getData when apply_tax is enabled
- */
-const calculateTaxForCheckout = async (
-  countryCode: string,
-  amount: number,
-  currency: string
-): Promise<{
-  tax_enabled: boolean;
-  tax_rate: number;
-  tax_acronym: string;
-  tax_amount: number;
-  country_code: string;
-  country_name: string;
-  subtotal: number;
-  total: number;
-  currency: string;
-} | null> => {
-  try {
-    const upperCountryCode = countryCode.toUpperCase();
-    
-    let taxRate = 0;
-    let taxAcronym = TAX_ACRONYMS[upperCountryCode] || 'Tax';
-    let countryName = COUNTRY_NAMES[upperCountryCode] || countryCode;
-    
-    // Define type for cached rate
-    interface CachedTaxRate {
-      dataValues: {
-        standard_rate?: string | number;
-        tax_acronym?: string;
-        country_name?: string;
-      };
-    }
-    
-    // Check database cache first
-    const cachedRate = await taxRateModel.findOne({
-      where: { country_code: upperCountryCode }
-    }) as CachedTaxRate | null;
-
-    if (cachedRate) {
-      taxRate = parseFloat(String(cachedRate.dataValues.standard_rate)) || 0;
-      taxAcronym = String(cachedRate.dataValues.tax_acronym || taxAcronym);
-      countryName = String(cachedRate.dataValues.country_name || countryName);
-      cronLogger.info(`[Tax] Using cached rate for ${upperCountryCode}: ${taxRate}%`);
-    } else if (TAX_DATA_API_KEY) {
-      // Try to fetch from API
-      try {
-        const response = await axios.get(`${TAX_DATA_API_URL}/tax_rates`, {
-          headers: { apikey: TAX_DATA_API_KEY },
-          params: { country: upperCountryCode },
-          timeout: 5000
-        });
-
-        if (response.data && response.data.standard_rate !== undefined) {
-          taxRate = response.data.standard_rate;
-          cronLogger.info(`[Tax] Fetched rate from API for ${upperCountryCode}: ${taxRate}%`);
-          
-          // Cache the result
-          await taxRateModel.create({
-            country_code: upperCountryCode,
-            country_name: countryName,
-            tax_acronym: taxAcronym,
-            standard_rate: taxRate,
-          }).catch(() => {}); // Ignore cache errors
-        }
-      } catch (apiError: unknown) {
-        cronLogger.info(`[Tax] API error for ${upperCountryCode}, using fallback:`, getErrorMessage(apiError));
-        taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
-      }
-    } else {
-      // No API key, use fallback
-      taxRate = FALLBACK_TAX_RATES[upperCountryCode] || 0;
-      cronLogger.info(`[Tax] Using fallback rate for ${upperCountryCode}: ${taxRate}%`);
-    }
-
-    // Calculate tax
-    const taxAmount = (amount * taxRate) / 100;
-    const total = amount + taxAmount;
-
-    return {
-      tax_enabled: true,
-      tax_rate: taxRate,
-      tax_acronym: taxAcronym,
-      tax_amount: parseFloat(taxAmount.toFixed(2)),
-      country_code: upperCountryCode,
-      country_name: countryName,
-      subtotal: parseFloat(amount.toFixed(2)),
-      total: parseFloat(total.toFixed(2)),
-      currency
-    };
-  } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    cronLogger.error(`[Tax] Error calculating tax:`, errorMessage);
-    return null;
-  }
-};
+import { calculateTaxForCheckout } from "./payment/taxService";
 
 const getData = async (req: express.Request, res: express.Response) => {
   try {

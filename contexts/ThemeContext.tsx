@@ -18,16 +18,15 @@ function getSystemPreference(): ThemeMode {
   return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
 }
 
-/**
- * Read the theme that the blocking script in _document.tsx already applied.
- * This ensures the first React render matches what the user already sees.
- */
-function getInitialTheme(): ThemeMode {
-  if (typeof document !== 'undefined') {
-    const preset = document.documentElement.dataset.theme;
-    if (preset === 'light' || preset === 'dark') return preset;
+/** Persist the theme to a cookie so the server can read it on the next
+ * request and render the matching theme (prevents SSR hydration mismatch). */
+function writeThemeCookie(mode: ThemeMode) {
+  if (typeof document === 'undefined') return;
+  try {
+    document.cookie = `theme-mode=${mode}; path=/; max-age=31536000; samesite=lax`;
+  } catch {
+    /* ignore */
   }
-  return 'dark'; // SSR fallback
 }
 
 export const useThemeMode = () => {
@@ -42,29 +41,36 @@ export const useThemeMode = () => {
   return context;
 };
 
-export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // Lazy initializer reads the data-theme attribute set by the blocking script
-  const [mode, setMode] = useState<ThemeMode>(getInitialTheme);
-  const [mounted, setMounted] = useState(false);
+export const ThemeProvider: React.FC<{
+  children: React.ReactNode;
+  /** Theme resolved server-side from the cookie. Guarantees the first client
+   * render matches the server render (no emotion className hydration mismatch). */
+  initialMode?: ThemeMode;
+}> = ({ children, initialMode }) => {
+  // Initial state mirrors the server-provided cookie value (default 'dark').
+  // Identical on server + first client render → no hydration mismatch.
+  const [mode, setMode] = useState<ThemeMode>(initialMode ?? 'dark');
 
   // Track whether the user has explicitly chosen a theme (manual toggle)
   const userOverrideRef = useRef(false);
 
-  // ── 1. On mount: localStorage > system preference > blocking-script value ──
+  // ── On mount: reconcile with localStorage > system preference, and persist
+  //    to the cookie so the NEXT SSR renders the correct theme. ──
   useEffect(() => {
-    setMounted(true);
+    let resolved: ThemeMode | null = null;
     try {
-      const savedMode = localStorage.getItem('theme-mode') as ThemeMode;
-      if (savedMode && (savedMode === 'light' || savedMode === 'dark')) {
-        setMode(savedMode);
+      const saved = localStorage.getItem('theme-mode') as ThemeMode;
+      if (saved === 'light' || saved === 'dark') {
+        resolved = saved;
         userOverrideRef.current = true;
-        return;
       }
     } catch (e) {
       console.log('Could not access localStorage');
     }
-    // No saved preference → follow OS / device setting
-    setMode(getSystemPreference());
+    if (!resolved) resolved = getSystemPreference();
+    if (resolved !== mode) setMode(resolved);
+    writeThemeCookie(resolved);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── 2. Keep data-theme attribute in sync so CSS always matches ──
@@ -103,6 +109,7 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       } catch (e) {
         console.log('Could not save to localStorage');
       }
+      writeThemeCookie(newMode);
       return newMode;
     });
   }, []);
@@ -115,17 +122,6 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }),
     [mode, toggleTheme]
   );
-
-  // Before hydration, use the theme the blocking script already set
-  // so the first render matches what the user sees (no flash)
-  if (!mounted) {
-    const presetMode = getInitialTheme();
-    return (
-      <ThemeContext.Provider value={{ mode: presetMode, toggleTheme: () => {}, isDark: presetMode === 'dark' }}>
-        {children}
-      </ThemeContext.Provider>
-    );
-  }
 
   return (
     <ThemeContext.Provider value={value}>

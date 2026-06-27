@@ -3,7 +3,7 @@ import "nprogress/nprogress.css";
 import "../i18n";
 
 import type { NextPage } from "next";
-import type { AppProps } from "next/app";
+import NextApp, { type AppProps, type AppContext } from "next/app";
 import { useRouter } from "next/router";
 import Head from "next/head";
 import React, { ReactNode, useEffect, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { useTranslation } from "react-i18next";
 
 import type { SxProps, Theme } from "@mui/material";
 import { ThemeProvider as MuiThemeProvider, CssBaseline } from "@mui/material";
+import { CacheProvider, type EmotionCache } from "@emotion/react";
 import { SessionProvider } from "next-auth/react";
 import { Provider } from "react-redux";
 
@@ -21,10 +22,14 @@ import store from "@/store";
 import ErrorBoundary from "@/Components/ErrorBoundary";
 import { ThemeProvider as AppThemeProvider, useThemeMode } from "@/contexts/ThemeContext";
 import IdleTimeoutManager from "@/Components/UI/IdleTimeoutManager";
+import { createEmotionCache } from "@/utils/createEmotionCache";
 
 import { homeTheme, homeThemeDark } from "@/styles/homeTheme";
 import { theme, themeDark } from "@/styles/theme";
 import { lightTheme, darkTheme } from "@/styles/theme";
+
+// Client-side emotion cache shared across the whole app (created once).
+const clientSideEmotionCache = createEmotionCache();
 
 // ─── Dynamic imports: each layout only loads when its route is hit ───
 const HomeLayout = dynamic(() => import("@/Containers/Home"), {
@@ -61,6 +66,8 @@ export type NextPageWithLayout<P = {}, IP = P> = NextPage<P, IP> & {
 
 type AppPropsWithLayout = AppProps & {
   Component: NextPageWithLayout;
+  emotionCache?: EmotionCache;
+  initialThemeMode?: "light" | "dark";
 };
 
 // -----------------------------
@@ -433,17 +440,35 @@ function AppInner({ Component, pageProps }: AppPropsWithLayout) {
 // App Component
 // -----------------------------
 
-export default function App(props: AppPropsWithLayout) {
+export default function App({
+  emotionCache = clientSideEmotionCache,
+  initialThemeMode,
+  ...props
+}: AppPropsWithLayout) {
   return (
-    <ErrorBoundary>
-      <Provider store={store}>
-        <LanguageBootstrap />
-        <SessionProvider session={props.pageProps.session} refetchInterval={0} refetchOnWindowFocus={false}>
-          <AppThemeProvider>
-            <AppInner {...props} />
-          </AppThemeProvider>
-        </SessionProvider>
-      </Provider>
-    </ErrorBoundary>
+    <CacheProvider value={emotionCache}>
+      <ErrorBoundary>
+        <Provider store={store}>
+          <LanguageBootstrap />
+          <SessionProvider session={props.pageProps.session} refetchInterval={0} refetchOnWindowFocus={false}>
+            <AppThemeProvider initialMode={initialThemeMode}>
+              <AppInner {...(props as AppPropsWithLayout)} />
+            </AppThemeProvider>
+          </SessionProvider>
+        </Provider>
+      </ErrorBoundary>
+    </CacheProvider>
   );
 }
+
+// Read the theme cookie server-side so SSR renders the user's actual theme
+// (eliminates the emotion className hydration mismatch app-wide).
+App.getInitialProps = async (appContext: AppContext) => {
+  const appProps = await NextApp.getInitialProps(appContext);
+  const cookieHeader =
+    appContext.ctx.req?.headers?.cookie ||
+    (typeof document !== "undefined" ? document.cookie : "");
+  const match = /(?:^|;\s*)theme-mode=(light|dark)/.exec(cookieHeader || "");
+  const initialThemeMode = (match ? match[1] : "dark") as "light" | "dark";
+  return { ...appProps, initialThemeMode };
+};

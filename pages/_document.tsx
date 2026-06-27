@@ -1,6 +1,19 @@
-import { Html, Head, Main, NextScript } from "next/document";
+import Document, {
+  Html,
+  Head,
+  Main,
+  NextScript,
+  type DocumentContext,
+  type DocumentInitialProps,
+} from "next/document";
+import createEmotionServer from "@emotion/server/create-instance";
+import { createEmotionCache } from "@/utils/createEmotionCache";
 
-export default function Document() {
+type MyDocumentProps = DocumentInitialProps & {
+  emotionStyleTags: JSX.Element[];
+};
+
+export default function MyDocument({ emotionStyleTags }: MyDocumentProps) {
   return (
     <Html>
       <Head>
@@ -32,6 +45,10 @@ export default function Document() {
 
         {/* Google Identity Services for client-side OAuth (bypasses NextAuth /api/auth/* K8s conflict) */}
         <script src="https://accounts.google.com/gsi/client" async defer></script>
+
+        {/* MUI/emotion critical CSS extracted during SSR (prevents FOUC) */}
+        <meta name="emotion-insertion-point" content="" />
+        {emotionStyleTags}
       </Head>
       <body>
         {/* ── Blocking language script: sets <html lang> BEFORE React hydrates ── */}
@@ -67,7 +84,8 @@ export default function Document() {
 `,
           }}
         />
-        {/* ── Blocking theme script: runs BEFORE React hydrates to prevent flash ── */}
+        {/* ── Blocking theme script: runs BEFORE React hydrates to prevent flash.
+             Also seeds the theme-mode cookie so the NEXT SSR render matches. ── */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
@@ -80,6 +98,9 @@ export default function Document() {
     document.documentElement.dataset.theme = mode;
     document.documentElement.style.colorScheme = mode;
     document.documentElement.style.backgroundColor = mode === 'light' ? '#F2F3F8' : '#0B0D17';
+    if (!/(?:^|;\\s*)theme-mode=(light|dark)/.test(document.cookie)) {
+      document.cookie = 'theme-mode=' + mode + '; path=/; max-age=31536000; samesite=lax';
+    }
   } catch(e) {
     document.documentElement.dataset.theme = 'dark';
     document.documentElement.style.colorScheme = 'dark';
@@ -95,3 +116,30 @@ export default function Document() {
     </Html>
   );
 }
+
+MyDocument.getInitialProps = async (ctx: DocumentContext): Promise<MyDocumentProps> => {
+  const originalRenderPage = ctx.renderPage;
+  const cache = createEmotionCache();
+  const { extractCriticalToChunks } = createEmotionServer(cache);
+
+  ctx.renderPage = () =>
+    originalRenderPage({
+      enhanceApp: (App: any) =>
+        function EnhanceApp(props) {
+          return <App emotionCache={cache} {...props} />;
+        },
+    });
+
+  const initialProps = await Document.getInitialProps(ctx);
+  const emotionStyles = extractCriticalToChunks(initialProps.html);
+  const emotionStyleTags = emotionStyles.styles.map((style) => (
+    <style
+      data-emotion={`${style.key} ${style.ids.join(" ")}`}
+      key={style.key}
+      // eslint-disable-next-line react/no-danger
+      dangerouslySetInnerHTML={{ __html: style.css }}
+    />
+  ));
+
+  return { ...initialProps, emotionStyleTags };
+};

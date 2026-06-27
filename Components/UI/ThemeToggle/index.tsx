@@ -17,6 +17,8 @@ const ThemeToggle: React.FC<ThemeToggleProps> = ({ size = "medium", sx }) => {
       <IconButton
         onClick={toggleTheme}
         size={size}
+        data-testid="theme-toggle-button"
+        aria-label={isDark ? "Switch to Light Mode" : "Switch to Dark Mode"}
         sx={{
           color: isDark ? "#FFD54F" : "#676768",
           transition: "all 0.3s ease",
