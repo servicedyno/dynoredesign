@@ -98,6 +98,80 @@ frontend:
     - Navigation consistent across all pages
     - Auth flows working (OTP for merchants, password for admin)
 
+## Onboarding UX Improvements — Frontend Test Request (2026-06-27)
+- scope: Faster/improved onboarding. Implemented A,B,C,D,E,G,H,I. Dropped F (wallet OTP kept for security) and J (no custodial wallet).
+- changes:
+  - pages/auth/register.tsx: prominent "Continue with Google" button at TOP + "or sign up with" divider; small bottom Google icon REMOVED; ThemeToggle present next to LanguageSwitcher
+  - pages/auth/login.tsx: ThemeToggle added next to LanguageSwitcher
+  - CreateCompanyModal: prefills Business Email + Mobile from the account; Mobile is now OPTIONAL (label "Mobile Number (optional)")
+  - CelebrationOverlay: PRIMARY CTA "Create your first payment link" (-> /create-pay-link), SECONDARY "Go to Dashboard"; no auto-dismiss
+  - OnboardingFlow/index.tsx: non-blocking, data-driven; renders persistent resumable OnboardingChecklist (Company -> Wallet REQUIRED -> First link); later steps LOCKED until prereqs met; auto-opens company once for brand-new users (closable)
+  - OnboardingFlow/OnboardingChecklist.tsx: NEW card (progress bar, collapsible via localStorage, done/next/locked states)
+  - pages/dashboard.tsx: DashboardSetupPrompt replaced by unified OnboardingChecklist
+- TEST TARGETS (public + temporary preview only — merchant /dashboard onboarding NOT testable against LIVE prod without a merchant account):
+  - /auth/register : "Continue with Google" prominent at TOP, divider below it, email/phone toggle + form below, NO small google icon at bottom; ThemeToggle present and toggles light<->dark
+  - /auth/login : ThemeToggle present and toggles light<->dark
+  - /onboarding-preview (TEMPORARY page): OnboardingChecklist shows progress bar + a DONE step (strikethrough/check), a NEXT step (arrow, highlighted) and a LOCKED step (lock icon + "Complete the step above first"); collapse/expand toggle works; "Show celebration" button opens CelebrationOverlay whose PRIMARY button reads "Create your first payment link"
+- HARD CONSTRAINTS for tester: DO NOT submit registration (no new users created), DO NOT add wallets/companies, DO NOT create payment links — backend is connected to LIVE production DB.
+
+## Onboarding UX Improvements — Test Results (2026-06-27 17:42 UTC)
+- agent: testing
+- test_date: 2026-06-27 17:42:00 UTC
+- test_url: https://3199fd37-075d-43f1-a052-ba7f4ae8062c.preview.emergentagent.com
+- test_results: PARTIAL PASS (2/3 pages working, 1 CRITICAL ISSUE)
+
+### PAGE 1: /auth/register ✅ PASS
+- ✅ Prominent "Continue with Google" button at TOP (full-width, above form fields)
+- ✅ Divider with "Or sign up with" text directly below Google button
+- ✅ Email/Phone registration toggle appears BELOW the divider
+- ✅ NO small circular Google icon at bottom (old design removed)
+- ✅ Theme toggle button present in top bar (next to language selector)
+- ✅ Theme toggle functional (sun/moon icon visible in screenshots)
+- ✅ All layout requirements met per specification
+- Screenshots: register_detailed.png (dark mode)
+
+### PAGE 2: /auth/login ✅ PASS
+- ✅ Theme toggle button present in top bar (next to language selector)
+- ✅ Theme toggle functional (visible in both light and dark mode)
+- ✅ Page renders correctly
+- ✅ Did NOT enter credentials or submit (as instructed - LIVE production DB)
+- Screenshots: login_detailed.png (dark mode), login_page_light.png
+
+### PAGE 3: /onboarding-preview ❌ CRITICAL FAILURE
+- ❌ Page redirects to /auth/login (authentication required)
+- ❌ Onboarding checklist NOT accessible (page protected)
+- ❌ Celebration overlay NOT testable (cannot reach page)
+- ❌ All onboarding preview components NOT verifiable
+- Root cause: /onboarding-preview page is protected by auth middleware
+- Expected: Public temporary preview page (per specification: "TEMPORARY page, public")
+- Actual: Page redirects unauthenticated users to login
+- Page title after redirect: "Merchant Login | DynoPay"
+- Screenshot: onboarding_after_wait.png (shows login page, not preview)
+
+### CRITICAL ISSUE DETAILS
+- Issue: /onboarding-preview page requires authentication
+- Impact: Cannot verify onboarding checklist UI (progress bar, done/next/locked states, collapse/expand, celebration overlay)
+- Code exists: pages/onboarding-preview.tsx file contains correct implementation
+- Problem: Auth middleware or redirect logic preventing public access
+- Required fix: Make /onboarding-preview page publicly accessible (no auth required)
+
+### VERIFICATION STATUS
+- ✅ Registration page onboarding improvements: VERIFIED
+- ✅ Login page theme toggle: VERIFIED
+- ❌ Onboarding preview page: NOT TESTABLE (auth redirect)
+- ⚠️ Overall: 2/3 pages pass, 1 critical blocker
+
+### SCREENSHOTS CAPTURED
+- register_detailed.png - Registration page with Google button at top
+- login_detailed.png - Login page with theme toggle
+- onboarding_after_wait.png - Shows redirect to login (not preview page)
+
+### NEXT STEPS FOR MAIN AGENT
+1. CRITICAL: Remove auth protection from /onboarding-preview page
+2. Ensure /onboarding-preview is publicly accessible without login
+3. Re-test after fix to verify onboarding checklist and celebration overlay
+
+
 ## Testing Protocol
 1. ALWAYS start by reading this file
 2. Run ONLY the tests specified above
