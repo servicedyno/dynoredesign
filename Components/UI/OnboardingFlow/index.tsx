@@ -67,6 +67,15 @@ const OnboardingFlow: React.FC = () => {
     dispatch(WalletAction(WALLET_FETCH));
   }, [dispatch]);
 
+  // Restore the per-session auto-open guard (survives reloads within a session
+  // so the wizard doesn't re-pop on every dashboard visit).
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.sessionStorage.getItem(AUTO_OPEN_SESSION_KEY) === "1") {
+      autoOpened.current = true;
+    }
+  }, []);
+
   // Once a company exists, fetch payment links once to know if step 3 is done
   useEffect(() => {
     if (hasCompany && companyId && !payLinkRequested.current) {
@@ -75,12 +84,15 @@ const OnboardingFlow: React.FC = () => {
     }
   }, [hasCompany, companyId, dispatch]);
 
-  // Auto-open the company step ONCE for brand-new users (closable, non-blocking)
+  // Auto-open the company step ONCE per session for brand-new users (closable, non-blocking)
   useEffect(() => {
     if (autoOpened.current || dismissed.current) return;
     if (!coreReady) return;
     if (!hasCompany && !hasWallet && !activeModal && !celebrate) {
       autoOpened.current = true;
+      if (typeof window !== "undefined") {
+        window.sessionStorage.setItem(AUTO_OPEN_SESSION_KEY, "1");
+      }
       setActiveModal("company");
     }
   }, [coreReady, hasCompany, hasWallet, activeModal, celebrate]);
@@ -105,6 +117,9 @@ const OnboardingFlow: React.FC = () => {
   // Closing a wizard modal should not re-trigger the auto-open this session
   const handleModalClose = useCallback(() => {
     dismissed.current = true;
+    if (typeof window !== "undefined") {
+      window.sessionStorage.setItem(AUTO_OPEN_SESSION_KEY, "1");
+    }
     setActiveModal(null);
   }, []);
 
