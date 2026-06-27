@@ -410,7 +410,7 @@ describe('callMerchantWebhook', () => {
     expect(axios.post).toHaveBeenCalledWith(
       'https://merchant.com/hook',
       expect.objectContaining({ event: 'payment.confirmed' }),
-      expect.objectContaining({ timeout: 10000 })
+      expect.objectContaining({ timeout: 15000 })
     );
   });
 

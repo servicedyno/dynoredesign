@@ -92,9 +92,8 @@ describe("canTransition — invalid transitions", () => {
     [PaymentState.EXPIRED, PaymentState.DETECTED],
     [PaymentState.REFUNDED, PaymentState.PAYOUT_COMPLETE],
     [PaymentState.REFUNDED, PaymentState.PENDING],
-    // Self-transitions not allowed (except payout_complete which is idempotent)
+    // Self-transitions not allowed (except payout_complete & processing which are idempotent)
     [PaymentState.PENDING, PaymentState.PENDING],
-    [PaymentState.PROCESSING, PaymentState.PROCESSING],
     [PaymentState.FAILED, PaymentState.FAILED],
     // Confirming can't go to underpaid
     [PaymentState.CONFIRMING, PaymentState.UNDERPAID],
@@ -192,9 +191,16 @@ describe("transition() — throws InvalidTransitionError", () => {
   });
 
   it("throws for self-transition", () => {
+    // PENDING has no idempotent self-loop (unlike PROCESSING / PAYOUT_COMPLETE)
     expect(() =>
-      transition(PaymentState.PROCESSING, PaymentState.PROCESSING, "pay_self")
+      transition(PaymentState.PENDING, PaymentState.PENDING, "pay_self")
     ).toThrow(InvalidTransitionError);
+  });
+
+  it("allows idempotent PROCESSING self-transition (retry/recovery)", () => {
+    expect(() =>
+      transition(PaymentState.PROCESSING, PaymentState.PROCESSING, "pay_retry")
+    ).not.toThrow();
   });
 });
 
@@ -612,32 +618,32 @@ describe("toExternalStatus — merchant API compatibility", () => {
     expect(toExternalStatus(PaymentState.CONFIRMING)).toBe("pending");
   });
 
-  it("maps CONFIRMED to 'pending' (still processing internally)", () => {
-    expect(toExternalStatus(PaymentState.CONFIRMED)).toBe("pending");
+  it("maps CONFIRMED to 'confirmed'", () => {
+    expect(toExternalStatus(PaymentState.CONFIRMED)).toBe("confirmed");
   });
 
-  it("maps PROCESSING to 'pending'", () => {
-    expect(toExternalStatus(PaymentState.PROCESSING)).toBe("pending");
+  it("maps PROCESSING to 'processing'", () => {
+    expect(toExternalStatus(PaymentState.PROCESSING)).toBe("processing");
   });
 
   it("maps UNDERPAID to 'underpaid'", () => {
     expect(toExternalStatus(PaymentState.UNDERPAID)).toBe("underpaid");
   });
 
-  it("maps PAYOUT_COMPLETE to 'confirmed' (what checkout shows)", () => {
-    expect(toExternalStatus(PaymentState.PAYOUT_COMPLETE)).toBe("confirmed");
+  it("maps PAYOUT_COMPLETE to 'settled' (funds forwarded to merchant)", () => {
+    expect(toExternalStatus(PaymentState.PAYOUT_COMPLETE)).toBe("settled");
   });
 
-  it("maps CONVERTED to 'confirmed'", () => {
-    expect(toExternalStatus(PaymentState.CONVERTED)).toBe("confirmed");
+  it("maps CONVERTED to 'settled'", () => {
+    expect(toExternalStatus(PaymentState.CONVERTED)).toBe("settled");
   });
 
   it("maps FAILED to 'failed'", () => {
     expect(toExternalStatus(PaymentState.FAILED)).toBe("failed");
   });
 
-  it("maps EXPIRED to 'failed'", () => {
-    expect(toExternalStatus(PaymentState.EXPIRED)).toBe("failed");
+  it("maps EXPIRED to 'expired'", () => {
+    expect(toExternalStatus(PaymentState.EXPIRED)).toBe("expired");
   });
 
   it("every state has an external mapping", () => {
@@ -663,16 +669,16 @@ describe("toWebhookEvent — webhook event names", () => {
     expect(toWebhookEvent(PaymentState.CONFIRMED)).toBe("payment.confirmed");
   });
 
-  it("maps PAYOUT_COMPLETE to 'payment.confirmed'", () => {
-    expect(toWebhookEvent(PaymentState.PAYOUT_COMPLETE)).toBe("payment.confirmed");
+  it("maps PAYOUT_COMPLETE to 'payment.settled'", () => {
+    expect(toWebhookEvent(PaymentState.PAYOUT_COMPLETE)).toBe("payment.settled");
   });
 
   it("maps UNDERPAID to 'payment.underpaid'", () => {
     expect(toWebhookEvent(PaymentState.UNDERPAID)).toBe("payment.underpaid");
   });
 
-  it("maps FAILED to 'payment.failed'", () => {
-    expect(toWebhookEvent(PaymentState.FAILED)).toBe("payment.failed");
+  it("maps FAILED to 'payment.settlement_failed'", () => {
+    expect(toWebhookEvent(PaymentState.FAILED)).toBe("payment.settlement_failed");
   });
 
   it("returns null for states without webhook events", () => {
@@ -769,8 +775,11 @@ describe("round-trip consistency", () => {
   });
 
   it("toExternalStatus matches what verifyCryptoPayment returns for each internal state", () => {
-    // The verify endpoint returns these exact strings to merchants
-    const expectedExternals = new Set(["waiting", "pending", "confirmed", "underpaid", "failed"]);
+    // The verify endpoint / merchant API returns these exact strings to merchants
+    const expectedExternals = new Set([
+      "waiting", "pending", "confirmed", "underpaid",
+      "processing", "settled", "failed", "expired", "refunded",
+    ]);
     for (const state of ALL_STATES) {
       const ext = toExternalStatus(state);
       expect(expectedExternals.has(ext)).toBe(true);
