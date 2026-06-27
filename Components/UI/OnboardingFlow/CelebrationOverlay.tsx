@@ -11,6 +11,7 @@ import React, { useCallback, useEffect } from "react";
 import confetti from "canvas-confetti";
 import { CelebrationRounded } from "@mui/icons-material";
 import CustomButton from "@/Components/UI/Buttons";
+import { useRouter } from "next/router";
 
 const Transition = React.forwardRef(function Transition(
   props: TransitionProps & { children: React.ReactElement<any, any> },
@@ -30,6 +31,12 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useIsMobile("sm");
+  const router = useRouter();
+
+  const goToCreateLink = useCallback(() => {
+    onDismiss();
+    router.push("/create-pay-link");
+  }, [onDismiss, router]);
 
   const fireConfetti = useCallback(() => {
     const duration = 2500;
@@ -67,13 +74,11 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
     if (open) {
       // Small delay so the dialog is visible before confetti fires
       const timer = setTimeout(() => fireConfetti(), 300);
-      const autoDismiss = setTimeout(() => onDismiss(), 6000);
       return () => {
         clearTimeout(timer);
-        clearTimeout(autoDismiss);
       };
     }
-  }, [open, fireConfetti, onDismiss]);
+  }, [open, fireConfetti]);
 
   return (
     <Dialog
@@ -141,7 +146,7 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
             },
           }}
         >
-          You're all set!
+          {"You're all set!"}
         </Typography>
 
         <Typography
@@ -155,21 +160,36 @@ const CelebrationOverlay: React.FC<CelebrationOverlayProps> = ({
             animation: "celebrationFadeIn 0.6s ease-out 0.5s both",
           }}
         >
-          Your company and wallet are configured. You're ready to start
-          accepting crypto payments!
+          Your company and wallet are ready. Create your first payment link to
+          start accepting crypto in seconds.
         </Typography>
 
         <Box
           sx={{
             mt: 1,
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 1,
             animation: "celebrationFadeIn 0.6s ease-out 0.7s both",
           }}
         >
           <CustomButton
-            data-testid="celebration-dismiss-btn"
-            label="Go to Dashboard"
+            data-testid="celebration-create-link-btn"
+            label="Create your first payment link"
             variant="primary"
             size={isMobile ? "small" : "medium"}
+            fullWidth
+            onClick={goToCreateLink}
+            sx={{ px: 4 }}
+          />
+          <CustomButton
+            data-testid="celebration-dismiss-btn"
+            label="Go to Dashboard"
+            variant="secondary"
+            size={isMobile ? "small" : "medium"}
+            fullWidth
             onClick={onDismiss}
             sx={{ px: 4 }}
           />

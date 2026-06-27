@@ -1,7 +1,6 @@
 import DashboardLeftSection from "@/Components/Page/Dashboard/DashboardLeftSection";
 import DashboardRightSection from "@/Components/Page/Dashboard/DashboardRightSection";
 import CustomButton from "@/Components/UI/Buttons";
-import DashboardSetupPrompt from "@/Components/UI/DashboardSetupPrompt";
 import MobileReferralBanner from "@/Components/UI/MobileReferralBanner";
 import OnboardingFlow from "@/Components/UI/OnboardingFlow";
 import useIsMobile from "@/hooks/useIsMobile";
@@ -82,9 +81,6 @@ export default function Home({
 
       <main>
         <OnboardingFlow />
-        {!setupComplete && (
-          <DashboardSetupPrompt hasCompany={hasCompany} hasWallet={hasWallet} />
-        )}
         {isMobile && <MobileReferralBanner />}
         <Grid container spacing={2.5}>
           <Grid item xs={12} xl={8}>

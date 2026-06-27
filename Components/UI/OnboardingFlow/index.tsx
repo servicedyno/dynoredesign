@@ -1,133 +1,201 @@
-import { CompanyAction, WalletAction } from "@/Redux/Actions";
+import { CompanyAction, WalletAction, PaymentLinkAction } from "@/Redux/Actions";
 import { COMPANY_FETCH } from "@/Redux/Actions/CompanyAction";
 import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
+import { PAYLINK_FETCH } from "@/Redux/Actions/PaymentLinkAction";
 import { rootReducer } from "@/utils/types";
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/router";
+import {
+  BusinessRounded,
+  AccountBalanceWalletRounded,
+  LinkRounded,
+} from "@mui/icons-material";
 import CreateCompanyModal from "./CreateCompanyModal";
 import AddWalletModal from "@/Components/UI/AddWalletModal";
 import CelebrationOverlay from "./CelebrationOverlay";
 import StepIndicator from "./StepIndicator";
+import OnboardingChecklist, { ChecklistStep } from "./OnboardingChecklist";
 
-type OnboardingPhase = "loading" | "company" | "wallet" | "celebration" | "done";
+type ActiveModal = "company" | "wallet" | null;
 
-const ONBOARDING_DISMISSED_KEY = "onboarding_dismissed";
-
+/**
+ * Onboarding orchestrator (non-blocking + resumable).
+ *
+ * - Renders a persistent checklist card (derived from real account data).
+ * - Launches the company / wallet wizard modals from the checklist.
+ * - Auto-opens the company step ONCE for brand-new users (closable).
+ * - Surfaces "Create your first payment link" as the activation step.
+ */
 const OnboardingFlow: React.FC = () => {
   const dispatch = useDispatch();
-  const [phase, setPhase] = useState<OnboardingPhase>("loading");
-  const decisionMade = useRef(false);
-  const loadingSeenTrue = useRef(false);
+  const router = useRouter();
 
-  const companyState = useSelector(
-    (state: rootReducer) => state.companyReducer,
-  );
+  const [activeModal, setActiveModal] = useState<ActiveModal>(null);
+  const [celebrate, setCelebrate] = useState(false);
+  const [payLinkSettled, setPayLinkSettled] = useState(false);
+
+  const loadingSeenTrue = useRef(false);
+  const autoOpened = useRef(false);
+  const dismissed = useRef(false);
+  const payLinkRequested = useRef(false);
+  const payLinkLoadingSeen = useRef(false);
+
+  const companyState = useSelector((state: rootReducer) => state.companyReducer);
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
+  const payLinkState = useSelector(
+    (state: rootReducer) => state.paymentLinkReducer,
+  );
 
   const companyList = companyState.companyList ?? [];
   const walletList = walletState.walletList ?? [];
   const hasCompany = companyList.length > 0;
   const hasWallet = walletList.length > 0;
-  const isLoading = companyState.loading || walletState.loading;
+  const hasLink = (payLinkState.paymentLinks?.length ?? 0) > 0;
 
-  // Fetch data once on mount
+  const companyId =
+    companyState.selectedCompanyId || companyList?.[0]?.company_id;
+
+  const isCoreLoading = companyState.loading || walletState.loading;
+
+  // Initial fetch of company + wallet
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
     dispatch(WalletAction(WALLET_FETCH));
   }, [dispatch]);
 
-  // Track when loading has been true at least once (meaning dispatches were processed)
+  // Track that core fetches have actually run (true -> false)
   useEffect(() => {
-    if (isLoading) {
-      loadingSeenTrue.current = true;
-    }
-  }, [isLoading]);
+    if (isCoreLoading) loadingSeenTrue.current = true;
+  }, [isCoreLoading]);
 
-  // Make phase decision only AFTER loading has been true AND then returned to false
-  // This ensures we wait for actual data fetches, not just the initial empty state
+  const coreReady = loadingSeenTrue.current && !isCoreLoading;
+
+  // Once a company exists, fetch payment links once to know if step 3 is done
   useEffect(() => {
-    if (decisionMade.current) return;
-
-    // Wait until loading was true at least once (dispatches processed)
-    if (!loadingSeenTrue.current) return;
-
-    // Wait until loading is done
-    if (isLoading) return;
-
-    // Now data has actually been fetched
-    decisionMade.current = true;
-
-    // If user previously dismissed onboarding this session, skip
-    if (typeof window !== "undefined" && sessionStorage.getItem(ONBOARDING_DISMISSED_KEY)) {
-      setPhase("done");
-      return;
+    if (hasCompany && companyId && !payLinkRequested.current) {
+      payLinkRequested.current = true;
+      dispatch(PaymentLinkAction(PAYLINK_FETCH, { company_id: companyId }));
     }
+  }, [hasCompany, companyId, dispatch]);
 
-    if (!hasCompany) {
-      setPhase("company");
-    } else if (!hasWallet) {
-      setPhase("wallet");
-    } else {
-      setPhase("done");
-    }
-  }, [isLoading, hasCompany, hasWallet]);
-
-  // Auto-dismiss wallet modal if wallet data arrives late
+  // Detect payment-link fetch settling (loading true -> false)
   useEffect(() => {
-    if (phase === "wallet" && hasWallet) {
-      setPhase("done");
+    if (!payLinkRequested.current) return;
+    if (payLinkState.loading) {
+      payLinkLoadingSeen.current = true;
+    } else if (payLinkLoadingSeen.current) {
+      setPayLinkSettled(true);
     }
-  }, [hasWallet, phase]);
+  }, [payLinkState.loading]);
 
-  // Called when company creation succeeds
+  // Auto-open the company step ONCE for brand-new users (closable, non-blocking)
+  useEffect(() => {
+    if (autoOpened.current || dismissed.current) return;
+    if (!coreReady) return;
+    if (!hasCompany && !hasWallet && !activeModal && !celebrate) {
+      autoOpened.current = true;
+      setActiveModal("company");
+    }
+  }, [coreReady, hasCompany, hasWallet, activeModal, celebrate]);
+
+  // Company created -> refresh wallets and guide to wallet step
   const handleCompanyCreated = useCallback(() => {
     dispatch(WalletAction(WALLET_FETCH));
-    setPhase("wallet");
+    setActiveModal("wallet");
   }, [dispatch]);
 
-  // Called when wallet is successfully added
+  // Wallet added -> refresh and celebrate
   const handleWalletAdded = useCallback(() => {
     dispatch(WalletAction(WALLET_FETCH));
-    // Clear dismissal flag since user completed onboarding
-    if (typeof window !== "undefined") {
-      sessionStorage.removeItem(ONBOARDING_DISMISSED_KEY);
-    }
-    setPhase("celebration");
+    setActiveModal(null);
+    setCelebrate(true);
   }, [dispatch]);
 
-  // Called when celebration is dismissed
   const handleCelebrationDismiss = useCallback(() => {
-    setPhase("done");
+    setCelebrate(false);
   }, []);
 
-  // Called when user skips onboarding ("I'll do this later")
-  const handleSkipOnboarding = useCallback(() => {
-    if (typeof window !== "undefined") {
-      sessionStorage.setItem(ONBOARDING_DISMISSED_KEY, "1");
+  // Closing a wizard modal should not re-trigger the auto-open this session
+  const handleModalClose = useCallback(() => {
+    dismissed.current = true;
+    setActiveModal(null);
+  }, []);
+
+  const openCompany = useCallback(() => setActiveModal("company"), []);
+  const openWallet = useCallback(() => {
+    // wallet requires a company first
+    if (!hasCompany) setActiveModal("company");
+    else setActiveModal("wallet");
+  }, [hasCompany]);
+  const openFirstLink = useCallback(() => {
+    if (!hasCompany) setActiveModal("company");
+    else if (!hasWallet) setActiveModal("wallet");
+    else router.push("/create-pay-link");
+  }, [hasCompany, hasWallet, router]);
+
+  const steps: ChecklistStep[] = useMemo(
+    () => [
+      {
+        key: "company",
+        label: "Create your company",
+        description: "Add your business details",
+        icon: BusinessRounded,
+        done: hasCompany,
+        onClick: openCompany,
+      },
+      {
+        key: "wallet",
+        label: "Add a payout wallet",
+        description: "Where your funds are received",
+        icon: AccountBalanceWalletRounded,
+        done: hasWallet,
+        onClick: openWallet,
+      },
+      {
+        key: "link",
+        label: "Create your first payment link",
+        description: "Start getting paid in seconds",
+        icon: LinkRounded,
+        done: hasLink,
+        onClick: openFirstLink,
+      },
+    ],
+    [hasCompany, hasWallet, hasLink, openCompany, openWallet, openFirstLink],
+  );
+
+  // Decide whether to show the checklist card
+  const allCoreDone = hasCompany && hasWallet;
+  let showChecklist = false;
+  if (coreReady) {
+    if (!allCoreDone) {
+      showChecklist = true;
+    } else if (payLinkSettled && !hasLink) {
+      // company + wallet done, but no payment link yet
+      showChecklist = true;
     }
-    setPhase("done");
-  }, []);
-
-  // Don't render anything for returning users or during loading
-  if (phase === "done" || phase === "loading") return null;
+  }
 
   return (
     <>
+      {showChecklist && <OnboardingChecklist steps={steps} />}
+
       <CreateCompanyModal
-        open={phase === "company"}
+        open={activeModal === "company"}
         onSuccess={handleCompanyCreated}
-        onClose={handleSkipOnboarding}
+        onClose={handleModalClose}
+        closeLabel="I'll do this later"
       />
 
       <AddWalletModal
-        open={phase === "wallet"}
-        onClose={handleSkipOnboarding}
+        open={activeModal === "wallet"}
+        onClose={handleModalClose}
         onWalletAdded={handleWalletAdded}
         headerExtra={<StepIndicator currentStep={2} totalSteps={2} />}
       />
 
       <CelebrationOverlay
-        open={phase === "celebration"}
+        open={celebrate}
         onDismiss={handleCelebrationDismiss}
       />
     </>

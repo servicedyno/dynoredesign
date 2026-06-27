@@ -50,6 +50,7 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer,
   );
+  const userState = useSelector((state: rootReducer) => state.userReducer);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [companyName, setCompanyName] = useState("");
@@ -62,14 +63,23 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
 
+  // A) Prefill business email & mobile from the account the user just created,
+  // so they don't have to re-type details they already provided at signup.
+  React.useEffect(() => {
+    if (!open) return;
+    setEmail((prev) => prev || userState.email || "");
+    setMobile((prev) => prev || userState.mobile || "");
+  }, [open, userState.email, userState.mobile]);
+
   const validate = () => {
     const newErrors: Record<string, string> = {};
     if (!companyName.trim()) newErrors.companyName = "Company name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       newErrors.email = "Please enter a valid email";
-    if (!mobile || mobile.replace(/\D/g, "").length < 10)
-      newErrors.mobile = "Valid mobile number is required";
+    // D) Mobile is optional — only validate the format if a value was entered.
+    if (mobile && mobile.replace(/\D/g, "").length < 10)
+      newErrors.mobile = "Please enter a valid mobile number";
     if (website.trim()) {
       const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]{2,}(\/[\w\-._~:/?#[\]@!$&'()*+,;=%]*)?$/i;
       if (!urlPattern.test(website.trim()))
@@ -286,7 +296,7 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
               ml: 0.25,
             }}
           >
-            Mobile Number *
+            Mobile Number (optional)
           </Typography>
           <MuiTelInput
             fullWidth

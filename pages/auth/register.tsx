@@ -563,6 +563,46 @@ const Register = () => {
           descriptionVariant="p"
         />
 
+        {/* B) Primary path: Continue with Google (fastest — verified email, no password/OTP) */}
+        <CustomButton
+          data-testid="google-signup-top-btn"
+          label="Continue with Google"
+          variant="outlined"
+          fullWidth
+          onClick={handleGoogleLogin}
+          startIcon={
+            <Image
+              src={GoogleIcon}
+              alt="google"
+              width={20}
+              height={20}
+              draggable={false}
+            />
+          }
+          sx={{ mt: 2.5 }}
+        />
+
+        {/* Divider: or sign up manually */}
+        <Box sx={{ mt: 2, mb: 0.5 }}>
+          <Divider
+            sx={{
+              "&::before, &::after": { borderColor: "divider" },
+            }}
+          >
+            <Typography
+              variant="body2"
+              sx={{
+                fontSize: isMobile ? "12px" : "14px",
+                fontFamily: "UrbanistMedium",
+                color: "#676768",
+                fontWeight: 500,
+              }}
+            >
+              {t("or")} sign up with
+            </Typography>
+          </Divider>
+        </Box>
+
         {/* Registration Method Toggle */}
         <Box sx={{ mt: 2, mb: 1, display: "flex", justifyContent: "center" }}>
           <ToggleButtonGroup
@@ -1056,87 +1096,7 @@ const Register = () => {
           </Typography>
         </Box>
 
-        {/* Divider with "Or" */}
-        <Box sx={{ marginTop: isMobile ? "16px" : "20px" }}>
-          <Divider
-            sx={{
-              "&::before, &::after": {
-                borderColor: "divider",
-              },
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: isMobile ? "12px" : "14px",
-                fontFamily: "UrbanistMedium",
-                color: "#676768",
-                fontWeight: 500,
-                lineHeight: "1.2",
-                letterSpacing: 0,
-              }}
-            >
-              {t("or")}
-            </Typography>
-          </Divider>
-        </Box>
-
-        {/* Google Sign-in */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "16px",
-            padding: 0,
-            marginTop: isMobile ? "16px" : "20px",
-          }}
-        >
-          <Typography
-            variant="body2"
-            sx={{
-              fontSize: isMobile ? "13px" : "15px",
-              fontFamily: "UrbanistMedium",
-              color: "#676768",
-              fontWeight: 500,
-              lineHeight: "1.2",
-              letterSpacing: 0,
-            }}
-          >
-            {t("registerLogin")}
-          </Typography>
-
-          <Box
-            sx={{
-              height: isMobile ? "32px" : "40px",
-              width: isMobile ? "32px" : "40px",
-              borderRadius: "100%",
-              border: "1px solid",
-              borderColor: "divider",
-              backgroundColor: "action.hover",
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              transition: "all 0.2s ease",
-              "&:hover": {
-                backgroundColor: "action.selected",
-                borderColor: "#D0D5DD",
-              },
-            }}
-            onClick={handleGoogleLogin}
-          >
-            <ImageCenter>
-              <Image
-                src={GoogleIcon}
-                alt="google login"
-                width={24}
-                height={24}
-                draggable={false}
-              />
-            </ImageCenter>
-          </Box>
-        </Box>
+        {/* Google sign-in is now presented at the top of the form (primary path). */}
       </CardWrapper>
 
       {/* Email Verification OTP Dialog */}
