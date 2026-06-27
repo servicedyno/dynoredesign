@@ -9,6 +9,7 @@ import {
 } from "@mui/icons-material";
 import { Box, Collapse, IconButton, Typography, useTheme } from "@mui/material";
 import useIsMobile from "@/hooks/useIsMobile";
+import { trackOnboarding } from "@/utils/trackOnboarding";
 
 export interface ChecklistStep {
   key: string;
@@ -45,6 +46,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
       if (typeof window !== "undefined") {
         window.localStorage.setItem(COLLAPSE_KEY, next ? "1" : "0");
       }
+      trackOnboarding({ event_type: next ? "collapsed" : "expanded" });
       return next;
     });
   }, []);

@@ -5,6 +5,13 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-06-27 — Onboarding Drop-off Analytics (self-contained, no 3rd party)
+- **New table** `tbl_onboarding_event` (`backend/models/onboardingEventModel.ts`): user_id, event_type, step_key, completed_count, metadata, timestamps. Synced on startup in `server.ts`.
+- **Write endpoint** `POST /api/track/onboarding` (auth-required, in `trackRouter.ts`): records events `checklist_shown | step_clicked | step_completed | dismissed | collapsed | expanded`. High-frequency events deduped via Redis (checklist_shown 6h, step_completed 30d). Validates event_type; always responds 200 (never blocks UI).
+- **Admin funnel** `GET /api/admin/analytics/onboarding?days=30` (`analyticsController.onboardingFunnel`, `analyticsRouter.ts`): distinct-user funnel (saw_checklist → clicked_* → completed_* → dismissed/collapsed) + raw_event_counts.
+- **Frontend** (`utils/trackOnboarding.ts` fire-and-forget helper) instrumented in `OnboardingFlow/index.tsx` (shown, step clicks, company/wallet completion, dismiss) and `OnboardingChecklist.tsx` (collapse/expand).
+- **Verified end-to-end**: events fire from browser → recorded → funnel aggregates correctly; dedup, invalid-event, and no-auth guards confirmed.
+
 ### 2026-06-27 — Onboarding Flow Hardening + Auth Logo Hydration Fix
 - **Onboarding (`Components/UI/OnboardingFlow/index.tsx`)**: Migrated readiness gating from fragile React refs/loading-timing to Redux `fetched` flags. `coreReady = companyReducer.fetched && walletReducer.fetched`; `payLinkFetched = paymentLinkReducer.fetched`. All three reducers now set `fetched: true` on BOTH fetch success and API error (added `fetched` to `paymentLinkReducer.ts`), so a failed fetch never leaves the checklist stuck/hidden.
 - **Per-session auto-open guard**: Wired up the previously-unused `AUTO_OPEN_SESSION_KEY` via `sessionStorage`. Brand-new users (no company AND no wallet) get the company modal auto-opened ONCE per session; reloads and dismissals no longer re-pop it.

@@ -44,6 +44,9 @@ import stablecoinConversionModel from "./stablecoinConversionModel";
 // Push Subscriptions
 import pushSubscriptionModel from "./pushSubscriptionModel";
 
+// Onboarding analytics
+import onboardingEventModel from "./onboardingEventModel";
+
 // USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
@@ -120,4 +123,6 @@ export {
   stablecoinConversionModel,
   // Push Subscriptions
   pushSubscriptionModel,
+  // Onboarding analytics
+  onboardingEventModel,
 };

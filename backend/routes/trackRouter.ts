@@ -8,11 +8,69 @@
 
 import express from "express";
 import axios from "axios";
+import jwt from "jsonwebtoken";
 import { apiLogger } from "../utils/loggers";
 import { getRedisItem, setRedisItemWithTTL } from "../utils/redisInstance";
 import { sendNewVisitorAdminEmail } from "../services/emailService";
+import { authMiddleware } from "../middleware";
 
 const trackRouter = express.Router();
+
+const ONBOARDING_EVENT_TYPES = [
+  "checklist_shown",
+  "step_clicked",
+  "step_completed",
+  "dismissed",
+  "collapsed",
+  "expanded",
+];
+
+/**
+ * POST /api/track/onboarding
+ * Auth required. Body: { event_type, step_key?, completed_count?, metadata? }
+ *
+ * Records onboarding-checklist engagement so admins can see where new
+ * merchants drop off. High-frequency events (checklist_shown, step_completed)
+ * are de-duplicated via Redis so a row is written at most once per window.
+ */
+trackRouter.post("/onboarding", authMiddleware, async (req: express.Request, res: express.Response) => {
+  try {
+    const decoded = jwt.decode(res.locals.token) as { user_id?: number } | null;
+    const user_id = decoded?.user_id;
+    const { event_type, step_key, completed_count, metadata } = req.body || {};
+
+    if (!user_id || !ONBOARDING_EVENT_TYPES.includes(event_type)) {
+      return res.status(200).json({ ok: false });
+    }
+
+    // De-duplicate noisy events so the table stays meaningful
+    if (event_type === "checklist_shown" || event_type === "step_completed") {
+      const dedupKey = `onb:${event_type}:${user_id}:${step_key || "_"}`;
+      const seen = await getRedisItem(dedupKey);
+      if (seen && Object.keys(seen).length > 0) {
+        return res.status(200).json({ ok: true, deduped: true });
+      }
+      // checklist_shown: 6h window; step_completed: 30d (effectively once)
+      const ttl = event_type === "checklist_shown" ? 21600 : 2592000;
+      await setRedisItemWithTTL(dedupKey, { t: Date.now() }, ttl);
+    }
+
+    const { onboardingEventModel } = await import("../models");
+    await onboardingEventModel.create({
+      user_id,
+      event_type,
+      step_key: typeof step_key === "string" ? step_key : null,
+      completed_count: typeof completed_count === "number" ? completed_count : null,
+      metadata: metadata && typeof metadata === "object" ? metadata : null,
+    });
+
+    return res.status(200).json({ ok: true });
+  } catch (err) {
+    apiLogger.error("[Track] Onboarding event error:", err);
+    // Tracking must never surface an error to the client
+    return res.status(200).json({ ok: false });
+  }
+});
 
 // In-memory rate limiter: max 30 unique visitor emails per hour
 let emailsSentThisHour = 0;

@@ -16,6 +16,7 @@ import AddWalletModal from "@/Components/UI/AddWalletModal";
 import CelebrationOverlay from "./CelebrationOverlay";
 import StepIndicator from "./StepIndicator";
 import OnboardingChecklist, { ChecklistStep } from "./OnboardingChecklist";
+import { trackOnboarding } from "@/utils/trackOnboarding";
 
 type ActiveModal = "company" | "wallet" | null;
 
@@ -40,6 +41,7 @@ const OnboardingFlow: React.FC = () => {
   const autoOpened = useRef(false);
   const dismissed = useRef(false);
   const payLinkRequested = useRef(false);
+  const shownTracked = useRef(false);
 
   const companyState = useSelector((state: rootReducer) => state.companyReducer);
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
@@ -99,16 +101,26 @@ const OnboardingFlow: React.FC = () => {
 
   // Company created -> refresh wallets and guide to wallet step
   const handleCompanyCreated = useCallback(() => {
+    trackOnboarding({
+      event_type: "step_completed",
+      step_key: "company",
+      completed_count: 1 + (hasWallet ? 1 : 0) + (hasLink ? 1 : 0),
+    });
     dispatch(WalletAction(WALLET_FETCH));
     setActiveModal("wallet");
-  }, [dispatch]);
+  }, [dispatch, hasWallet, hasLink]);
 
   // Wallet added -> refresh and celebrate
   const handleWalletAdded = useCallback(() => {
+    trackOnboarding({
+      event_type: "step_completed",
+      step_key: "wallet",
+      completed_count: (hasCompany ? 1 : 0) + 1 + (hasLink ? 1 : 0),
+    });
     dispatch(WalletAction(WALLET_FETCH));
     setActiveModal(null);
     setCelebrate(true);
-  }, [dispatch]);
+  }, [dispatch, hasCompany, hasLink]);
 
   const handleCelebrationDismiss = useCallback(() => {
     setCelebrate(false);
@@ -116,20 +128,26 @@ const OnboardingFlow: React.FC = () => {
 
   // Closing a wizard modal should not re-trigger the auto-open this session
   const handleModalClose = useCallback(() => {
+    trackOnboarding({ event_type: "dismissed", step_key: activeModal ?? undefined });
     dismissed.current = true;
     if (typeof window !== "undefined") {
       window.sessionStorage.setItem(AUTO_OPEN_SESSION_KEY, "1");
     }
     setActiveModal(null);
-  }, []);
+  }, [activeModal]);
 
-  const openCompany = useCallback(() => setActiveModal("company"), []);
+  const openCompany = useCallback(() => {
+    trackOnboarding({ event_type: "step_clicked", step_key: "company" });
+    setActiveModal("company");
+  }, []);
   const openWallet = useCallback(() => {
+    trackOnboarding({ event_type: "step_clicked", step_key: "wallet" });
     // wallet requires a company first
     if (!hasCompany) setActiveModal("company");
     else setActiveModal("wallet");
   }, [hasCompany]);
   const openFirstLink = useCallback(() => {
+    trackOnboarding({ event_type: "step_clicked", step_key: "link" });
     if (!hasCompany) setActiveModal("company");
     else if (!hasWallet) setActiveModal("wallet");
     else router.push("/create-pay-link");
@@ -176,6 +194,18 @@ const OnboardingFlow: React.FC = () => {
       showChecklist = true;
     }
   }
+
+  // Track that the checklist was shown (deduped server-side per user/6h)
+  useEffect(() => {
+    if (showChecklist && !shownTracked.current) {
+      shownTracked.current = true;
+      trackOnboarding({
+        event_type: "checklist_shown",
+        completed_count:
+          (hasCompany ? 1 : 0) + (hasWallet ? 1 : 0) + (hasLink ? 1 : 0),
+      });
+    }
+  }, [showChecklist, hasCompany, hasWallet, hasLink]);
 
   return (
     <>

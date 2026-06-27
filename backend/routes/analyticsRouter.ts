@@ -21,4 +21,7 @@ analyticsRouter.get("/cohorts", adminAuthMiddleware, analyticsController.cohorts
 // Payment funnel analysis
 analyticsRouter.get("/funnel", adminAuthMiddleware, analyticsController.funnel);
 
+// Onboarding-checklist drop-off funnel
+analyticsRouter.get("/onboarding", adminAuthMiddleware, analyticsController.onboardingFunnel);
+
 export default analyticsRouter;

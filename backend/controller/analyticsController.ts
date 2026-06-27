@@ -7,6 +7,8 @@ import express from "express";
 import { errorResponseHelper, successResponseHelper } from "../helper";
 import { handleControllerError } from "../helper/controllerErrorHandler";
 import { apiLogger } from "../utils/loggers";
+import sequelize from "../utils/dbInstance";
+import { QueryTypes } from "sequelize";
 import {
   getRevenueAnalytics,
   getUserGrowthAnalytics,
@@ -70,9 +72,64 @@ const funnel = async (req: express.Request, res: express.Response) => {
   }
 };
 
+/**
+ * GET /api/admin/analytics/onboarding?days=30
+ * Onboarding-checklist drop-off funnel built from tbl_onboarding_event.
+ */
+const onboardingFunnel = async (req: express.Request, res: express.Response) => {
+  try {
+    const days = Math.min(parseInt(req.query.days as string) || 30, 365);
+
+    const rows = await sequelize.query<{
+      event_type: string;
+      step_key: string | null;
+      events: string;
+      users: string;
+    }>(
+      `SELECT event_type, step_key,
+              COUNT(*)::int AS events,
+              COUNT(DISTINCT user_id)::int AS users
+       FROM tbl_onboarding_event
+       WHERE created_at >= NOW() - (:days || ' days')::interval
+       GROUP BY event_type, step_key`,
+      { replacements: { days: String(days) }, type: QueryTypes.SELECT }
+    );
+
+    const usersByKey: Record<string, number> = {};
+    const eventsByKey: Record<string, number> = {};
+    for (const r of rows) {
+      const key = r.step_key ? `${r.event_type}:${r.step_key}` : r.event_type;
+      usersByKey[key] = Number(r.users) || 0;
+      eventsByKey[key] = Number(r.events) || 0;
+    }
+
+    // Distinct-user funnel (engagement → intent → completion)
+    const funnel = {
+      saw_checklist: usersByKey["checklist_shown"] || 0,
+      clicked_company: usersByKey["step_clicked:company"] || 0,
+      clicked_wallet: usersByKey["step_clicked:wallet"] || 0,
+      clicked_link: usersByKey["step_clicked:link"] || 0,
+      completed_company: usersByKey["step_completed:company"] || 0,
+      completed_wallet: usersByKey["step_completed:wallet"] || 0,
+      dismissed: usersByKey["dismissed"] || 0,
+      collapsed: usersByKey["collapsed"] || 0,
+      expanded: usersByKey["expanded"] || 0,
+    };
+
+    successResponseHelper(res, 200, "Onboarding funnel retrieved", {
+      period_days: days,
+      funnel,
+      raw_event_counts: eventsByKey,
+    });
+  } catch (e) {
+    handleControllerError(res, e, apiLogger);
+  }
+};
+
 export default {
   revenue,
   userGrowth,
   cohorts,
   funnel,
+  onboardingFunnel,
 };

@@ -1024,6 +1024,11 @@ const startServer = async () => {
     // Sync user model to add referral columns
     await userModel.sync(syncOptions);
     log('User model synced with referral columns.', 'info');
+
+    // Sync onboarding analytics table
+    const { onboardingEventModel } = await import("./models");
+    await onboardingEventModel.sync(syncOptions);
+    log('Onboarding analytics table synced successfully.', 'info');
     
     // One-time migration: shorten old long referral codes (DYNO2026XXXYYY → DYNO-XXXXXX)
     try {
