@@ -19,6 +19,9 @@ import OnboardingChecklist, { ChecklistStep } from "./OnboardingChecklist";
 
 type ActiveModal = "company" | "wallet" | null;
 
+// Per-session guard so the wizard doesn't auto-pop on every dashboard visit.
+const AUTO_OPEN_SESSION_KEY = "onboarding_autoopen_seen";
+
 /**
  * Onboarding orchestrator (non-blocking + resumable).
  *

@@ -56,6 +56,7 @@ export interface transactionReducer {
 export interface walletReducer {
   walletList: IWallet[];
   loading: boolean;
+  fetched?: boolean;
   amount: number;
   currency: string;
   otpVerified?: boolean;

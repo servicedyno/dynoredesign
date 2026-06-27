@@ -15,6 +15,7 @@ import {
 const walletInitialState: IWalletReducer = {
   walletList: [],
   loading: false,
+  fetched: false,
   amount: 0,
   currency: "USD",
   otpVerified: false,
@@ -55,6 +56,7 @@ const walletReducer = (state = walletInitialState, action: ReducerAction) => {
       return {
         ...state,
         loading: false,
+        fetched: true,
         walletList: Array.isArray(payload) ? payload : [],
       };
 
@@ -93,6 +95,7 @@ const walletReducer = (state = walletInitialState, action: ReducerAction) => {
       return {
         ...state,
         loading: false,
+        fetched: true,
       };
     default:
       return {
