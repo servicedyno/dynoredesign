@@ -5,6 +5,14 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-06-27 — Onboarding Flow Hardening + Auth Logo Hydration Fix
+- **Onboarding (`Components/UI/OnboardingFlow/index.tsx`)**: Migrated readiness gating from fragile React refs/loading-timing to Redux `fetched` flags. `coreReady = companyReducer.fetched && walletReducer.fetched`; `payLinkFetched = paymentLinkReducer.fetched`. All three reducers now set `fetched: true` on BOTH fetch success and API error (added `fetched` to `paymentLinkReducer.ts`), so a failed fetch never leaves the checklist stuck/hidden.
+- **Per-session auto-open guard**: Wired up the previously-unused `AUTO_OPEN_SESSION_KEY` via `sessionStorage`. Brand-new users (no company AND no wallet) get the company modal auto-opened ONCE per session; reloads and dismissals no longer re-pop it.
+- **Verified end-to-end** (throwaway merchant user_id=3): new-user → checklist visible + company modal auto-opens; reload → no re-open; after company created → company step checked, wallet step unlocked, link step locked, no auto-open. No hydration errors introduced by onboarding.
+- **Auth logo hydration fix (`pages/auth/login.tsx`, `pages/auth/register.tsx`)**: The theme-dependent logo (`theme.palette.mode === 'dark' ? WhiteLogo : Logo`) mismatched SSR (always 'dark') vs first client render. Gated behind a `mounted` flag so SSR and first client render agree. Logo `srcSet` hydration warning resolved.
+- **Known remaining (out of scope)**: Systemic MUI emotion className SSR mismatch (`css-xxx`) persists app-wide because `theme.palette.mode` differs server vs client; needs emotion SSR cache setup or cookie-based theme. Dashboard `/api/wallet/getUserAnalytics` and `/api/dashboard` return 500 for brand-new merchants with no data.
+
+
 ### 2026-03-25 — Critical Bug Fix: Double SUN→TRX Conversion (Fee Wallet Drain)
 - **Root Cause**: `tatumApi.getAddressBalance()` was fixed on ~March 15 to convert SUN→TRX (÷1M), but 4 caller sites still had their own ÷1M, making TRX balances appear 1,000,000× smaller
 - **Impact**: `fundGasIfNeeded` always thought pool addresses had 0 gas → kept draining the fee wallet. `checkFeeBalance` reported $0 instead of actual ~$21 balance

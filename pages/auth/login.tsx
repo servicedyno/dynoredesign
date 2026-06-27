@@ -55,6 +55,10 @@ import * as yup from "yup";
 export default function Login() {
   const { t } = useTranslation("auth");
   const theme = useTheme();
+  // Gate theme-dependent rendering until mount so SSR (always 'dark') and the
+  // first client render agree — prevents the logo hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const isMobile = useIsMobile("sm");
   const dispatch = useDispatch();
   const router = useRouter();
@@ -939,7 +943,7 @@ export default function Login() {
       >
         {/* Logo */}
         <Image
-          src={theme.palette.mode === "dark" ? WhiteLogo : Logo}
+          src={mounted && theme.palette.mode === "dark" ? WhiteLogo : Logo}
           alt="logo"
           width={isMobile ? 86 : 114}
           height={isMobile ? 29 : 39}

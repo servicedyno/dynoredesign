@@ -54,6 +54,10 @@ const Register = () => {
   const dispatch = useDispatch();
   const muiTheme = useTheme();
   const nextRouter = useRouter();
+  // Gate theme-dependent rendering until mount so SSR (always 'dark') and the
+  // first client render agree — prevents the logo hydration mismatch.
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
   const userState = useSelector((state: rootReducer) => state.userReducer);
 
   const [firstName, setFirstName] = useState("");
@@ -536,7 +540,7 @@ const Register = () => {
       >
         {/* Logo */}
         <Image
-          src={muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
+          src={mounted && muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
           alt="logo"
           width={isMobile ? 86 : 114}
           height={isMobile ? 29 : 39}
