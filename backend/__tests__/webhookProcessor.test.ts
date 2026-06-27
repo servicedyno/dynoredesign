@@ -27,6 +27,7 @@ jest.mock('../utils/loggers', () => ({
   webhookLogs: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
   cronLogger: { info: jest.fn(), error: jest.fn(), warn: jest.fn() },
   apiLogger: { info: jest.fn(), error: jest.fn() },
+  log: jest.fn(),
 }));
 
 jest.mock('../controller', () => ({
