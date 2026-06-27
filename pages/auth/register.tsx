@@ -6,6 +6,7 @@ import PasswordValidation from "@/Components/UI/AuthLayout/PasswordValidation";
 import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
+import ThemeToggle from "@/Components/UI/ThemeToggle";
 import OtpDialog from "@/Components/UI/OtpDialog";
 import { AuthContainer, CardWrapper, ImageCenter } from "@/Containers/Login/styled";
 import useIsMobile from "@/hooks/useIsMobile";
@@ -546,8 +547,9 @@ const Register = () => {
           style={{ cursor: "pointer" }}
         />
 
-        <Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <LanguageSwitcher />
+          <ThemeToggle size="small" />
         </Box>
       </CardWrapper>
 

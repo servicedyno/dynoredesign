@@ -11,6 +11,7 @@ import CustomButton from "@/Components/UI/Buttons";
 import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
 import ForgotPasswordDialog from "@/Components/UI/ForgotPasswordDialog";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
+import ThemeToggle from "@/Components/UI/ThemeToggle";
 import OtpDialog from "@/Components/UI/OtpDialog";
 import CustomRadio from "@/Components/UI/RadioGroup";
 import {
@@ -949,8 +950,9 @@ export default function Login() {
           style={{ cursor: "pointer" }}
         />
 
-        <Box>
+        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
           <LanguageSwitcher />
+          <ThemeToggle size="small" />
         </Box>
       </CardWrapper>
 
