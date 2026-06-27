@@ -14,12 +14,15 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
   - `utils/createEmotionCache.ts` (new). Added `@emotion/cache` + `@emotion/server`.
   - Added `data-testid="theme-toggle-button"` to `ThemeToggle`.
   - **Verified**: NO hydration warnings on `/auth/login` (light) or `/dashboard` (dark); theme toggle switches + persists across reloads via cookie SSR.
-- **`paymentController.ts` incremental refactor (started, zero behavior change): 8932 → 8697 lines.**
-  - `backend/controller/payment/paymentConfig.ts`: PAYMENT_TIMING, ADMIN_CONFIG, RETRY_CONFIG, TAX_DATA_API_URL/KEY.
-  - `backend/controller/payment/paymentHelpers.ts`: `convertToUSD`, `withRetry`.
-  - `backend/controller/payment/taxService.ts`: `calculateTaxForCheckout`.
-  - **Verified**: backend tsc 0 errors, restarts clean, `POST /api/pay/calculateFees` returns identical breakdown.
-  - REMAINING (NOT done): large stateful handlers (createCryptoPayment, settleCryptoTransaction, cryptoVerification, confirmPayment, createPaymentLink, cron jobs) — need a payment-flow test strategy before extraction.
+- **`paymentController.ts` incremental refactor (in progress, zero behavior change): 8932 → 6849 lines (~23% reduction).** New `backend/controller/payment/` module:
+  - `paymentConfig.ts`: PAYMENT_TIMING, ADMIN_CONFIG, RETRY_CONFIG, TAX_DATA_API_URL/KEY.
+  - `paymentHelpers.ts`: `convertToUSD`, `withRetry`, `getCryptoPriceForPayment`.
+  - `taxService.ts`: `calculateTaxForCheckout`.
+  - `paymentTokens.ts`: `getLinkAccessToken`, `getAccessToken`.
+  - `feeController.ts`: `getNetworkFees`, `calculatePaymentAmount`, `getConfiguredCurrenciesForCheckout`, `calculateCheckoutFees`, `getFeePreview`, `getCompanyConfiguredCurrencies` (re-exported from paymentController so routes are unchanged).
+  - `paymentLinkController.ts`: `createPaymentLink`, `getPaymentLinks`, `getPaymentLinkById`, `updatePaymentLink`, `deletePaymentLink` (re-exported).
+  - **Verified after each slice**: backend tsc 0 errors, restarts clean, `POST /api/pay/calculateFees` identical breakdown, `GET /api/pay/getPaymentLinks` returns 200.
+  - REMAINING (NOT done — needs E2E payment-flow test harness against live/testnet blockchain; these move real funds): payment-flow chain (getData, addPayment, createCryptoPayment, authStep, verifyPayment, confirmPayment, cardPayment + alt methods, Crypto, settleCryptoTransaction, verifyCryptoPayment, cryptoVerification, userWallet), getCurrencyRates, getBalance, and cron jobs (checkingUSDT, sweepNativeAdminFees, checkFeeBalance, checkOnBlockchair, processIncompletePayments).
 
 ### 2026-06-27 — Onboarding Drop-off Analytics (self-contained, no 3rd party)
 - **New table** `tbl_onboarding_event` (`backend/models/onboardingEventModel.ts`): user_id, event_type, step_key, completed_count, metadata, timestamps. Synced on startup in `server.ts`.

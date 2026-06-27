@@ -6,6 +6,7 @@ import { convertToUSD as convertToUSDUtil } from "../../utils/currencyUtils";
 import { getErrorMessage } from "../../helper";
 import { cronLogger } from "../../utils/loggers";
 import { RETRY_CONFIG } from "./paymentConfig";
+import axios from "axios";
 
 /**
  * Convert crypto amount to USD
@@ -87,4 +88,43 @@ export const withRetry = async <T>(
   }
 
   throw lastError;
+};
+
+/**
+ * Fetch a crypto's USD price (CoinGecko) with hardcoded fallback prices.
+ */
+export const getCryptoPriceForPayment = async (symbol: string): Promise<number> => {
+  try {
+    const idMap: Record<string, string> = {
+      'BTC': 'bitcoin',
+      'ETH': 'ethereum',
+      'LTC': 'litecoin',
+      'DOGE': 'dogecoin',
+      'TRX': 'tron',
+      'USDT': 'tether',
+      'USDT_ERC20': 'tether',
+      'USDT_TRC20': 'tether',
+      'BCH': 'bitcoin-cash',
+    };
+
+    const coinId = idMap[symbol.toUpperCase()] || symbol.toLowerCase();
+    const response = await axios.get(
+      `https://api.coingecko.com/api/v3/simple/price?ids=${coinId}&vs_currencies=usd`
+    );
+
+    return response.data[coinId]?.usd || 0;
+  } catch (error) {
+    const fallbackPrices: Record<string, number> = {
+      'BTC': 95000,
+      'ETH': 3300,
+      'LTC': 100,
+      'DOGE': 0.35,
+      'TRX': 0.25,
+      'USDT': 1,
+      'USDT_ERC20': 1,
+      'USDT_TRC20': 1,
+      'BCH': 450,
+    };
+    return fallbackPrices[symbol.toUpperCase()] || 0;
+  }
 };
