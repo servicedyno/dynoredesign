@@ -36,13 +36,10 @@ const OnboardingFlow: React.FC = () => {
 
   const [activeModal, setActiveModal] = useState<ActiveModal>(null);
   const [celebrate, setCelebrate] = useState(false);
-  const [payLinkSettled, setPayLinkSettled] = useState(false);
 
-  const loadingSeenTrue = useRef(false);
   const autoOpened = useRef(false);
   const dismissed = useRef(false);
   const payLinkRequested = useRef(false);
-  const payLinkLoadingSeen = useRef(false);
 
   const companyState = useSelector((state: rootReducer) => state.companyReducer);
   const walletState = useSelector((state: rootReducer) => state.walletReducer);
@@ -59,20 +56,16 @@ const OnboardingFlow: React.FC = () => {
   const companyId =
     companyState.selectedCompanyId || companyList?.[0]?.company_id;
 
-  const isCoreLoading = companyState.loading || walletState.loading;
+  // Core readiness is derived from real Redux fetch flags (set on success OR
+  // error). This avoids SSR hydration mismatches and fragile loading-timing refs.
+  const coreReady = Boolean(companyState.fetched && walletState.fetched);
+  const payLinkFetched = Boolean(payLinkState.fetched);
 
   // Initial fetch of company + wallet
   useEffect(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
     dispatch(WalletAction(WALLET_FETCH));
   }, [dispatch]);
-
-  // Track that core fetches have actually run (true -> false)
-  useEffect(() => {
-    if (isCoreLoading) loadingSeenTrue.current = true;
-  }, [isCoreLoading]);
-
-  const coreReady = loadingSeenTrue.current && !isCoreLoading;
 
   // Once a company exists, fetch payment links once to know if step 3 is done
   useEffect(() => {
@@ -81,16 +74,6 @@ const OnboardingFlow: React.FC = () => {
       dispatch(PaymentLinkAction(PAYLINK_FETCH, { company_id: companyId }));
     }
   }, [hasCompany, companyId, dispatch]);
-
-  // Detect payment-link fetch settling (loading true -> false)
-  useEffect(() => {
-    if (!payLinkRequested.current) return;
-    if (payLinkState.loading) {
-      payLinkLoadingSeen.current = true;
-    } else if (payLinkLoadingSeen.current) {
-      setPayLinkSettled(true);
-    }
-  }, [payLinkState.loading]);
 
   // Auto-open the company step ONCE for brand-new users (closable, non-blocking)
   useEffect(() => {
@@ -173,7 +156,7 @@ const OnboardingFlow: React.FC = () => {
   if (coreReady) {
     if (!allCoreDone) {
       showChecklist = true;
-    } else if (payLinkSettled && !hasLink) {
+    } else if (payLinkFetched && !hasLink) {
       // company + wallet done, but no payment link yet
       showChecklist = true;
     }

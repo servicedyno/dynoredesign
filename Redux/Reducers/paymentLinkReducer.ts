@@ -15,6 +15,7 @@ export interface PaymentLinkState {
   loading: boolean;
   createLoading: boolean;
   feePreview: any | null;
+  fetched: boolean;
 }
 
 const paymentLinkInitialState: PaymentLinkState = {
@@ -23,6 +24,7 @@ const paymentLinkInitialState: PaymentLinkState = {
   loading: false,
   createLoading: false,
   feePreview: null,
+  fetched: false,
 };
 
 const paymentLinkReducer = (
@@ -49,6 +51,7 @@ const paymentLinkReducer = (
       return {
         ...state,
         loading: false,
+        fetched: true,
         paymentLinks: payload.paymentLinks || [],
       };
 
@@ -86,6 +89,7 @@ const paymentLinkReducer = (
         ...state,
         loading: false,
         createLoading: false,
+        fetched: true,
       };
 
     case PAYLINK_FEE_PREVIEW:
