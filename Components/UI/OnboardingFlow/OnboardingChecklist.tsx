@@ -4,6 +4,7 @@ import {
   CheckRounded,
   ExpandLessRounded,
   ExpandMoreRounded,
+  LockRounded,
   RocketLaunchRounded,
 } from "@mui/icons-material";
 import { Box, Collapse, IconButton, Typography, useTheme } from "@mui/material";
@@ -52,6 +53,7 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
   const completed = steps.filter((s) => s.done).length;
   const progress = total > 0 ? Math.round((completed / total) * 100) : 0;
   const nextStep = steps.find((s) => !s.done);
+  const firstIncompleteIndex = steps.findIndex((s) => !s.done);
 
   return (
     <Box
@@ -150,10 +152,14 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
       {/* Steps */}
       <Collapse in={!collapsed} timeout={250}>
         <Box sx={{ display: "flex", flexDirection: "column", gap: 1, mt: 1.75 }}>
-          {steps.map((step) => {
+          {steps.map((step, idx) => {
             const Icon = step.icon;
             const isDone = step.done;
             const isNext = !isDone && step.key === nextStep?.key;
+            const isLocked =
+              !isDone &&
+              firstIncompleteIndex !== -1 &&
+              idx > firstIncompleteIndex;
             return (
               <Box
                 key={step.key}
@@ -178,14 +184,15 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
                       : "#F0FAF0"
                     : theme.palette.background.paper,
                   cursor: isDone ? "default" : "pointer",
-                  opacity: isDone ? 0.75 : 1,
+                  opacity: isDone ? 0.75 : isLocked ? 0.6 : 1,
                   transition: "all 0.15s ease",
-                  ...(!isDone && {
-                    "&:hover": {
-                      borderColor: theme.palette.primary.main,
-                      backgroundColor: theme.palette.primary.light,
-                    },
-                  }),
+                  ...(!isDone &&
+                    !isLocked && {
+                      "&:hover": {
+                        borderColor: theme.palette.primary.main,
+                        backgroundColor: theme.palette.primary.light,
+                      },
+                    }),
                 }}
               >
                 <Box
@@ -197,7 +204,11 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
                       ? theme.palette.mode === "dark"
                         ? "rgba(76,175,80,0.15)"
                         : "#E8F5E9"
-                      : theme.palette.primary.light || "#E5EDFF",
+                      : isLocked
+                        ? theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.06)"
+                          : "#F1F3F7"
+                        : theme.palette.primary.light || "#E5EDFF",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -206,6 +217,13 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
                 >
                   {isDone ? (
                     <CheckRounded sx={{ fontSize: 18, color: "#4CAF50" }} />
+                  ) : isLocked ? (
+                    <LockRounded
+                      sx={{
+                        fontSize: isMobile ? 15 : 17,
+                        color: theme.palette.text.disabled || "#9DA3AE",
+                      }}
+                    />
                   ) : (
                     <Icon
                       sx={{
@@ -219,11 +237,16 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
                   <Typography
                     sx={{
                       fontSize: isMobile ? "13px" : "14px",
-                      fontFamily: isDone ? "UrbanistMedium" : "UrbanistSemibold",
-                      fontWeight: isDone ? 500 : 600,
+                      fontFamily:
+                        isDone || isLocked
+                          ? "UrbanistMedium"
+                          : "UrbanistSemibold",
+                      fontWeight: isDone || isLocked ? 500 : 600,
                       color: isDone
                         ? theme.palette.text.secondary
-                        : theme.palette.text.primary,
+                        : isLocked
+                          ? theme.palette.text.secondary
+                          : theme.palette.text.primary,
                       textDecoration: isDone ? "line-through" : "none",
                     }}
                   >
@@ -239,11 +262,13 @@ const OnboardingChecklist: React.FC<OnboardingChecklistProps> = ({ steps }) => {
                         lineHeight: 1.3,
                       }}
                     >
-                      {step.description}
+                      {isLocked
+                        ? "Complete the step above first"
+                        : step.description}
                     </Typography>
                   )}
                 </Box>
-                {!isDone && (
+                {isNext && (
                   <ArrowForwardRounded
                     sx={{ fontSize: 18, color: theme.palette.primary.main }}
                   />

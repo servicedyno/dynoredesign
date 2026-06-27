@@ -147,7 +147,7 @@ const OnboardingFlow: React.FC = () => {
       {
         key: "wallet",
         label: "Add a payout wallet",
-        description: "Where your funds are received",
+        description: "Required — funds are forwarded here",
         icon: AccountBalanceWalletRounded,
         done: hasWallet,
         onClick: openWallet,
