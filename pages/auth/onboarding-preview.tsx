@@ -13,7 +13,8 @@ import CelebrationOverlay from "@/Components/UI/OnboardingFlow/CelebrationOverla
 /**
  * TEMPORARY preview page for verifying onboarding UI visuals
  * (checklist done/next/locked states + celebration CTA) without
- * needing a live merchant account. Safe to delete after testing.
+ * needing a live merchant account. Placed under /auth so it uses the
+ * public login layout. Safe to delete after testing.
  */
 const OnboardingPreview: React.FC = () => {
   const [celebrate, setCelebrate] = useState(false);

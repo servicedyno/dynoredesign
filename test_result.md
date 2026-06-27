@@ -171,6 +171,65 @@ frontend:
 2. Ensure /onboarding-preview is publicly accessible without login
 3. Re-test after fix to verify onboarding checklist and celebration overlay
 
+## Onboarding Preview Page Re-Test — Test Results (2026-06-27 17:48 UTC)
+- agent: testing
+- test_date: 2026-06-27 17:48:00 UTC
+- test_url: https://3199fd37-075d-43f1-a052-ba7f4ae8062c.preview.emergentagent.com/auth/onboarding-preview
+- test_results: ALL TESTS PASSED ✅ (Previous redirect issue FIXED)
+
+### TEST SUMMARY
+✅ **Page Access**: Page is now publicly accessible (no auth redirect) - FIXED
+✅ **Onboarding Checklist Card**: Renders correctly with data-testid="onboarding-checklist"
+✅ **Progress Bar**: Present with data-testid="onboarding-progress-bar" (shows 33% - 1 of 3 steps)
+✅ **Step 1 (Create your company)**: COMPLETED state verified
+  - Green check mark icon (CheckRoundedIcon) ✓
+  - Text has strikethrough decoration ✓
+  - Reduced opacity (0.75) ✓
+✅ **Step 2 (Add a payout wallet)**: NEXT/actionable state verified
+  - Forward arrow icon on right (ArrowForwardRoundedIcon) ✓
+  - Highlighted primary-colored border (rgb(106, 123, 255)) ✓
+  - Description: "Required — funds are forwarded here" ✓
+✅ **Step 3 (Create your first payment link)**: LOCKED state verified
+  - Lock icon present (LockRoundedIcon) instead of normal icon ✓
+  - Description: "Complete the step above first" ✓
+✅ **Collapse/Expand Toggle**: Works correctly (data-testid="onboarding-checklist-toggle")
+  - All 3 steps collapse (hide) when clicked ✓
+  - All 3 steps expand (show) when clicked again ✓
+✅ **Celebration Overlay**: Opens and functions correctly
+  - "Show celebration" button works (data-testid="preview-show-celebration") ✓
+  - Celebration dialog appears (data-testid="onboarding-celebration-modal") ✓
+  - Confetti animation plays ✓
+  - PRIMARY button text: "Create your first payment link" ✓
+  - SECONDARY button text: "Go to Dashboard" ✓
+  - Overlay closes when "Go to Dashboard" clicked ✓
+✅ **No Console Errors**: No error messages or blank screens
+
+### MINOR ISSUE IDENTIFIED (Non-blocking)
+⚠️ **CustomButton data-testid forwarding**: The CustomButton component (/app/Components/UI/Buttons/index.tsx) does not forward data-testid props to the underlying MuiButton element. 
+  - Impact: Celebration overlay buttons lack data-testid attributes on rendered DOM elements
+  - Defined in code: data-testid="celebration-create-link-btn" and data-testid="celebration-dismiss-btn"
+  - Actual DOM: data-testid="None" (not forwarded)
+  - Workaround: Buttons can be selected by text content (working in tests)
+  - Fix: Add data-testid to CustomButtonProps interface and spread to MuiButton
+
+### SCREENSHOTS CAPTURED
+- test1_checklist_expanded.png - Onboarding checklist with all 3 steps visible
+- test3_checklist_collapsed.png - Onboarding checklist collapsed (steps hidden)
+- test4_celebration_overlay.png - Celebration dialog with confetti and buttons
+- test_final_state.png - Final page state after all tests
+
+### VERIFICATION STATUS
+✅ All 4 test requirements PASSED
+✅ All visual states verified (COMPLETED, NEXT, LOCKED)
+✅ All interactions tested (collapse/expand, celebration overlay)
+✅ No critical issues found
+⚠️ 1 minor issue: CustomButton data-testid forwarding (non-blocking)
+
+### NEXT STEPS FOR MAIN AGENT
+1. ✅ RESOLVED: Page is now publicly accessible
+2. OPTIONAL: Fix CustomButton component to forward data-testid prop (minor enhancement)
+3. Consider removing /auth/onboarding-preview page after testing is complete (marked as TEMPORARY)
+
 
 ## Testing Protocol
 1. ALWAYS start by reading this file
