@@ -84,6 +84,21 @@ const getTatumHeaders = async () => {
   return headers;
 };
 
+/**
+ * Normalize PEM private key newlines.
+ * Handles multiple escape levels:
+ *  - \\n  (double-escaped, e.g. DigitalOcean App Platform injects two literal backslashes + n)
+ *  - \n   (single-escaped, standard dotenv / Railway / Heroku)
+ *  - real newlines (already correct — no-op)
+ * Order matters: collapse double-escapes first, then single-escapes.
+ */
+function normalizePrivateKey(raw: string | undefined): string | undefined {
+  if (!raw) return undefined;
+  return raw
+    .replace(/\\\\n/g, '\n')   // \\n  →  real newline
+    .replace(/\\n/g, '\n');     // \n   →  real newline
+}
+
 // CRC32C helper using AWS Crypto library (pure JavaScript, works on all platforms)
 const crc32c = {
   calculate: (data: Buffer | string): number => {
@@ -101,7 +116,7 @@ const encryptSymmetric = async (dataToEncrypt, keyId) => {
   const keyRingId = process.env.KEY_RING_ID;
 
   // Properly format private key: ensure newlines are converted from \n to actual newlines
-  const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
+  const privateKey = normalizePrivateKey(process.env.GOOGLE_CLIENT_KEY);
 
   const client = new KeyManagementServiceClient({
     credentials: {
@@ -145,7 +160,7 @@ async function decryptSymmetric(ciphertext, keyId) {
   const keyRingId = process.env.KEY_RING_ID;
   
   // Properly format private key: ensure newlines are converted from \n to actual newlines
-  const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
+  const privateKey = normalizePrivateKey(process.env.GOOGLE_CLIENT_KEY);
   
   const client = new KeyManagementServiceClient({
     credentials: {
@@ -197,7 +212,7 @@ const getTatumSDK = async () => {
     
     if (!tatumKey) {
       if (!tatumSdkInitLogged) cronLogger.info('[getTatumSDK] No Tatum key found in .env, attempting Secret Manager...');
-      const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
+      const privateKey = normalizePrivateKey(process.env.GOOGLE_CLIENT_KEY);
       const client = new SecretManagerServiceClient({
         credentials: {
           type: "service_account",
@@ -238,7 +253,7 @@ const getTatumKey = async () => {
     
     let tatumKey = process.env.TATUM_KEY || process.env.TATUM_SECRET_KEY;
     if (!tatumKey) {
-      const privateKey = process.env.GOOGLE_CLIENT_KEY?.replace(/\\n/g, '\n');
+      const privateKey = normalizePrivateKey(process.env.GOOGLE_CLIENT_KEY);
       const client = new SecretManagerServiceClient({
         credentials: {
           type: "service_account",
