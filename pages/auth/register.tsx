@@ -584,11 +584,11 @@ const Register = () => {
               draggable={false}
             />
           }
-          sx={{ mt: 2.5 }}
+          sx={{ mt: 1.5 }}
         />
 
         {/* Divider: or sign up manually */}
-        <Box sx={{ mt: 2, mb: 0.5 }}>
+        <Box sx={{ mt: 1.5, mb: 0.5 }}>
           <Divider
             sx={{
               "&::before, &::after": { borderColor: "divider" },
@@ -609,7 +609,7 @@ const Register = () => {
         </Box>
 
         {/* Registration Method Toggle */}
-        <Box sx={{ mt: 2, mb: 1, display: "flex", justifyContent: "center" }}>
+        <Box sx={{ mt: 1.5, mb: 0.5, display: "flex", justifyContent: "center" }}>
           <ToggleButtonGroup
             value={registerMethod}
             exclusive
@@ -774,10 +774,10 @@ const Register = () => {
         /* Email Registration Form (existing) */
         <Box
           sx={{
-            marginTop: isMobile ? "16px" : "24px",
+            marginTop: isMobile ? "12px" : "16px",
             display: "flex",
             flexDirection: "column",
-            gap: "12px",
+            gap: "10px",
           }}
         >
           <Box
@@ -1045,7 +1045,7 @@ const Register = () => {
           </Box>
 
           {/* Sign Up Button */}
-          <Box sx={{ marginTop: isMobile ? "16px" : "24px" }}>
+          <Box sx={{ marginTop: isMobile ? "8px" : "12px" }}>
             <CustomButton
               label={t("signUpButton")}
               variant="primary"

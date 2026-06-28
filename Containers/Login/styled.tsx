@@ -36,6 +36,7 @@ export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
   maxWidth: "1100px",
   height: "auto",
   minHeight: "600px",
+  maxHeight: "calc(100dvh - 64px)",
   margin: "0 auto",
   background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
   borderRadius: "20px",
@@ -50,6 +51,7 @@ export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
     flexDirection: "column",
     maxWidth: "520px",
     minHeight: "auto",
+    maxHeight: "none",
     margin: "24px auto",
     borderRadius: "16px",
   },
@@ -60,6 +62,7 @@ export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
     border: "none",
     boxShadow: "none",
     minHeight: "100dvh",
+    maxHeight: "none",
   },
 }));
 
@@ -99,20 +102,21 @@ export const FormPanel = styled(Box)(({ theme }) => ({
   flex: 1,
   display: "flex",
   justifyContent: "center",
-  alignItems: "center",
-  padding: "40px 48px",
-  overflow: "auto",
+  alignItems: "flex-start",
+  padding: "32px 48px",
+  overflowY: "auto",
+  overflowX: "hidden",
   background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
   scrollbarWidth: "none",
   "&::-webkit-scrollbar": { display: "none" },
 
   [theme.breakpoints.down("md")]: {
-    padding: "32px 28px",
+    padding: "28px 28px",
   },
 
   [theme.breakpoints.down("sm")]: {
     padding: "24px 24px 40px",
-    alignItems: "center",
+    alignItems: "flex-start",
     justifyContent: "center",
   },
 }));

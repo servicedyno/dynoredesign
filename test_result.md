@@ -2526,6 +2526,33 @@ frontend:
 - ✅ Ready to summarize and finish
 
 
+## Registration Page UI Fix (2026-06-28)
+- bug_report: 1) Phone registration: Sign up button text invisible. 2) Email registration: Form too long, requires scrolling to see Sign up button.
+- root_causes:
+  1. SplitLayoutWrapper had no max-height constraint, so the card grew beyond viewport. FormPanel's overflow:auto never kicked in.
+  2. CustomButton's `shouldHideLabel = hideLabelWhenLoading && disabled` hid the label whenever the button was disabled (including validation-failed state), not just when actually loading.
+- fixes:
+  1. Added `maxHeight: "calc(100dvh - 64px)"` to SplitLayoutWrapper to constrain to viewport. Changed FormPanel to `alignItems: "flex-start"` and `overflowY: "auto"` for proper scroll.
+  2. Fixed CustomButton: `shouldHideLabel = hideLabelWhenLoading && disabled && !!endIcon` — label is only hidden when loading spinner (endIcon) is present.
+  3. Reduced form spacing (mt, gap) to make forms more compact.
+- files_changed:
+  - Containers/Login/styled.tsx: SplitLayoutWrapper maxHeight + FormPanel scroll fix
+  - pages/auth/register.tsx: Reduced spacing (mt: 2.5→1.5, gap: 12→10, button mt: 24→12)
+  - Components/UI/Buttons/index.tsx: Fixed shouldHideLabel logic
+
+### Test Request
+- test_type: frontend
+- test_url: https://payment-config-stage.preview.emergentagent.com
+- test_scope: Registration page (/auth/register) - verify both email and phone registration forms fit in viewport with buttons visible
+- test_steps:
+  1. Navigate to /auth/register
+  2. Verify EMAIL tab: All fields (First name, Surname, Email, Password, Confirm password) + "Sign up" button visible without scrolling
+  3. Click "Mobile Number" tab
+  4. Verify PHONE tab: All fields (Full Name, Phone Number, Password) + "Send Verification Code" button visible with TEXT showing (not blank)
+  5. Navigate to /auth/login - verify no regression (login form still looks correct)
+  6. HARD CONSTRAINT: DO NOT submit any forms — this is connected to LIVE production DB
+
+
 ## Dashboard Stats Loading Fix (2026-06-28)
 - bug_report: Dashboard data (Volume Today, Volume Yesterday, Transactions Today, Pending, Total Transactions, Total Volume) stuck showing skeleton loading on production DigitalOcean deployment
 - root_cause: Redux `debounce(400, DASHBOARD_INIT, DashboardSaga)` in RootSaga.ts was silently dropping 2 of 3 dashboard fetch dispatches. The `useDashboardData` hook dispatched 3 separate `DASHBOARD_INIT` actions (stats, fee-tiers, recent-tx) simultaneously — since all shared the same Redux type `DASHBOARD_INIT`, debounce kept only the LAST one (`DASHBOARD_RECENT_TX_FETCH`). The main `DASHBOARD_FETCH` (stats/volume/transactions) was dropped, so `loading` stayed `true` forever.
@@ -2663,3 +2690,104 @@ The fix is architecturally sound:
 3. ✅ No Redux/Dashboard console errors
 4. ⚠️ Manual verification recommended: Login with OTP and verify dashboard stats load actual data (not skeletons)
 5. ✅ Fix is ready for production deployment
+
+
+## Registration Page UI Fix Testing Results (2026-06-28 16:10:15 UTC)
+- agent: testing
+- test_date: 2026-06-28 16:10:15 UTC
+- test_url: https://payment-config-stage.preview.emergentagent.com/auth/register
+- bug_fix_context: Fixed two critical UI bugs: (1) Phone registration "Send Verification Code" button text was INVISIBLE (appeared as blank gray bar), (2) Email registration form was too long requiring scrolling to see "Sign up" button
+
+### BUG FIX IMPLEMENTATION VERIFIED ✅
+- **Fix 1**: SplitLayoutWrapper maxHeight constraint (Containers/Login/styled.tsx line 39)
+  * Added `maxHeight: "calc(100dvh - 64px)"` to constrain card to viewport height
+  * FormPanel now has `overflowY: "auto"` and `alignItems: "flex-start"` for proper scrolling
+- **Fix 2**: CustomButton label visibility logic (Components/UI/Buttons/index.tsx line 142)
+  * Changed from `shouldHideLabel = hideLabelWhenLoading && disabled` 
+  * To `shouldHideLabel = hideLabelWhenLoading && disabled && !!endIcon`
+  * Label now only hidden when loading spinner (endIcon) is present, not just when disabled
+- **Fix 3**: Reduced form spacing (pages/auth/register.tsx)
+  * Gap reduced from 12px to 10px (line 780)
+  * Button margin-top reduced from 24px to 12px (line 1048)
+
+### TEST 1: EMAIL REGISTRATION TAB ✅ PASS
+- **Viewport**: 1920x1080 (desktop)
+- **All 11 elements visible within viewport without scrolling:**
+  1. ✅ Registration title visible
+  2. ✅ Continue with Google button visible
+  3. ✅ E-mail/Mobile Number toggle visible
+  4. ✅ First Name field visible
+  5. ✅ Surname field visible
+  6. ✅ Email field visible
+  7. ✅ Password field visible
+  8. ✅ Confirm Password field visible
+  9. ✅ "Have a referral code?" link visible
+  10. ✅ **"Sign up" button FULLY VISIBLE** (button bottom Y: 844px, viewport: 1080px)
+  11. ✅ "Do you already have an account? Log in" text visible
+- **Key Fix Verified**: Sign up button is at Y position 844px, well within 1080px viewport
+- **Result**: ✅ NO SCROLLING REQUIRED to see Sign up button (bug fixed!)
+- Screenshot: email_tab_viewport.png
+
+### TEST 2: PHONE REGISTRATION TAB ✅ PASS
+- **Viewport**: 1920x1080 (desktop)
+- **All 6 elements visible:**
+  1. ✅ Full Name field visible
+  2. ✅ Phone Number field visible
+  3. ✅ Password field visible
+  4. ✅ "Have a referral code?" link visible
+  5. ✅ **"Send Verification Code" button visible with TEXT SHOWING**
+  6. ✅ "Do you already have an account? Log in" text visible
+- **Key Fix Verified - Button Text Visibility:**
+  * Button text content: "Send Verification Code" ✅ (not blank!)
+  * Button label element visible: ✅ YES
+  * Label opacity: 1 (fully visible)
+  * Label display: block (not hidden)
+  * Button disabled: true (expected when form empty)
+  * Button background: rgb(176, 190, 197) - gray disabled state
+  * Button text color: rgb(255, 255, 255) - white text on gray background
+- **Result**: ✅ Button text is VISIBLE even in disabled state (bug fixed!)
+- Screenshot: phone_tab_viewport.png
+
+### TEST 3: LOGIN PAGE REGRESSION TEST ✅ PASS
+- **Verification**: Login page still works correctly after registration page fixes
+- **Elements checked:**
+  * ✅ Page title "Log in" visible
+  * ✅ Email field visible
+  * ✅ Continue button visible
+  * ✅ Google login option visible
+  * ✅ Create account link visible
+- **Result**: ✅ No regression detected
+- Screenshot: login_page_viewport.png
+
+### OVERALL TEST RESULT: ✅✅✅ ALL TESTS PASSED ✅✅✅
+
+### BUG FIX VERIFICATION SUMMARY
+1. ✅ **Email Registration Bug FIXED**: Sign up button now visible within viewport (no scrolling required)
+   - Button positioned at Y: 844px within 1080px viewport
+   - All form fields (First name, Surname, Email, Password, Confirm password) visible
+   - Referral code link and login link also visible
+   
+2. ✅ **Phone Registration Bug FIXED**: Send Verification Code button text is now visible (not blank)
+   - Button text "Send Verification Code" displays correctly
+   - Label element has opacity: 1 and display: block
+   - White text on gray background when disabled (proper contrast)
+   - Text remains visible even when button is disabled
+   
+3. ✅ **No Regression**: Login page continues to work correctly
+
+### SCREENSHOTS CAPTURED
+- email_tab_viewport.png - Email registration with all fields + Sign up button visible
+- phone_tab_viewport.png - Phone registration with visible "Send Verification Code" button text
+- login_page_viewport.png - Login page showing no regression
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ Both critical bugs successfully fixed
+- ✅ Email registration form fits within viewport
+- ✅ Phone registration button text is visible
+- ✅ No regressions detected on login page
+- ✅ All UI elements render correctly
+- ✅ Ready for production deployment
+
+### NEXT STEPS FOR MAIN AGENT
+- ✅ Both bugs verified fixed - no further action needed
+- ✅ Ready to summarize and finish

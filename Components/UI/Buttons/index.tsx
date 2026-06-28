@@ -139,7 +139,7 @@ const CustomButton: React.FC<CustomButtonProps> = ({
 
   const finalIconSize = iconSize ?? 10;
 
-  const shouldHideLabel = hideLabelWhenLoading && disabled;
+  const shouldHideLabel = hideLabelWhenLoading && disabled && !!endIcon;
   const animationClass = showSuccessAnimation
     ? "success-pulse"
     : showErrorAnimation
