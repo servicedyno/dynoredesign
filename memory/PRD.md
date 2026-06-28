@@ -5,6 +5,14 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-06-28 — Dark/Light Mode SVG Icon Fix & Mobile Responsiveness (P0)
+- **Root cause**: 87 SVG files in `/app/assets/Icons/` had hardcoded dark fills (`#242428`, `#676768`, `#0004FF`) that were invisible on dark backgrounds. Many `<Image>` components also had hardcoded CSS filter styles (`brightness(0) invert(0%)`) that prevented theme adaptation.
+- **Fix**: Added global CSS classes `.themed-icon` (dark fills → light gray in dark mode) and `.themed-icon-primary` (blue fills → lighter blue in dark mode) to `globals.css`. Updated 25 component files to use these classes instead of hardcoded filters.
+- **MobileNavigationBar**: Made `IconButton` dark-mode-aware in `styled.tsx` — uses `invert(85%)` in dark mode vs `invert(0%)` in light mode.
+- **TSX icon components**: Changed `ClockIcon.tsx` from `fill="#1A1919"` to `fill="currentColor"`.
+- **Files updated**: globals.css, CryptoSelection.tsx, PaymentSettingsBasic.tsx, DescriptionSection.tsx, Wallet/index.tsx, HelpAndSupport/index.tsx, TransactionsTopBar.tsx, TransactionsTable.tsx, PaymentLinksTopBar.tsx, PaymentLinksTable.tsx, Features.tsx, HomeFooter/index.tsx, MobileNavigationBar/styled.tsx, InfoBanner/index.tsx, TaxSection.tsx, PaymentLinkHeader.tsx, SaveChangeModel.tsx, WebhookNotificationsSection.tsx, CryptoConversionSection.tsx, PaymentToleranceSection.tsx, CreateApiModel/index.tsx, SuccessAPIModel/index.tsx, ForgotPasswordDialog/index.tsx, OtpDialog/index.tsx, ClockIcon.tsx.
+- **Verified**: 100% pass rate on 8 frontend test scenarios (desktop + mobile, light + dark mode). Home page, login page, features section, and footer all render correctly in both themes and viewports.
+
 ### 2026-06-28 — P0 FIX: Dashboard 500s for empty/new merchants
 - **Root cause**: `tbl_user_self_transaction` table was never created in this DB — its model (`models/userModels/selfTransactionModel.ts`) existed and was exported, but `selfTransactionModel.sync(...)` was missing from the server.ts startup sync list (its inline sync was commented out). `getDashboard` (selfCountQuery) and `getUserAnalytics` (`selfTransactionModel.findAndCountAll`) both query it → `relation "tbl_user_self_transaction" does not exist` → 500.
 - **Fix** (`server.ts`, after the onboarding-table sync): `const { selfTransactionModel } = await import("./models/userModels"); await selfTransactionModel.sync(syncOptions);`. Non-destructive — `syncOptions = isProduction ? {} : {alter:true}`, so production only creates the table if missing (never alters/drops data).
