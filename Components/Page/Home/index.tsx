@@ -4,6 +4,8 @@ import HeroSection from "./Hero";
 import SocialProofSection from "./SocialProof";
 import CoreValueProps from "./CoreValueProps";
 import FinalCTA from "./FinalCTA";
+import Testimonials from "./Testimonials";
+import FAQ from "./FAQ";
 import { HomeContainer, HomeFullWidthContainer, HomeWrapper } from "./styled";
 
 const HomePage: FC = () => {
@@ -42,6 +44,14 @@ const HomePage: FC = () => {
 
       <HomeFullWidthContainer>
         <FeeSection />
+      </HomeFullWidthContainer>
+
+      <HomeContainer>
+        <Testimonials />
+      </HomeContainer>
+
+      <HomeFullWidthContainer>
+        <FAQ />
       </HomeFullWidthContainer>
 
       <HomeFullWidthContainer>

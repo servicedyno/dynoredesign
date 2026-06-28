@@ -40,7 +40,7 @@ const FeeSection = () => {
       ref={sectionRef}
       id="fee-calculator"
       style={{
-        padding: isMobile ? "80px 0" : "120px 0",
+        padding: isMobile ? "80px 0" : "140px 0",
         maxWidth: 1280,
         margin: "0 auto",
       }}

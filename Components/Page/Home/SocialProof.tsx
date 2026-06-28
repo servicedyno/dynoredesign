@@ -57,7 +57,7 @@ const SocialProofSection: FC = () => {
     <Box
       ref={sectionRef}
       sx={{
-        py: isMobile ? 5 : 7,
+        py: isMobile ? 6 : 9,
         px: isMobile ? 2 : 4,
         maxWidth: 1100,
         mx: "auto",

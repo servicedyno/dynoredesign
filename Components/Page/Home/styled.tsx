@@ -14,15 +14,15 @@ export const HomeContainer = styled(Box)(({ theme }) => ({
   width: "100%",
   maxWidth: 1280,
   margin: "0 auto",
-  paddingLeft: theme.spacing(2),
-  paddingRight: theme.spacing(2),
+  paddingLeft: theme.spacing(3),
+  paddingRight: theme.spacing(3),
 }));
 
 export const HomeFullWidthContainer = styled(Box)(({ theme }) => ({
   width: "100%",
   margin: "0 auto",
-  paddingLeft: theme.spacing(2),
-  paddingRight: theme.spacing(2),
+  paddingLeft: theme.spacing(3),
+  paddingRight: theme.spacing(3),
   backgroundColor: alpha(theme.palette.background.default, 0.3),
 }));
 
@@ -32,16 +32,16 @@ export const Root = styled(Box)(() => ({
 }));
 
 export const TopSection = styled(Box)(({ theme }) => ({
-  paddingTop: "24px",
+  paddingTop: "32px",
   zIndex: 20,
   [theme.breakpoints.up("sm")]: {
-    paddingTop: "35px",
-  },
-  [theme.breakpoints.up("md")]: {
     paddingTop: "48px",
   },
+  [theme.breakpoints.up("md")]: {
+    paddingTop: "72px",
+  },
   [theme.breakpoints.up("lg")]: {
-    paddingTop: "63px",
+    paddingTop: "88px",
   },
 }));
 

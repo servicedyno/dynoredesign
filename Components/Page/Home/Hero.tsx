@@ -47,6 +47,7 @@ const HeroSection = () => {
 
         <ButtonsRow>
           <HomeButton variant="primary" label={t("startAcceptingCrypto")} navigateTo="/auth/register" />
+          <HomeButton variant="outlined" label="View Documentation" navigateTo="/documentation" showIcon={false} />
         </ButtonsRow>
 
         {/* Trust micro-copy */}

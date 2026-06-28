@@ -71,7 +71,7 @@ const CoreValueProps: React.FC = () => {
       ref={sectionRef}
       id="features"
       style={{
-        padding: isMobile ? "80px 0" : "120px 0",
+        padding: isMobile ? "80px 0" : "140px 0",
       }}
     >
       <HomeSectionTitle

@@ -30,7 +30,7 @@ const FinalCTA: React.FC = () => {
     <section
       ref={sectionRef}
       style={{
-        padding: isMobile ? "80px 16px" : "120px 32px",
+        padding: isMobile ? "80px 16px" : "140px 32px",
         maxWidth: 1280,
         margin: "0 auto",
       }}
@@ -102,12 +102,15 @@ const FinalCTA: React.FC = () => {
           sx={{
             display: "flex",
             justifyContent: "center",
+            gap: 2,
             mb: 3,
             position: "relative",
             zIndex: 1,
+            flexWrap: "wrap",
           }}
         >
           <HomeButton variant="primary" label={t("startAcceptingCrypto")} navigateTo="/auth/register" />
+          <HomeButton variant="outlined" label="View Documentation" navigateTo="/documentation" showIcon={false} />
         </Box>
 
         <Box
