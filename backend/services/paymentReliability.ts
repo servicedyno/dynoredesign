@@ -421,6 +421,11 @@ export async function markSettlementFailed(paymentId: string, error: string): Pr
     failedAt: Date.now(),
   });
   await setRedisTTL(redisKey, 300); // 5 min — allow retry after cooldown
+  
+  // Also release the atomic claim lock so retries can proceed
+  try {
+    await deleteRedisItem(`settlement-claim-${paymentId}`);
+  } catch (_) { /* non-critical */ }
 }
 
 
