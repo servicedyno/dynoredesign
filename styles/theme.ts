@@ -870,6 +870,12 @@ export const themeDark = createTheme({
         root: {
           borderRadius: "20px",
         },
+        input: {
+          "&::placeholder": {
+            color: "#A0A1A5",
+            opacity: 1,
+          },
+        },
       },
     },
     MuiSelect: {

@@ -392,7 +392,8 @@ const InputField: React.FC<InputFieldProps> = ({
                   lineHeight: "1.5",
                   color: disabled ? "#B0BEC5" : theme.palette.text.primary,
                   "&::placeholder": {
-                    color: theme.palette.text.disabled,
+                    color: theme.palette.text.secondary,
+                    opacity: 1,
                     fontFamily: "UrbanistMedium",
                     fontSize: isMobile ? "10px" : "13px",
                     lineHeight: 1.2,
@@ -470,7 +471,7 @@ const InputField: React.FC<InputFieldProps> = ({
               fontWeight: 500,
               color: error
                 ? theme.palette.error.main
-                : theme.palette.secondary.contrastText,
+                : theme.palette.text.secondary,
               lineHeight: isMobile ? "1.2" : "20px",
               textAlign: "start",
             }}

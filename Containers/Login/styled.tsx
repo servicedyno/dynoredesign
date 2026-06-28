@@ -67,7 +67,7 @@ export const AuthPageBackground = styled(Box)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   justifyContent: "center",
-  background: theme.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
+  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f0f2f7",
   padding: "32px 24px",
   boxSizing: "border-box",
 
@@ -140,9 +140,9 @@ export const CardWrapper = styled(Card)(({ theme }) => ({
   height: "fit-content",
   borderRadius: "12px",
   padding: "8px",
-  background: theme.palette.mode === "dark" ? "rgba(255,255,255,0.03)" : "rgba(0,0,0,0.015)",
+  background: theme.palette.mode === "dark" ? "#1A1D2E" : "rgba(0,0,0,0.015)",
   textAlign: "center",
-  border: `1px solid ${theme.palette.mode === "dark" ? "rgba(255,255,255,0.06)" : "#E9ECF2"}`,
+  border: `1px solid ${theme.palette.mode === "dark" ? "#2A2D42" : "#E9ECF2"}`,
   boxShadow: "none",
 
   [theme.breakpoints.down("sm")]: {

@@ -925,7 +925,7 @@ export default function Login() {
         flexDirection: "column",
         justifyContent: { xs: "flex-start", sm: "center" },
         alignItems: "center",
-        background: (t: any) => t.palette.mode === "dark" ? "#080A14" : "#f0f2f7",
+        background: (t: any) => t.palette.mode === "dark" ? "#0B0D17" : "#f0f2f7",
         padding: { xs: "16px", sm: "32px 24px" },
         boxSizing: "border-box",
       }}
