@@ -1,1232 +1,667 @@
-import LoadingIcon from "@/assets/Icons/LoadingIcon";
 import Logo from "@/assets/Images/auth/dynopay-logo.png";
 import WhiteLogo from "@/assets/Images/auth/dynopay-white-logo.png";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
-import PasswordValidation from "@/Components/UI/AuthLayout/PasswordValidation";
 import TitleDescription from "@/Components/UI/AuthLayout/TitleDescription";
 import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import ThemeToggle from "@/Components/UI/ThemeToggle";
-import OtpDialog from "@/Components/UI/OtpDialog";
 import AuthBrandPanel from "@/Components/UI/AuthLayout/AuthBrandPanel";
-import { AuthContainer, AuthPageBackground, SplitLayoutWrapper, FormPanel, CardWrapper, ImageCenter } from "@/Containers/Login/styled";
+import { AuthPageBackground, SplitLayoutWrapper, FormPanel } from "@/Containers/Login/styled";
 import useIsMobile from "@/hooks/useIsMobile";
-import {
-  USER_API_ERROR,
-  USER_VERIFY_EMAIL,
-  USER_REGISTER,
-  USER_RESEND_VERIFICATION,
-  UserAction,
-} from "@/Redux/Actions/UserAction";
-import { theme } from "@/styles/theme";
-import { rootReducer } from "@/utils/types";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import { Box, Typography, ToggleButton, ToggleButtonGroup, useTheme } from "@mui/material";
-import EmailIcon from "@mui/icons-material/Email";
-import PhoneIcon from "@mui/icons-material/Phone";
-import Image from "next/image";
-import router, { useRouter } from "next/router";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
-import { useDispatch, useSelector } from "react-redux";
-import * as yup from "yup";
 import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
-import axiosBaseApi from "@/axiosConfig";
 import GoogleIcon from "@/assets/Images/googleIcon.svg";
 import { signIn } from "next-auth/react";
-import { Divider } from "@mui/material";
 import { TOAST_SHOW } from "@/Redux/Actions/ToastAction";
 import { USER_LOGIN } from "@/Redux/Actions/UserAction";
+import axiosBaseApi from "@/axiosConfig";
+import Image from "next/image";
+import { useRouter } from "next/router";
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { useDispatch } from "react-redux";
+import {
+  Box,
+  Typography,
+  ToggleButton,
+  ToggleButtonGroup,
+  useTheme,
+  Divider,
+  Link,
+} from "@mui/material";
+import { ArrowBack, CheckCircleOutline } from "@mui/icons-material";
+import Head from "next/head";
 
-type RegisterErrorKey =
-  | ""
-  | "firstNameRequired"
-  | "lastNameRequired"
-  | "emailRequired"
-  | "emailInvalid"
-  | "passwordRequired"
-  | "passwordInvalid"
-  | "passwordAndConfirmPasswordShouldBeSame";
+type RegisterMethod = "email" | "phone";
+type Step = "input" | "otp" | "success";
+
+const LoadingSpinner = ({ size = 20 }: { size?: number }) => (
+  <Box
+    sx={{
+      width: size, height: size,
+      border: "2px solid rgba(255,255,255,0.3)",
+      borderTop: "2px solid #fff",
+      borderRadius: "50%",
+      animation: "spin 0.8s linear infinite",
+      "@keyframes spin": { "0%": { transform: "rotate(0deg)" }, "100%": { transform: "rotate(360deg)" } },
+    }}
+  />
+);
 
 const Register = () => {
-  const isMobile = useIsMobile();
   const { t } = useTranslation("auth");
+  const theme = useTheme();
+  const isMobile = useIsMobile("sm");
+  const router = useRouter();
   const dispatch = useDispatch();
-  const muiTheme = useTheme();
-  const nextRouter = useRouter();
-  // Gate theme-dependent rendering until mount so SSR (always 'dark') and the
-  // first client render agree — prevents the logo hydration mismatch.
-  const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
-  const userState = useSelector((state: rootReducer) => state.userReducer);
 
-  const [firstName, setFirstName] = useState("");
-  const [firstNameError, setFirstNameError] = useState<RegisterErrorKey>("");
-
-  const [lastName, setLastName] = useState("");
-  const [lastNameError, setLastNameError] = useState<RegisterErrorKey>("");
-
+  // State
+  const [step, setStep] = useState<Step>("input");
+  const [method, setMethod] = useState<RegisterMethod>("email");
   const [email, setEmail] = useState("");
-  const [emailError, setEmailError] = useState<RegisterErrorKey>("");
-
-  const [password, setPassword] = useState("");
-  const [passwordError, setPasswordError] = useState<RegisterErrorKey>("");
-  const [showPassword, setShowPassword] = useState(false);
-  const [showPasswordValidation, setShowPasswordValidation] = useState(false);
-  const passwordFieldRef = useRef<HTMLDivElement | null>(null);
-
-  const [confirmPassword, setConfirmPassword] = useState("");
-  const [confirmPasswordError, setConfirmPasswordError] =
-    useState<RegisterErrorKey>("");
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
-  // Email verification state
-  const [pendingVerification, setPendingVerification] = useState(false);
-  const [showOtpDialog, setShowOtpDialog] = useState(false);
-  const [otpCountdown, setOtpCountdown] = useState(0);
-  const [otpError, setOtpError] = useState("");
-  const [otpSubmitted, setOtpSubmitted] = useState(false);
-  const prevLoading = useRef(false);
-
-  const passwordRegex =
-    /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-=__+{}\[\]:;<>,.?/~]).{8,20}$/;
-
-  // Registration method toggle
-  const [registerMethod, setRegisterMethod] = useState<"email" | "phone">("email");
-
-  // Phone registration state
   const [phone, setPhone] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [phoneError, setPhoneError] = useState("");
-  const [phoneName, setPhoneName] = useState("");
-  const [phoneNameError, setPhoneNameError] = useState("");
-  const [phoneOtpSent, setPhoneOtpSent] = useState(false);
-  const [phoneOtpDialog, setPhoneOtpDialog] = useState(false);
-  const [phoneOtpCountdown, setPhoneOtpCountdown] = useState(0);
-  const [phoneOtpError, setPhoneOtpError] = useState("");
-  const [phonePassword, setPhonePassword] = useState("");
-  const [phonePasswordError, setPhonePasswordError] = useState("");
-  const [showPhonePassword, setShowPhonePassword] = useState(false);
-  const [showPhonePasswordValidation, setShowPhonePasswordValidation] = useState(false);
-  const phonePasswordFieldRef = useRef<HTMLDivElement | null>(null);
-  const [phoneLoading, setPhoneLoading] = useState(false);
-
-  // Referral code state
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [otpError, setOtpError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [countdown, setCountdown] = useState(0);
+  const [showReferralInput, setShowReferralInput] = useState(false);
   const [referralCode, setReferralCode] = useState("");
-  const [referralCodeError, setReferralCodeError] = useState("");
-  const [showReferralField, setShowReferralField] = useState(false);
+  const [phoneTypeChecking, setPhoneTypeChecking] = useState(false);
 
-  // Auto-populate referral code from URL query param
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Check for referral code in URL
   useEffect(() => {
-    const ref = nextRouter.query.ref as string;
-    if (ref) {
-      setReferralCode(ref);
-      setShowReferralField(true);
+    if (router.query.ref && typeof router.query.ref === "string") {
+      setReferralCode(router.query.ref);
+      setShowReferralInput(true);
     }
-  }, [nextRouter.query.ref]);
+  }, [router.query]);
 
-  // Phone OTP countdown timer
+  // Countdown timer
   useEffect(() => {
-    if (phoneOtpCountdown <= 0) return;
-    const timer = setInterval(() => {
-      setPhoneOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
     return () => clearInterval(timer);
-  }, [phoneOtpCountdown]);
+  }, [countdown]);
 
-  // Session idle timeout (30 minutes)
-  const [showSessionTimeout, setShowSessionTimeout] = useState(false);
+  // Auto-focus first OTP input
   useEffect(() => {
-    let idleTimer: NodeJS.Timeout;
-    const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+    if (step === "otp") {
+      setTimeout(() => otpRefs.current[0]?.focus(), 200);
+    }
+  }, [step]);
 
-    const resetTimer = () => {
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(() => {
-        setShowSessionTimeout(true);
-      }, IDLE_TIMEOUT);
-    };
-
-    const events = ["mousedown", "keydown", "scroll", "touchstart"];
-    events.forEach((event) => window.addEventListener(event, resetTimer));
-    resetTimer();
-
-    return () => {
-      clearTimeout(idleTimer);
-      events.forEach((event) => window.removeEventListener(event, resetTimer));
-    };
+  // ─── Google Sign Up ───
+  const handleGoogleLogin = useCallback(async () => {
+    try {
+      await signIn("google", { callbackUrl: "/dashboard" });
+    } catch (err) {
+      console.error("Google sign-in error:", err);
+    }
   }, []);
 
-  // Handle Google social login
-  const handleGoogleLogin = async () => {
-    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
-    if (!clientId) {
-      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
+  // ─── Phone Type Check ───
+  const checkPhoneType = useCallback(async (phoneDigits: string): Promise<boolean> => {
+    setPhoneTypeChecking(true);
+    try {
+      const res = await axiosBaseApi.post("/user/phone-type-check", { mobile: phoneDigits });
+      const data = res?.data?.data;
+      if (data && !data.is_mobile && data.phone_type !== "unknown") {
+        setPhoneError("Only mobile numbers are accepted. Please use a mobile phone number.");
+        return false;
+      }
+      return true;
+    } catch {
+      // If check fails, allow through
+      return true;
+    } finally {
+      setPhoneTypeChecking(false);
+    }
+  }, []);
+
+  // ─── Step 1: Send OTP ───
+  const handleContinue = useCallback(async () => {
+    setEmailError("");
+    setPhoneError("");
+    setLoading(true);
+
+    try {
+      if (method === "email") {
+        if (!email || !email.includes("@")) {
+          setEmailError("Please enter a valid email address");
+          setLoading(false);
+          return;
+        }
+        await axiosBaseApi.post("/user/registerEmail", {
+          email: email.toLowerCase().trim(),
+          referral_code: referralCode || undefined,
+        });
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        if (digits.length < 10) {
+          setPhoneError("Please enter a valid mobile number");
+          setLoading(false);
+          return;
+        }
+
+        // Check phone type first
+        const isMobileNumber = await checkPhoneType(digits);
+        if (!isMobileNumber) {
+          setLoading(false);
+          return;
+        }
+
+        await axiosBaseApi.post("/user/registerPhone", {
+          mobile: digits,
+          referral_code: referralCode || undefined,
+        });
+      }
+
+      setStep("otp");
+      setOtp(["", "", "", "", "", ""]);
+      setCountdown(60);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Something went wrong. Please try again.";
+      if (method === "email") setEmailError(msg);
+      else setPhoneError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [method, email, phone, referralCode, checkPhoneType]);
+
+  // ─── Step 2: Verify OTP & Create Account ───
+  const handleVerifyOtp = useCallback(async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      setOtpError("Please enter the complete 6-digit code");
       return;
     }
 
-    try {
-      if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
-        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
-          client_id: clientId,
-          scope: "openid email profile",
-          callback: async (tokenResponse: any) => {
-            if (tokenResponse?.access_token) {
-              try {
-                const res = await axiosBaseApi.post("user/google-signin", {
-                  accessToken: tokenResponse.access_token,
-                });
-                const { data, message } = res?.data || {};
-                if (data?.userData && data?.accessToken) {
-                  dispatch({ type: TOAST_SHOW, payload: { message: message || "Login successful" } });
-                  dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });
-                } else {
-                  throw new Error("Invalid response");
-                }
-              } catch (e: any) {
-                const msg = e.response?.data?.message ?? e.message ?? "Google login failed";
-                dispatch({ type: TOAST_SHOW, payload: { message: msg, severity: "error" } });
-              }
-            }
-          },
-        });
-        tokenClient.requestAccessToken();
-      } else {
-        signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
-      }
-    } catch {
-      signIn("google", { callbackUrl: "/auth/validateSocialLogin" });
-    }
-  };
-
-  const handlePhoneRegisterStep1 = async () => {
-    if (!phoneName.trim()) { setPhoneNameError("Name is required"); return; }
-    if (!/^[a-zA-Z\s]+$/.test(phoneName.trim())) { setPhoneNameError("Name must contain only letters"); return; }
-    // Strip all non-digit characters for validation and API call
-    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
-    if (!cleanMobile || cleanMobile.length < 10) { setPhoneError("Valid mobile number is required (select country code and enter number)"); return; }
-    if (!phonePassword || !passwordRegex.test(phonePassword)) { setPhonePasswordError(t("passwordValidationError")); return; }
-    // Validate referral code format if provided
-    if (referralCode.trim()) {
-      const referralPattern = /^DYNO-[A-F0-9]{6}$/i;
-      if (!referralPattern.test(referralCode.trim())) {
-        setReferralCodeError("Invalid referral code format (e.g. DYNO-A1B2C3)");
-        return;
-      }
-      setReferralCodeError("");
-    }
-    setPhoneNameError("");
-    setPhoneError("");
-    setPhonePasswordError("");
-    setPhoneLoading(true);
-    try {
-      const phonePayload: any = {
-        name: phoneName.trim(),
-        mobile: cleanMobile,
-        password: phonePassword,
-      };
-      if (referralCode.trim()) {
-        phonePayload.referral_code = referralCode.trim();
-      }
-      await axiosBaseApi.post("/user/registerPhone", phonePayload);
-      setPhoneOtpSent(true);
-      setPhoneOtpDialog(true);
-      setPhoneOtpCountdown(60);
-    } catch (err: any) {
-      const msg = err?.response?.data?.message || "Failed to send OTP. Please check your mobile number.";
-      setPhoneError(msg);
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  const handlePhoneOtpVerify = async (otp: string) => {
-    setPhoneOtpError("");
-    setPhoneLoading(true);
-    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
-    try {
-      const res = await axiosBaseApi.post("/user/registerPhone/verify", {
-        mobile: cleanMobile,
-        otp: otp.trim(),
-        name: phoneName.trim(),
-        password: phonePassword,
-      });
-      // If successful, user is created — redirect to login
-      if (res.data?.data?.token) {
-        // Auto-login
-        localStorage.setItem("token", res.data.data.token);
-        if (res.data.data.refreshToken) {
-          localStorage.setItem("refreshToken", res.data.data.refreshToken);
-        }
-        router.push("/dashboard");
-      } else {
-        router.push("/auth/login");
-      }
-    } catch (err: any) {
-      setPhoneOtpError(err?.response?.data?.message || "Invalid OTP. Please try again.");
-    } finally {
-      setPhoneLoading(false);
-    }
-  };
-
-  const handlePhoneResend = async () => {
-    setPhoneOtpError("");
-    const cleanMobile = phone.trim().replace(/[^\d]/g, '');
-    try {
-      await axiosBaseApi.post("/user/registerPhone", {
-        name: phoneName.trim(),
-        mobile: cleanMobile,
-        password: phonePassword,
-      });
-      setPhoneOtpCountdown(60);
-    } catch (err: any) {
-      setPhoneOtpError("Failed to resend OTP");
-    }
-  };
-
-  const registerSchema = yup.object().shape({
-    firstName: yup.string().required("firstNameRequired").matches(/^[a-zA-Z\s]+$/, "nameOnlyLetters"),
-    lastName: yup.string().required("lastNameRequired").matches(/^[a-zA-Z\s]+$/, "nameOnlyLetters"),
-    email: yup.string().email("emailInvalid").required("emailRequired"),
-    password: yup
-      .string()
-      .required("passwordRequired")
-      .matches(passwordRegex, "passwordInvalid"),
-    confirmPassword: yup.string().oneOf([yup.ref("password")]),
-  });
-
-  // Redirect to dashboard only AFTER email verification (not on registration)
-  useEffect(() => {
-    if (userState.name && !pendingVerification) {
-      router.push("/dashboard");
-    }
-  }, [userState, pendingVerification]);
-
-  // Reset pendingVerification on registration error
-  useEffect(() => {
-    if (
-      pendingVerification &&
-      !showOtpDialog &&
-      userState.error &&
-      userState.error.actionType === USER_REGISTER
-    ) {
-      setPendingVerification(false);
-    }
-  }, [userState.error, pendingVerification, showOtpDialog]);
-
-  // When registration succeeds, show OTP dialog
-  // NOTE: Backend registerUser already sends the verification OTP email,
-  // so we only open the dialog — no need to call resend-verification here
-  useEffect(() => {
-    if (userState.name && pendingVerification && !showOtpDialog) {
-      setShowOtpDialog(true);
-      setOtpCountdown(30);
-    }
-  }, [userState.name, pendingVerification, showOtpDialog]);
-
-  // Detect OTP verification result (loading transitions from true → false after submit)
-  useEffect(() => {
-    if (prevLoading.current && !userState.loading && otpSubmitted) {
-      if (!userState.error || (userState.error && userState.error.actionType !== USER_VERIFY_EMAIL)) {
-        // Check if email_verified was set
-        if (userState.email_verified) {
-          // OTP verified — allow redirect
-          setShowOtpDialog(false);
-          setPendingVerification(false);
-          setOtpSubmitted(false);
-        }
-      }
-      if (userState.error && userState.error.actionType === USER_VERIFY_EMAIL) {
-        setOtpError(userState.error.message || t("enterOTPError"));
-        setOtpSubmitted(false);
-      }
-    }
-    prevLoading.current = userState.loading;
-  }, [userState.loading, userState.error, userState.email_verified, otpSubmitted, t]);
-
-  // OTP countdown timer
-  useEffect(() => {
-    if (otpCountdown <= 0) return;
-    const timer = setInterval(() => {
-      setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
-    }, 1000);
-    return () => clearInterval(timer);
-  }, [otpCountdown]);
-
-  const handleOtpVerify = useCallback(
-    (otp: string) => {
-      setOtpError("");
-      setOtpSubmitted(true);
-      dispatch(UserAction(USER_VERIFY_EMAIL, { otp: otp.trim() }));
-    },
-    [dispatch],
-  );
-
-  const handleResendOtp = useCallback(() => {
     setOtpError("");
-    dispatch(UserAction(USER_RESEND_VERIFICATION, { email }));
-    setOtpCountdown(30);
-  }, [dispatch, email]);
+    setLoading(true);
 
-  useEffect(() => {
-    if (userState.loading) {
-      const timeout = setTimeout(() => {
-        if (!userState.name) {
-          dispatch({ type: USER_API_ERROR });
-        }
-      }, 10000);
-      return () => clearTimeout(timeout);
-    }
-  }, [userState.loading, userState.name, dispatch]);
-
-  const validateField = async (
-    field: "firstName" | "lastName" | "email" | "password",
-    nextValues?: {
-      firstName?: string;
-      lastName?: string;
-      email?: string;
-      password?: string;
-      confirmPassword?: string;
-    },
-  ) => {
     try {
-      await registerSchema.validateAt(field, {
-        firstName,
-        lastName,
-        email,
-        password,
-        confirmPassword,
-        ...(nextValues || {}),
-      });
-      if (field === "firstName") setFirstNameError("");
-      if (field === "lastName") setLastNameError("");
-      if (field === "email") setEmailError("");
-      if (field === "password") {
-        setPasswordError("");
-        setShowPasswordValidation(false);
-      }
-    } catch (e: any) {
-      const key = (e?.message || "") as RegisterErrorKey;
-      if (field === "firstName") setFirstNameError(key);
-      if (field === "lastName") setLastNameError(key);
-      if (field === "email") setEmailError(key);
-      if (field === "password") {
-        if (key === "passwordInvalid") {
-          setPasswordError("");
-          setShowPasswordValidation(true);
-        } else {
-          setPasswordError(key);
-        }
-      }
-    }
-  };
-
-  const handlePasswordChange = (value: string) => {
-    const valueWithoutSpaces = value.replace(/\s/g, "");
-    const finalValue = valueWithoutSpaces;
-
-    setPassword(finalValue);
-
-    if (!finalValue) {
-      setShowPasswordValidation(false);
-      if (passwordError) validateField("password", { password: finalValue });
-    } else if (passwordRegex.test(finalValue)) {
-      setPasswordError("");
-      setShowPasswordValidation(false);
-    } else {
-      setPasswordError("");
-      setShowPasswordValidation(true);
-    }
-
-    if (confirmPassword) {
-      if (finalValue && confirmPassword && confirmPassword !== finalValue) {
-        setConfirmPasswordError("passwordAndConfirmPasswordShouldBeSame");
-      } else {
-        setConfirmPasswordError("");
-      }
-    }
-  };
-
-  const handlePasswordBlur = () => {
-    setTimeout(() => {
-      setShowPasswordValidation(false);
-    }, 200);
-  };
-
-  const handleSignUp = async () => {
-    try {
-      await registerSchema.validate(
-        { firstName, lastName, email, password, confirmPassword },
-        { abortEarly: false },
-      );
-
-      setFirstNameError("");
-      setLastNameError("");
-      setEmailError("");
-      setPasswordError("");
-      setConfirmPasswordError("");
-
-      // Validate referral code format if provided
-      if (referralCode.trim()) {
-        const referralPattern = /^DYNO-[A-F0-9]{6}$/i;
-        if (!referralPattern.test(referralCode.trim())) {
-          setReferralCodeError("Invalid referral code format (e.g. DYNO-A1B2C3)");
-          return;
-        }
-        setReferralCodeError("");
-      }
-
-      const payload: any = {
-        name: `${firstName} ${lastName}`.trim(),
-        email,
-        password,
-      };
-
-      if (referralCode.trim()) {
-        payload.referral_code = referralCode.trim();
-      }
-
-      setPendingVerification(true);
-      dispatch(UserAction(USER_REGISTER, payload));
-    } catch (err: any) {
-      if (err.inner && Array.isArray(err.inner)) {
-        const fieldErrors: Record<string, RegisterErrorKey> = {};
-        err.inner.forEach((e: any) => {
-          if (e.path && !fieldErrors[e.path]) {
-            fieldErrors[e.path] = e.message as RegisterErrorKey;
-          }
+      let response;
+      if (method === "email") {
+        response = await axiosBaseApi.post("/user/registerEmail/verify-otp", {
+          email: email.toLowerCase().trim(),
+          otp: otpCode,
         });
-
-        setFirstNameError(fieldErrors.firstName || "");
-        setLastNameError(fieldErrors.lastName || "");
-        setEmailError(fieldErrors.email || "");
-        if (fieldErrors.password === "passwordInvalid") {
-          setPasswordError("");
-          setShowPasswordValidation(true);
-        } else {
-          setPasswordError(fieldErrors.password || "");
-        }
-
-        if (confirmPassword && password && confirmPassword !== password) {
-          setConfirmPasswordError("passwordAndConfirmPasswordShouldBeSame");
-        } else {
-          setConfirmPasswordError("");
-        }
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        response = await axiosBaseApi.post("/user/registerPhone/verify", {
+          mobile: digits,
+          otp: otpCode,
+        });
       }
+
+      const data = response?.data?.data;
+      if (data?.accessToken) {
+        // Store token and redirect
+        dispatch({
+          type: USER_LOGIN,
+          payload: data,
+        });
+        dispatch({
+          type: TOAST_SHOW,
+          payload: { message: "Account created successfully!", severity: "success" },
+        });
+        setStep("success");
+        // Auto redirect after brief success display
+        setTimeout(() => {
+          router.push("/dashboard");
+        }, 1500);
+      } else {
+        setOtpError("Account creation failed. Please try again.");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Invalid verification code. Please try again.";
+      setOtpError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [otp, method, email, phone, dispatch, router]);
+
+  // ─── Resend OTP ───
+  const handleResendOtp = useCallback(async () => {
+    if (countdown > 0) return;
+    setOtpError("");
+    setLoading(true);
+
+    try {
+      if (method === "email") {
+        await axiosBaseApi.post("/user/registerEmail", {
+          email: email.toLowerCase().trim(),
+          referral_code: referralCode || undefined,
+        });
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        await axiosBaseApi.post("/user/registerPhone", { mobile: digits });
+      }
+      setCountdown(60);
+      setOtp(["", "", "", "", "", ""]);
+      otpRefs.current[0]?.focus();
+    } catch {
+      setOtpError("Failed to resend code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [countdown, method, email, phone, referralCode]);
+
+  // ─── OTP Input Handlers ───
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setOtpError("");
+    if (value && index < 5) otpRefs.current[index + 1]?.focus();
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
+    if (e.key === "Enter" && otp.join("").length === 6) handleVerifyOtp();
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pastedData.length > 0) {
+      const newOtp = [...otp];
+      pastedData.split("").forEach((char, i) => { if (i < 6) newOtp[i] = char; });
+      setOtp(newOtp);
+      otpRefs.current[Math.min(pastedData.length, 5)]?.focus();
     }
   };
+
+  // ════════════════════════════════════════════════════════
+  // RENDER
+  // ════════════════════════════════════════════════════════
 
   return (
-    <AuthPageBackground>
-    <SplitLayoutWrapper>
-      {/* Left: Brand Panel */}
-      <AuthBrandPanel />
-
-      {/* Right: Form Panel */}
-      <FormPanel>
-      <Box sx={{ width: "100%", maxWidth: 420 }}>
-        {/* Mobile-only: Logo + controls */}
-        <Box
-          sx={{
-            display: { xs: "flex", lg: "none" },
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Image
-            src={mounted && muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
-            alt="logo"
-            width={isMobile ? 120 : 114}
-            height={isMobile ? 41 : 39}
-            draggable={false}
-            onClick={() => router.push("/")}
-            style={{ cursor: "pointer" }}
-          />
-          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+    <>
+      <Head>
+        <title>Create Account | DynoPay</title>
+      </Head>
+      <AuthPageBackground>
+        {/* Top bar: Language + Theme */}
+        {!isMobile && (
+          <Box
+            sx={{
+              position: "absolute", top: "24px", right: "32px",
+              display: "flex", gap: "12px", zIndex: 10,
+            }}
+          >
             <LanguageSwitcher />
-            <ThemeToggle size="small" />
+            <ThemeToggle />
           </Box>
-        </Box>
-
-        {/* Desktop-only: settings row */}
-        <Box
-          sx={{
-            display: { xs: "none", lg: "flex" },
-            justifyContent: "flex-end",
-            alignItems: "center",
-            mb: 2,
-            gap: 0.5,
-          }}
-        >
-          <LanguageSwitcher />
-          <ThemeToggle size="small" />
-        </Box>
-        <TitleDescription
-          title={t("register")}
-          description={t("registerDescription")}
-          align="left"
-          titleVariant="h2"
-          descriptionVariant="p"
-        />
-
-        {/* B) Primary path: Continue with Google (fastest — verified email, no password/OTP) */}
-        <CustomButton
-          data-testid="google-signup-top-btn"
-          label="Continue with Google"
-          variant="outlined"
-          fullWidth
-          onClick={handleGoogleLogin}
-          startIcon={
-            <Image
-              src={GoogleIcon}
-              alt="google"
-              width={20}
-              height={20}
-              draggable={false}
-            />
-          }
-          sx={{ mt: 1.5 }}
-        />
-
-        {/* Divider: or sign up manually */}
-        <Box sx={{ mt: 1.5, mb: 0.5 }}>
-          <Divider
-            sx={{
-              "&::before, &::after": { borderColor: "divider" },
-            }}
-          >
-            <Typography
-              variant="body2"
-              sx={{
-                fontSize: isMobile ? "12px" : "14px",
-                fontFamily: "UrbanistMedium",
-                color: "#676768",
-                fontWeight: 500,
-              }}
-            >
-              {t("or")} sign up with
-            </Typography>
-          </Divider>
-        </Box>
-
-        {/* Registration Method Toggle */}
-        <Box sx={{ mt: 1.5, mb: 0.5, display: "flex", justifyContent: "center" }}>
-          <ToggleButtonGroup
-            value={registerMethod}
-            exclusive
-            onChange={(_, val) => { if (val) setRegisterMethod(val); }}
-            size="small"
-            sx={{
-              "& .MuiToggleButton-root": {
-                textTransform: "none",
-                fontFamily: "UrbanistMedium",
-                fontSize: "13px",
-                px: 3,
-                py: 0.8,
-                borderColor: theme.palette.divider,
-                "&.Mui-selected": {
-                  bgcolor: theme.palette.primary.main,
-                  color: "#fff",
-                  "&:hover": { bgcolor: theme.palette.primary.dark },
-                },
-              },
-            }}
-          >
-            <ToggleButton value="email">
-              <EmailIcon sx={{ fontSize: 16, mr: 0.5 }} /> {t("email")}
-            </ToggleButton>
-            <ToggleButton value="phone">
-              <PhoneIcon sx={{ fontSize: 16, mr: 0.5 }} /> {t("phone")}
-            </ToggleButton>
-          </ToggleButtonGroup>
-        </Box>
-
-        {registerMethod === "phone" ? (
-          /* Phone Registration Form */
-          <Box
-            sx={{
-              marginTop: isMobile ? "12px" : "16px",
-              display: "flex",
-              flexDirection: "column",
-              gap: "12px",
-            }}
-          >
-            <InputField
-              label={t("fullName")}
-              type="text"
-              placeholder={t("fullNamePlaceholder")}
-              value={phoneName}
-              onChange={(e) => { const filtered = e.target.value.replace(/[^a-zA-Z\s]/g, ""); setPhoneName(filtered); setPhoneNameError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
-              error={!!phoneNameError}
-              helperText={phoneNameError}
-            />
-            <Box>
-              <Typography
-                sx={{
-                  fontSize: isMobile ? "10px" : "13px",
-                  fontFamily: "UrbanistMedium",
-                  fontWeight: 500,
-                  color: muiTheme.palette.text.primary,
-                  mb: "6px",
-                }}
-              >
-                {t("phoneNumber")}
-              </Typography>
-              <CountryPhoneInput
-                value={phone}
-                onChange={(value) => { setPhone(value); setPhoneError(""); }}
-                placeholder="Enter mobile number"
-                defaultCountry="US"
-                error={!!phoneError}
-              />
-              {phoneError && (
-                <Typography
-                  sx={{
-                    fontSize: "11px",
-                    fontFamily: "UrbanistMedium",
-                    color: muiTheme.palette.error.main,
-                    mt: "4px",
-                  }}
-                >
-                  {phoneError}
-                </Typography>
-              )}
-            </Box>
-            <Box
-              ref={phonePasswordFieldRef}
-              sx={{ position: "relative", width: "100%" }}
-            >
-              <InputField
-                type={showPhonePassword ? "text" : "password"}
-                value={phonePassword}
-                autoComplete="off"
-                label={t("password")}
-                onChange={(e) => {
-                  const val = e.target.value.replace(/\s/g, "");
-                  setPhonePassword(val);
-                  setPhonePasswordError("");
-                  if (!val) {
-                    setShowPhonePasswordValidation(false);
-                  } else if (passwordRegex.test(val)) {
-                    setShowPhonePasswordValidation(false);
-                  } else {
-                    setShowPhonePasswordValidation(true);
-                  }
-                }}
-                onFocus={() => {
-                  if (phonePassword && !passwordRegex.test(phonePassword)) {
-                    setShowPhonePasswordValidation(true);
-                  }
-                }}
-                onBlur={() => {
-                  setTimeout(() => setShowPhonePasswordValidation(false), 200);
-                }}
-                onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
-                placeholder={t("createPassword")}
-                error={!!phonePasswordError || showPhonePasswordValidation}
-                helperText={phonePasswordError}
-                sideButton={true}
-                sideButtonType="primary"
-                sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
-                sideButtonIconWidth={isMobile ? "14px" : "18px"}
-                sideButtonIconHeight={isMobile ? "14px" : "18px"}
-                onSideButtonClick={() => setShowPhonePassword(!showPhonePassword)}
-                showPasswordToggle={true}
-              />
-              <Box
-                sx={{
-                  display: "flex",
-                  justifyContent: "center",
-                  alignItems: "center",
-                  position: "absolute",
-                  ...(isMobile &&
-                    theme.breakpoints.down("lg") && {
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      width: "100%",
-                    }),
-                  zIndex: 5,
-                }}
-              >
-                <PasswordValidation
-                  password={phonePassword}
-                  anchorEl={phonePasswordFieldRef.current}
-                  open={showPhonePasswordValidation}
-                  onClose={() => setShowPhonePasswordValidation(false)}
-                  showOnMobile={showPhonePasswordValidation}
-                />
-              </Box>
-            </Box>
-
-            {/* Referral Code for Phone Tab */}
-            <Box>
-              {!showReferralField ? (
-                <Typography
-                  onClick={() => setShowReferralField(true)}
-                  sx={{
-                    fontSize: "13px",
-                    fontFamily: "UrbanistMedium",
-                    color: muiTheme.palette.primary.main,
-                    cursor: "pointer",
-                    "&:hover": { textDecoration: "underline" },
-                  }}
-                >
-                  {t("haveReferralCode")}
-                </Typography>
-              ) : (
-                <InputField
-                  label={t("referralCode")}
-                  type="text"
-                  placeholder={t("referralCodePlaceholder")}
-                  value={referralCode}
-                  onChange={(e) => { setReferralCode(e.target.value.toUpperCase()); setReferralCodeError(""); }}
-                  error={!!referralCodeError}
-                  helperText={referralCodeError}
-                />
-              )}
-            </Box>
-
-            <Box sx={{ mt: 1 }}>
-              <CustomButton
-                label={t("sendVerificationCode")}
-                variant="primary"
-                size="medium"
-                fullWidth
-                disabled={phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword}
-                onClick={handlePhoneRegisterStep1}
-                hideLabelWhenLoading={true}
-                endIcon={phoneLoading ? <LoadingIcon size={20} /> : undefined}
-              />
-            </Box>
-
-            {/* Phone OTP Dialog */}
-            <OtpDialog
-              open={phoneOtpDialog}
-              onClose={() => setPhoneOtpDialog(false)}
-              preventClose={false}
-              title={t("phoneVerification")}
-              subtitle={t("phoneVerificationSubtitle")}
-              contactInfo={phone}
-              contactType="phone"
-              otpLength={6}
-              onVerify={handlePhoneOtpVerify}
-              onResendCode={handlePhoneResend}
-              onClearError={() => setPhoneOtpError("")}
-              countdown={phoneOtpCountdown}
-              loading={phoneLoading}
-              error={phoneOtpError}
-            />
-          </Box>
-        ) : (
-        /* Email Registration Form (existing) */
-        <Box
-          sx={{
-            marginTop: isMobile ? "12px" : "16px",
-            display: "flex",
-            flexDirection: "column",
-            gap: "10px",
-          }}
-        >
-          <Box
-            sx={{
-              display: "flex",
-              flexDirection: isMobile ? "column" : "row",
-              gap: isMobile ? "12px" : "14px",
-            }}
-          >
-            {/* First Name */}
-            <InputField
-              label={t("firstName")}
-              type="text"
-              placeholder={t("firstNamePlaceholder")}
-              value={firstName}
-              onChange={(e) => {
-                const rawValue = e.target.value.replace(/[^a-zA-Z]/g, "");
-                const capitalized =
-                  rawValue.length > 0
-                    ? rawValue.charAt(0).toUpperCase() + rawValue.slice(1)
-                    : rawValue;
-                setFirstName(capitalized);
-                if (firstNameError)
-                  validateField("firstName", { firstName: capitalized });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !userState.loading) {
-                  e.preventDefault();
-                  handleSignUp();
-                }
-              }}
-              error={!!firstNameError}
-              helperText={firstNameError ? t(firstNameError) : ""}
-            />
-
-            {/* Last Name */}
-            <InputField
-              label={t("lastName")}
-              type="text"
-              placeholder={t("lastNamePlaceholder")}
-              value={lastName}
-              onChange={(e) => {
-                const rawValue = e.target.value.replace(/[^a-zA-Z]/g, "");
-                const capitalized =
-                  rawValue.length > 0
-                    ? rawValue.charAt(0).toUpperCase() + rawValue.slice(1)
-                    : rawValue;
-                setLastName(capitalized);
-                if (lastNameError)
-                  validateField("lastName", { lastName: capitalized });
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !userState.loading) {
-                  e.preventDefault();
-                  handleSignUp();
-                }
-              }}
-              error={!!lastNameError}
-              helperText={lastNameError ? t(lastNameError) : ""}
-            />
-          </Box>
-
-          {/* Email */}
-          <InputField
-            label={t("email")}
-            type="email"
-            placeholder={t("emailPlaceholder")}
-            value={email}
-            onChange={(e) => {
-              const valueWithoutSpaces = e.target.value.replace(/\s/g, "");
-              setEmail(valueWithoutSpaces);
-              if (emailError)
-                validateField("email", { email: valueWithoutSpaces });
-            }}
-            onKeyDown={(e) => {
-              if (e.key === " " || e.key === "Spacebar") {
-                e.preventDefault();
-              }
-              // Submit on Enter
-              if (e.key === "Enter" && !userState.loading) {
-                e.preventDefault();
-                handleSignUp();
-              }
-            }}
-            error={!!emailError}
-            helperText={emailError ? t(emailError) : ""}
-          />
-
-          {/* Password */}
-          <Box
-            ref={passwordFieldRef}
-            sx={{ position: "relative", width: "100%" }}
-          >
-            <InputField
-              type={showPassword ? "text" : "password"}
-              value={password}
-              autoComplete="off"
-              label={t("password")}
-              onChange={(e) => {
-                handlePasswordChange(e.target.value);
-              }}
-              onFocus={() => {
-                if (password && !passwordRegex.test(password)) {
-                  setShowPasswordValidation(true);
-                }
-              }}
-              onBlur={() => {
-                handlePasswordBlur();
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !userState.loading) {
-                  e.preventDefault();
-                  handleSignUp();
-                }
-              }}
-              placeholder={t("passwordPlaceHolder")}
-              error={!!passwordError || showPasswordValidation}
-              helperText={passwordError ? t(passwordError) : ""}
-              sideButton={true}
-              sideButtonType="primary"
-              sideButtonIcon={
-                showPassword ? (
-                  <VisibilityOffIcon
-                    tabIndex={-1}
-                    aria-hidden={true}
-                    sx={{
-                      color: "text.secondary",
-                      height: "18px",
-                      width: "16px",
-                    }}
-                  />
-                ) : (
-                  <VisibilityIcon
-                    tabIndex={-1}
-                    aria-hidden={true}
-                    sx={{
-                      color: "text.secondary",
-                      height: "18px",
-                      width: "16px",
-                    }}
-                  />
-                )
-              }
-              sideButtonIconWidth={isMobile ? "14px" : "18px"}
-              sideButtonIconHeight={isMobile ? "14px" : "18px"}
-              onSideButtonClick={() => {
-                setShowPassword(!showPassword);
-              }}
-              showPasswordToggle={true}
-            />
-            <Box
-              sx={{
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                position: "absolute",
-                ...(isMobile &&
-                  theme.breakpoints.down("lg") && {
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "100%",
-                  }),
-                zIndex: 5,
-              }}
-            >
-              <PasswordValidation
-                password={password}
-                anchorEl={passwordFieldRef.current}
-                open={showPasswordValidation}
-                onClose={() => setShowPasswordValidation(false)}
-                showOnMobile={showPasswordValidation}
-              />
-            </Box>
-          </Box>
-
-          {/* Confirm Password */}
-          <InputField
-            type={showConfirmPassword ? "text" : "password"}
-            value={confirmPassword}
-            autoComplete="off"
-            label={t("confirmPassword")}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\s/g, "");
-              setConfirmPassword(value);
-              if (!password || !value) {
-                setConfirmPasswordError("");
-              } else if (value !== password) {
-                setConfirmPasswordError(
-                  "passwordAndConfirmPasswordShouldBeSame",
-                );
-              } else {
-                setConfirmPasswordError("");
-              }
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !userState.loading) {
-                e.preventDefault();
-                handleSignUp();
-              }
-            }}
-            placeholder={t("confirmPasswordPlaceHolder")}
-            error={
-              confirmPasswordError === "passwordAndConfirmPasswordShouldBeSame"
-            }
-            helperText={confirmPasswordError ? t(confirmPasswordError) : ""}
-            sideButton={true}
-            sideButtonType="primary"
-            sideButtonIcon={
-              showConfirmPassword ? (
-                <VisibilityOffIcon
-                  tabIndex={-1}
-                  aria-hidden={true}
-                  sx={{
-                    color: "#676768",
-                    height: "18px",
-                    width: "16px",
-                  }}
-                />
-              ) : (
-                <VisibilityIcon
-                  tabIndex={-1}
-                  aria-hidden={true}
-                  sx={{
-                    color: "#676768",
-                    height: "18px",
-                    width: "16px",
-                  }}
-                />
-              )
-            }
-            sideButtonIconWidth={isMobile ? "14px" : "18px"}
-            sideButtonIconHeight={isMobile ? "14px" : "18px"}
-            onSideButtonClick={() => {
-              setShowConfirmPassword(!showConfirmPassword);
-            }}
-            showPasswordToggle={true}
-          />
-
-          {/* Referral Code */}
-          <Box sx={{ mt: 1 }}>
-            {!showReferralField ? (
-              <Typography
-                onClick={() => setShowReferralField(true)}
-                sx={{
-                  fontSize: "13px",
-                  fontFamily: "UrbanistMedium",
-                  color: muiTheme.palette.primary.main,
-                  cursor: "pointer",
-                  "&:hover": { textDecoration: "underline" },
-                }}
-              >
-                {t("haveReferralCode")}
-              </Typography>
-            ) : (
-              <InputField
-                label={t("referralCode")}
-                type="text"
-                placeholder={t("referralCodePlaceholder")}
-                value={referralCode}
-                onChange={(e) => { setReferralCode(e.target.value.toUpperCase()); setReferralCodeError(""); }}
-                error={!!referralCodeError}
-                helperText={referralCodeError}
-              />
-            )}
-          </Box>
-
-          {/* Sign Up Button */}
-          <Box sx={{ marginTop: isMobile ? "8px" : "12px" }}>
-            <CustomButton
-              label={t("signUpButton")}
-              variant="primary"
-              size={isMobile ? "small" : "medium"}
-              fullWidth
-              disabled={userState.loading}
-              onClick={handleSignUp}
-              hideLabelWhenLoading={true}
-              endIcon={userState.loading ? <LoadingIcon size={20} /> : undefined}
-            />
-          </Box>
-        </Box>
         )}
 
-        {/* Don't have acc */}
-        <Box
-          sx={{
-            display: "flex",
-            gap: "7px",
-            marginTop: "16px",
-            textAlign: "center",
-          }}
-        >
-          <Typography
-            width="100%"
-            sx={{
-              fontSize: "13px",
-              color: theme.palette.text.secondary,
-              fontFamily: "UrbanistMedium",
-            }}
-            fontWeight={500}
-          >
-            {t("alreadyHaveAccountLink")}
-            <Typography
-              component="span"
-              sx={{
-                fontSize: "13px",
-                color: theme.palette.primary.main,
-                fontWeight: 500,
-                textAlign: "start",
-                cursor: "pointer",
-                paddingLeft: "7px",
-                textDecoration: "underline",
-                textUnderlineOffset: "2px",
-                fontFamily: "UrbanistMedium",
-              }}
-              onClick={() => {
-                router.push("/auth/login");
-              }}
-            >
-              {t("login")}
-            </Typography>
-          </Typography>
-        </Box>
+        <SplitLayoutWrapper>
+          {/* Left Panel: Brand */}
+          {!isMobile && <AuthBrandPanel />}
 
-        {/* Google sign-in is now presented at the top of the form (primary path). */}
-
-      </Box>
-      </FormPanel>
-    </SplitLayoutWrapper>
-
-      {/* Email Verification OTP Dialog */}
-      <OtpDialog
-        open={showOtpDialog}
-        onClose={() => {}}
-        preventClose={true}
-        title={t("emailVerification")}
-        subtitle={t("emailVerificationSubtitle")}
-        contactInfo={email}
-        contactType="email"
-        otpLength={6}
-        onVerify={handleOtpVerify}
-        onResendCode={handleResendOtp}
-        onClearError={() => setOtpError("")}
-        countdown={otpCountdown}
-        loading={userState.loading && otpSubmitted}
-        error={otpError}
-      />
-
-      {/* Session Timeout Dialog */}
-      {showSessionTimeout && (
-        <Box
-          sx={{
-            position: "fixed",
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            bgcolor: "rgba(0,0,0,0.6)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9999,
-          }}
-        >
-          <Box
-            sx={{
-              bgcolor: "background.paper",
-              borderRadius: "16px",
-              p: 4,
-              maxWidth: 400,
-              width: "90%",
-              textAlign: "center",
-            }}
-          >
-            <Typography sx={{ fontSize: "18px", fontWeight: 600, fontFamily: "UrbanistBold", mb: 1, color: "text.primary" }}>
-              {t("sessionExpiredTitle") || "Session Expired"}
-            </Typography>
-            <Typography sx={{ fontSize: "14px", fontFamily: "UrbanistRegular", mb: 3, color: "text.secondary" }}>
-              {t("sessionExpiredMessage") || "Your session has expired due to inactivity. Please refresh the page to continue."}
-            </Typography>
+          {/* Right Panel: Form */}
+          <FormPanel>
             <Box
-              component="button"
-              onClick={() => { setShowSessionTimeout(false); window.location.reload(); }}
               sx={{
-                bgcolor: "primary.main",
-                color: "#fff",
-                border: "none",
-                borderRadius: "10px",
-                p: "10px 32px",
-                fontSize: "14px",
-                fontFamily: "UrbanistMedium",
-                cursor: "pointer",
-                "&:hover": { opacity: 0.9 },
+                maxWidth: "420px",
+                width: "100%",
+                py: isMobile ? 2 : 0,
               }}
             >
-              {t("refreshPage") || "Refresh Page"}
+              {/* Mobile Logo */}
+              {isMobile && (
+                <Box
+                  sx={{ display: "flex", justifyContent: "center", mb: 2, cursor: "pointer" }}
+                  onClick={() => router.push("/")}
+                >
+                  <Image
+                    src={theme.palette.mode === "dark" ? WhiteLogo : Logo}
+                    alt="logo"
+                    width={110}
+                    height={38}
+                    draggable={false}
+                  />
+                </Box>
+              )}
+
+              {/* ─── STEP 1: Input ─── */}
+              {step === "input" && (
+                <>
+                  <TitleDescription
+                    title="Registration"
+                    description="Create your DynoPay account in seconds"
+                    descriptionFontSize="14px"
+                    descriptionColor={theme.palette.text.secondary}
+                  />
+
+                  {/* Google Sign Up */}
+                  <CustomButton
+                    data-testid="google-signup-btn"
+                    label="Continue with Google"
+                    variant="outlined"
+                    fullWidth
+                    onClick={handleGoogleLogin}
+                    startIcon={
+                      <Image src={GoogleIcon} alt="google" width={20} height={20} draggable={false} />
+                    }
+                    sx={{ mt: 1.5 }}
+                  />
+
+                  {/* Divider */}
+                  <Box sx={{ mt: 1.5, mb: 1.5 }}>
+                    <Divider
+                      sx={{
+                        "&::before, &::after": {
+                          borderColor: theme.palette.mode === "dark" ? "rgba(255,255,255,0.12)" : "rgba(0,0,0,0.08)",
+                        },
+                      }}
+                    >
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          color: "text.secondary",
+                          fontFamily: "UrbanistMedium",
+                          textTransform: "lowercase",
+                          px: 1,
+                        }}
+                      >
+                        or sign up with
+                      </Typography>
+                    </Divider>
+                  </Box>
+
+                  {/* Method Toggle */}
+                  <Box sx={{ mb: 1.5 }}>
+                    <ToggleButtonGroup
+                      value={method}
+                      exclusive
+                      onChange={(_, val) => {
+                        if (val) {
+                          setMethod(val);
+                          setEmailError("");
+                          setPhoneError("");
+                        }
+                      }}
+                      sx={{
+                        width: "100%",
+                        background: theme.palette.mode === "dark" ? "#1a1d2e" : "#f3f4f6",
+                        borderRadius: "12px",
+                        padding: "3px",
+                        "& .MuiToggleButton-root": {
+                          flex: 1,
+                          border: "none",
+                          borderRadius: "10px !important",
+                          textTransform: "none",
+                          fontFamily: "UrbanistSemiBold",
+                          fontSize: "14px",
+                          color: "text.secondary",
+                          padding: "8px 0",
+                          transition: "all 0.25s",
+                          "&.Mui-selected": {
+                            background: theme.palette.mode === "dark" ? "#2a2d45" : "#fff",
+                            color: "text.primary",
+                            boxShadow: "0 2px 8px rgba(0,0,0,0.06)",
+                            "&:hover": { background: theme.palette.mode === "dark" ? "#2a2d45" : "#fff" },
+                          },
+                          "&:hover": { background: "transparent" },
+                        },
+                      }}
+                    >
+                      <ToggleButton value="email">E-mail</ToggleButton>
+                      <ToggleButton value="phone">Mobile Number</ToggleButton>
+                    </ToggleButtonGroup>
+                  </Box>
+
+                  {/* Input Field */}
+                  {method === "email" ? (
+                    <Box sx={{ mb: 1 }}>
+                      <InputField
+                        type="email"
+                        value={email}
+                        onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleContinue(); }}
+                        placeholder="Enter your email address"
+                        label="E-mail"
+                        error={!!emailError}
+                        helperText={emailError}
+                      />
+                    </Box>
+                  ) : (
+                    <Box sx={{ mb: 1 }}>
+                      <CountryPhoneInput
+                        value={phone}
+                        onChange={(value) => { setPhone(value); setPhoneError(""); }}
+                        label="Mobile Number"
+                        error={!!phoneError}
+                        helperText={phoneError}
+                        placeholder="Enter mobile number"
+                      />
+                      {phoneTypeChecking && (
+                        <Typography sx={{ fontSize: "12px", color: "text.secondary", fontFamily: "UrbanistMedium", mt: 0.5, ml: 0.5 }}>
+                          Checking number type...
+                        </Typography>
+                      )}
+                    </Box>
+                  )}
+
+                  {/* Referral Code */}
+                  {!showReferralInput ? (
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        color: theme.palette.primary.main,
+                        fontFamily: "UrbanistMedium",
+                        cursor: "pointer",
+                        textDecoration: "underline",
+                        textUnderlineOffset: "2px",
+                        mb: 1.5,
+                      }}
+                      onClick={() => setShowReferralInput(true)}
+                    >
+                      Have a referral code?
+                    </Typography>
+                  ) : (
+                    <Box sx={{ mb: 1.5 }}>
+                      <InputField
+                        type="text"
+                        value={referralCode}
+                        onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
+                        placeholder="Enter referral code (optional)"
+                        label="Referral Code"
+                      />
+                    </Box>
+                  )}
+
+                  {/* Continue Button */}
+                  <CustomButton
+                    variant="primary"
+                    size="medium"
+                    label="Continue"
+                    onClick={handleContinue}
+                    disabled={loading || phoneTypeChecking}
+                    fullWidth
+                    sx={{ fontWeight: 700, padding: "13px 24px", borderRadius: "12px", fontSize: "15px" }}
+                    endIcon={loading ? <LoadingSpinner size={18} /> : undefined}
+                    hideLabelWhenLoading={true}
+                  />
+
+                  {/* Already have account */}
+                  <Box sx={{ display: "flex", gap: "7px", justifyContent: "center", mt: 2 }}>
+                    <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium" }}>
+                      Do you already have an account?
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "13px", color: theme.palette.primary.main, fontWeight: 500,
+                        cursor: "pointer", textDecoration: "underline", fontFamily: "UrbanistMedium",
+                      }}
+                      onClick={() => router.push("/auth/login")}
+                    >
+                      Log in
+                    </Typography>
+                  </Box>
+                </>
+              )}
+
+              {/* ─── STEP 2: OTP ─── */}
+              {step === "otp" && (
+                <>
+                  <Box sx={{ textAlign: "center", mb: 2.5 }}>
+                    <Box
+                      sx={{
+                        width: 56, height: 56, borderRadius: "16px",
+                        background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        margin: "0 auto 12px",
+                      }}
+                    >
+                      <Typography sx={{ fontSize: "28px" }}>✉️</Typography>
+                    </Box>
+                    <Typography sx={{ fontWeight: 700, fontSize: "22px", color: "text.primary", fontFamily: "UrbanistBold" }}>
+                      Verify Your {method === "email" ? "Email" : "Phone"}
+                    </Typography>
+                    <Typography sx={{ fontSize: "14px", color: "text.secondary", fontFamily: "UrbanistMedium", mt: 0.5, lineHeight: 1.5 }}>
+                      Enter the 6-digit code sent to{" "}
+                      <Typography component="span" sx={{ fontWeight: 600, color: "text.primary", fontSize: "14px" }}>
+                        {method === "email"
+                          ? email.replace(/(.{2}).*(@.*)/, "$1***$2")
+                          : phone.replace(/(\d{3})\d+(\d{2})/, "$1****$2")}
+                      </Typography>
+                    </Typography>
+                  </Box>
+
+                  {/* OTP Inputs */}
+                  <Box sx={{ display: "flex", gap: isMobile ? "8px" : "10px", justifyContent: "center", mb: 2 }}>
+                    {otp.map((digit, index) => (
+                      <Box
+                        key={index}
+                        component="input"
+                        ref={(el: HTMLInputElement | null) => { otpRefs.current[index] = el; }}
+                        type="text"
+                        inputMode="numeric"
+                        maxLength={1}
+                        value={digit}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtpChange(index, e.target.value)}
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleOtpKeyDown(index, e)}
+                        onPaste={index === 0 ? handleOtpPaste : undefined}
+                        sx={{
+                          width: isMobile ? "44px" : "52px",
+                          height: isMobile ? "52px" : "60px",
+                          textAlign: "center",
+                          fontSize: "22px",
+                          fontWeight: 700,
+                          fontFamily: "UrbanistBold",
+                          color: "text.primary",
+                          background: theme.palette.mode === "dark" ? "#1a1d2e" : "#f9fafb",
+                          border: `2px solid ${digit ? "#4F46E5" : (theme.palette.mode === "dark" ? "#2a2d45" : "#e5e7eb")}`,
+                          borderRadius: "14px",
+                          outline: "none",
+                          transition: "all 0.2s",
+                          caretColor: "#4F46E5",
+                          "&:focus": {
+                            borderColor: "#4F46E5",
+                            boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.15)",
+                          },
+                        }}
+                      />
+                    ))}
+                  </Box>
+
+                  {/* Error */}
+                  {otpError && (
+                    <Typography sx={{ fontSize: "13px", color: theme.palette.error.main, fontFamily: "UrbanistMedium", mb: 1.5, textAlign: "center" }}>
+                      {otpError}
+                    </Typography>
+                  )}
+
+                  {/* Verify Button */}
+                  <CustomButton
+                    variant="primary"
+                    size="medium"
+                    label="Verify & Create Account"
+                    onClick={handleVerifyOtp}
+                    disabled={loading || otp.join("").length !== 6}
+                    fullWidth
+                    sx={{ fontWeight: 700, padding: "13px 24px", borderRadius: "12px", fontSize: "15px" }}
+                    endIcon={loading ? <LoadingSpinner size={18} /> : undefined}
+                    hideLabelWhenLoading={true}
+                  />
+
+                  {/* Resend */}
+                  <Box sx={{ display: "flex", justifyContent: "center", mt: 2, gap: 0.5 }}>
+                    <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium" }}>
+                      Didn't receive the code?
+                    </Typography>
+                    {countdown > 0 ? (
+                      <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistSemiBold" }}>
+                        Resend in {countdown}s
+                      </Typography>
+                    ) : (
+                      <Typography
+                        component="button"
+                        onClick={handleResendOtp}
+                        sx={{
+                          fontSize: "13px", color: theme.palette.primary.main, fontFamily: "UrbanistSemiBold",
+                          cursor: "pointer", background: "none", border: "none", padding: 0,
+                          textDecoration: "underline", textUnderlineOffset: "2px",
+                        }}
+                      >
+                        Resend
+                      </Typography>
+                    )}
+                  </Box>
+
+                  {/* Back */}
+                  <Box sx={{ display: "flex", justifyContent: "center", mt: 1.5 }}>
+                    <Link
+                      component="button"
+                      onClick={() => { setStep("input"); setOtpError(""); setOtp(["", "", "", "", "", ""]); }}
+                      sx={{
+                        fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium",
+                        textDecoration: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+                        background: "transparent", border: "none", padding: 0,
+                        "&:hover": { textDecoration: "underline" },
+                      }}
+                    >
+                      <ArrowBack sx={{ fontSize: "16px" }} />
+                      Change {method === "email" ? "email" : "phone number"}
+                    </Link>
+                  </Box>
+                </>
+              )}
+
+              {/* ─── STEP 3: Success ─── */}
+              {step === "success" && (
+                <Box sx={{ textAlign: "center", py: 4 }}>
+                  <Box
+                    sx={{
+                      width: 72, height: 72, borderRadius: "50%",
+                      background: "linear-gradient(135deg, #10B981, #059669)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      margin: "0 auto 20px",
+                      boxShadow: "0 8px 32px rgba(16, 185, 129, 0.3)",
+                    }}
+                  >
+                    <CheckCircleOutline sx={{ fontSize: 40, color: "#fff" }} />
+                  </Box>
+                  <Typography sx={{ fontWeight: 700, fontSize: "24px", color: "text.primary", fontFamily: "UrbanistBold", mb: 1 }}>
+                    Welcome to DynoPay!
+                  </Typography>
+                  <Typography sx={{ fontSize: "15px", color: "text.secondary", fontFamily: "UrbanistMedium", lineHeight: 1.6, mb: 1 }}>
+                    Your account has been created. Redirecting to your dashboard...
+                  </Typography>
+                  <LoadingSpinner size={24} />
+                </Box>
+              )}
             </Box>
-          </Box>
-        </Box>
-      )}
-    </AuthPageBackground>
+          </FormPanel>
+        </SplitLayoutWrapper>
+      </AuthPageBackground>
+    </>
   );
 };
 

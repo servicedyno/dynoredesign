@@ -249,6 +249,21 @@ const addCompany = async (req: express.Request, res: express.Response) => {
       photo,
     });
 
+    // Update user profile with first_name + last_name if provided
+    // (Simplified registration creates accounts without names — names are collected here)
+    const firstName = req.body.first_name || data.first_name;
+    const lastName = req.body.last_name || data.last_name;
+    if (firstName || lastName) {
+      const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
+      if (fullName) {
+        await userModel.update(
+          { name: fullName },
+          { where: { user_id: userData.user_id } }
+        );
+        companyLogger.info(`Updated user profile name: "${fullName}"`, { user_id: userData.user_id });
+      }
+    }
+
     // Send email notifications (with deduplication guard)
     try {
       const emailDedupKey = `company-email-sent:${userData.user_id}:${resData.dataValues.company_id}`;

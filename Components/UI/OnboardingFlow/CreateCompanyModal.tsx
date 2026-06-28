@@ -54,6 +54,8 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [companyName, setCompanyName] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
   const [mobile, setMobile] = useState("");
   const [website, setWebsite] = useState("");
@@ -69,10 +71,22 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
     if (!open) return;
     setEmail((prev) => prev || userState.email || "");
     setMobile((prev) => prev || userState.mobile || "");
-  }, [open, userState.email, userState.mobile]);
+    // Prefill first/last name from user profile if available
+    if (userState.name) {
+      const parts = (userState.name || "").trim().split(/\s+/);
+      if (parts.length >= 2) {
+        setFirstName((prev) => prev || parts[0]);
+        setLastName((prev) => prev || parts.slice(1).join(" "));
+      } else if (parts.length === 1) {
+        setFirstName((prev) => prev || parts[0]);
+      }
+    }
+  }, [open, userState.email, userState.mobile, userState.name]);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
+    if (!firstName.trim()) newErrors.firstName = "First name is required";
+    if (!lastName.trim()) newErrors.lastName = "Last name is required";
     if (!companyName.trim()) newErrors.companyName = "Company name is required";
     if (!email.trim()) newErrors.email = "Email is required";
     else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
@@ -116,6 +130,8 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
       email: email.trim(),
       mobile,
       website: website.trim(),
+      first_name: firstName.trim(),
+      last_name: lastName.trim(),
     };
 
     const formData = new FormData();
@@ -258,6 +274,60 @@ const CreateCompanyModal: React.FC<CreateCompanyModalProps> = ({
           flexGrow: 1,
         }}
       >
+        {/* Your Name Section */}
+        <Box>
+          <Typography
+            sx={{
+              fontSize: "13px", fontWeight: 600, fontFamily: "UrbanistSemiBold",
+              color: theme.palette.text.secondary, mb: 1, textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Your Name
+          </Typography>
+          <Box sx={{ display: "flex", gap: "12px" }}>
+            <Box sx={{ flex: 1 }}>
+              <InputField
+                label="First Name *"
+                placeholder="First name"
+                value={firstName}
+                onChange={(e) => {
+                  setFirstName(e.target.value);
+                  if (errors.firstName) setErrors({ ...errors, firstName: "" });
+                }}
+                error={!!errors.firstName}
+                helperText={errors.firstName}
+              />
+            </Box>
+            <Box sx={{ flex: 1 }}>
+              <InputField
+                label="Last Name *"
+                placeholder="Last name"
+                value={lastName}
+                onChange={(e) => {
+                  setLastName(e.target.value);
+                  if (errors.lastName) setErrors({ ...errors, lastName: "" });
+                }}
+                error={!!errors.lastName}
+                helperText={errors.lastName}
+              />
+            </Box>
+          </Box>
+        </Box>
+
+        {/* Company Section */}
+        <Box>
+          <Typography
+            sx={{
+              fontSize: "13px", fontWeight: 600, fontFamily: "UrbanistSemiBold",
+              color: theme.palette.text.secondary, mb: 1, textTransform: "uppercase",
+              letterSpacing: "0.5px",
+            }}
+          >
+            Company Details
+          </Typography>
+        </Box>
+
         <InputField
           label="Company Name *"
           placeholder="Enter your company name"

@@ -62,8 +62,7 @@ const registerUser = async (req: express.Request, res: express.Response) => {
 
       // Generate unique referral code for new user
       const generateReferralCode = () => {
-        // Short 8-char format: DYNO + 6 alphanumeric chars (e.g., DYNO-A3X9K2)
-        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // no I/O/0/1 to avoid confusion
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
         let code = '';
         const bytes = crypto.randomBytes(6);
         for (let i = 0; i < 6; i++) {
@@ -109,12 +108,10 @@ const registerUser = async (req: express.Request, res: express.Response) => {
         });
       }
 
-      // If user was referred, create referral record
       if (referral_code) {
         try {
           const referrer = await userModel.findOne({ where: { referral_code } });
           if (referrer) {
-            // Import Referral model at the top if not already imported
             const Referral = require('../models/referralModels/referralModel').default;
             await Referral.create({
               referrer_user_id: referrer.dataValues.user_id,
@@ -127,28 +124,23 @@ const registerUser = async (req: express.Request, res: express.Response) => {
               referee_discount_percent: 50.00,
               referee_discount_duration_days: 30,
               referred_at: new Date(),
-              expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000), // 90 days
+              expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
             });
           }
         } catch (refError) {
-          // Log error but don't fail registration
           userLogger.error("Error creating referral record:", refError);
         }
       }
 
-      // Welcome email is deferred until after OTP verification (see verifyEmail)
-
-      // Notify admin of new user registration (non-blocking)
       emailService.sendNewUserAdminNotification({
         name, email: email.toLowerCase(), login_type: "Email",
         user_id: createdUser.dataValues.user_id,
       }).catch(err => userLogger.error("Admin notification error:", err));
 
-      // Generate email verification OTP and send it
       const verifyOtp = Math.floor(100000 + Math.random() * 900000).toString();
       const verifyKey = `email-verify:${createdUser.dataValues.user_id}`;
       await setRedisItem(verifyKey, { otp: verifyOtp, createdAt: new Date().toISOString() });
-      await setRedisTTL(verifyKey, 600); // 10 minutes
+      await setRedisTTL(verifyKey, 600);
       emailService.sendEmailVerificationOTPEmail(email.toLowerCase(), name, verifyOtp).catch(err => {
         userLogger.error("Failed to send email verification OTP:", err);
       });
@@ -163,8 +155,254 @@ const registerUser = async (req: express.Request, res: express.Response) => {
       });
     }
   } catch (e) {
-
       handleControllerError(res, e, userLogger);
+  }
+};
+
+// ─── Helper to create user wallets ───
+const createUserWallets = async (userId: number) => {
+  const walletData = await adminWalletModel.findAll();
+  const fiatData = walletData.filter((x) => x.dataValues.currency_type === "FIAT");
+  const cryptoData = walletData.filter((x) => x.dataValues.currency_type === "CRYPTO");
+  for (let i = 0; i < fiatData.length; i++) {
+    await userWalletModel.create({
+      id: crypto.randomUUID(),
+      user_id: userId,
+      wallet_type: fiatData[i].dataValues.wallet_type,
+      currency_type: "FIAT",
+    });
+  }
+  for (let i = 0; i < cryptoData.length; i++) {
+    await userWalletModel.create({
+      id: crypto.randomUUID(),
+      user_id: userId,
+      wallet_type: cryptoData[i].dataValues.wallet_type,
+      currency_type: "CRYPTO",
+    });
+  }
+};
+
+// ─── Helper to generate referral code ───
+const generateReferralCode = () => {
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+  let code = '';
+  const bytes = crypto.randomBytes(6);
+  for (let i = 0; i < 6; i++) {
+    code += chars[bytes[i] % chars.length];
+  }
+  return `DYNO-${code}`;
+};
+
+/**
+ * Simplified Email Registration - Step 1: Send OTP
+ * POST /api/user/registerEmail
+ * Only requires email — no password, no name
+ */
+const registerEmailStep1 = async (req: express.Request, res: express.Response) => {
+  try {
+    const { email, referral_code } = req.body;
+
+    if (!email) {
+      return errorResponseHelper(res, 400, "Email is required");
+    }
+
+    const emailLower = email.toLowerCase().trim();
+
+    // Check if email already exists
+    const existing = await userModel.findOne({ where: { email: emailLower } });
+    if (existing) {
+      return errorResponseHelper(res, 400, "An account with this email already exists. Please log in.");
+    }
+
+    // Store referral code in Redis for later use during verification
+    if (referral_code) {
+      await setRedisItemWithTTL(`reg-referral:${emailLower}`, { referral_code }, 900);
+    }
+
+    // Send OTP via email
+    const sent = await sendEmailOTP(emailLower, "there");
+    if (!sent) {
+      return errorResponseHelper(res, 503, "Unable to send verification code. Please try again.");
+    }
+
+    userLogger.info(`[RegisterEmail] OTP sent for registration: ${emailLower}`);
+    return successResponseHelper(res, 200, "Verification code sent to your email", {});
+
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Simplified Email Registration - Step 2: Verify OTP & Create Account
+ * POST /api/user/registerEmail/verify-otp
+ */
+const registerEmailVerifyOtp = async (req: express.Request, res: express.Response) => {
+  try {
+    const { email, otp } = req.body;
+
+    if (!email || !otp) {
+      return errorResponseHelper(res, 400, "Email and verification code are required");
+    }
+
+    const emailLower = email.toLowerCase().trim();
+
+    // Verify OTP from Redis
+    const otpKey = `otp:${emailLower}`;
+    const item = await getRedisItem(otpKey);
+
+    if (!item || !item.otp) {
+      return errorResponseHelper(res, 400, "Verification code expired. Please request a new one.");
+    }
+
+    const createdTime = new Date(item.createdAt);
+    const diff = getMinutesBetweenDates(new Date(), createdTime);
+    if (diff >= 10) {
+      await deleteRedisItem(otpKey);
+      return errorResponseHelper(res, 400, "Verification code expired. Please request a new one.");
+    }
+
+    if (otp !== item.otp) {
+      return errorResponseHelper(res, 400, "Invalid verification code.");
+    }
+
+    // OTP verified — delete it
+    await deleteRedisItem(otpKey);
+
+    // Double check email not taken (race condition guard)
+    const existing = await userModel.findOne({ where: { email: emailLower } });
+    if (existing) {
+      return errorResponseHelper(res, 400, "An account with this email already exists.");
+    }
+
+    // Retrieve referral code if stored
+    const referralData = await getRedisItem(`reg-referral:${emailLower}`);
+    const referral_code = referralData?.referral_code || null;
+    if (referralData) await deleteRedisItem(`reg-referral:${emailLower}`);
+
+    // Create user — no name, no password
+    const photoLocation = await downloadUserImage();
+    const photo = process.env.SERVER_URL + photoLocation;
+    const userReferralCode = generateReferralCode();
+
+    const createdUser = await userModel.create({
+      name: null,
+      email: emailLower,
+      photo,
+      password: null,
+      email_verified: true, // Already verified by OTP
+      referral_code: userReferralCode,
+      referred_by_code: referral_code,
+      login_type: "EMAIL",
+    });
+
+    // Create wallets
+    await createUserWallets(createdUser.dataValues.user_id);
+
+    // Handle referral
+    if (referral_code) {
+      try {
+        const referrer = await userModel.findOne({ where: { referral_code } });
+        if (referrer) {
+          const Referral = require('../models/referralModels/referralModel').default;
+          await Referral.create({
+            referrer_user_id: referrer.dataValues.user_id,
+            referred_user_id: createdUser.dataValues.user_id,
+            referral_code,
+            status: 'pending',
+            activation_requirement: 'first_transaction_100',
+            bonus_amount: 10.00,
+            bonus_currency: 'USD',
+            referee_discount_percent: 50.00,
+            referee_discount_duration_days: 30,
+            referred_at: new Date(),
+            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+          });
+        }
+      } catch (refError) {
+        userLogger.error("Error creating referral record:", refError);
+      }
+    }
+
+    // Admin notification
+    emailService.sendNewUserAdminNotification({
+      name: emailLower, email: emailLower, login_type: "Email",
+      user_id: createdUser.dataValues.user_id,
+    }).catch(err => userLogger.error("Admin notification error:", err));
+
+    // Welcome email
+    emailService.sendWelcomeEmail(emailLower, "there").catch(err => {
+      userLogger.error("Failed to send welcome email:", err);
+    });
+
+    const resData = await getAccessToken(createdUser.dataValues.user_id);
+
+    userLogger.info(`[RegisterEmail] User registered via simplified email flow: ${emailLower}`);
+
+    return successResponseHelper(res, 200, "Account created successfully!", {
+      ...resData,
+      email_verified: true,
+      referral_code: userReferralCode,
+    });
+
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Phone Type Check via Telnyx Number Lookup
+ * POST /api/user/phone-type-check
+ * Returns whether a phone number is mobile, landline, voip etc.
+ */
+const phoneTypeCheck = async (req: express.Request, res: express.Response) => {
+  try {
+    let { mobile } = req.body;
+
+    if (!mobile) {
+      return errorResponseHelper(res, 400, "Phone number is required");
+    }
+
+    mobile = mobile.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
+
+    const telnyxApiKey = process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN;
+
+    try {
+      const response = await axios.get(
+        `https://api.telnyx.com/v2/number_lookup/+${mobile}`,
+        {
+          headers: {
+            Authorization: "Bearer " + telnyxApiKey,
+          },
+        }
+      );
+
+      const data = response.data?.data;
+      const phoneType = data?.carrier?.type || "unknown";
+      const countryCode = data?.country_code || null;
+
+      return successResponseHelper(res, 200, "Phone type retrieved", {
+        phone_type: phoneType,
+        is_mobile: phoneType === "mobile",
+        country_code: countryCode,
+        carrier_name: data?.carrier?.name || null,
+      });
+
+    } catch (lookupErr: any) {
+      // If lookup fails, allow it through (don't block registration)
+      userLogger.warn("[phoneTypeCheck] Telnyx lookup failed, allowing through", {
+        error: lookupErr?.response?.data?.errors?.[0]?.detail || lookupErr.message,
+      });
+      return successResponseHelper(res, 200, "Phone type check unavailable", {
+        phone_type: "unknown",
+        is_mobile: true, // Default to allowing
+        country_code: null,
+        carrier_name: null,
+      });
+    }
+
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
   }
 };
 
@@ -175,14 +413,14 @@ const registerUser = async (req: express.Request, res: express.Response) => {
  */
 const registerPhoneStep1 = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, password } = req.body;
     let { mobile } = req.body;
+    const { referral_code } = req.body;
     
-    if (!name || !mobile || !password) {
-      return errorResponseHelper(res, 400, "Name, mobile number, and password are required");
+    if (!mobile) {
+      return errorResponseHelper(res, 400, "Mobile number is required");
     }
     
-    // Strip + prefix if present (Telnyx expects digits only, we add + when calling API)
+    // Strip + prefix if present
     mobile = mobile.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
     
     // Validate mobile format (digits only, 10-15 chars)
@@ -197,38 +435,41 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
     });
     
     if (mobileExists) {
-      return errorResponseHelper(res, 400, "Mobile number already registered");
+      return errorResponseHelper(res, 400, "This phone number is already registered. Please log in.");
+    }
+
+    // Store referral code in Redis for later use
+    if (referral_code) {
+      await setRedisItemWithTTL(`reg-referral-phone:${mobile}`, { referral_code }, 900);
     }
     
-    // Send OTP via Telnyx (with retry logic)
+    // Send OTP via Telnyx
     const smsSent = await sendTelnyxSMS(mobile);
     if (smsSent) {
-      return successResponseHelper(res, 200, "OTP sent to your mobile number. Please verify to complete registration.");
+      return successResponseHelper(res, 200, "Verification code sent to your phone number.");
     }
-    return errorResponseHelper(res, 503, "Failed to send OTP. Please try again shortly.");
+    return errorResponseHelper(res, 503, "Failed to send verification code. Please try again.");
     
   } catch (e) {
-
-    
       handleControllerError(res, e, userLogger);
   }
 };
 
 /**
- * Register User with Phone Number (Step 2: Verify OTP & Create Account)
+ * Simplified Phone Registration - Step 2: Verify OTP & Create Account
  * POST /api/user/registerPhone/verify
- * Verifies OTP and creates user account
+ * No password needed — just verifies OTP and creates account
  */
 const registerPhoneStep2 = async (req: express.Request, res: express.Response) => {
   try {
-    const { name, password, otp } = req.body;
+    const { otp } = req.body;
     let { mobile } = req.body;
     
-    if (!name || !mobile || !password || !otp) {
-      return errorResponseHelper(res, 400, "All fields are required: name, mobile number, password, otp");
+    if (!mobile || !otp) {
+      return errorResponseHelper(res, 400, "Mobile number and verification code are required");
     }
     
-    // Strip + prefix if present
+    // Strip + prefix
     mobile = mobile.replace(/^\+/, '').replace(/\s/g, '').replace(/-/g, '');
     
     // Verify OTP with Telnyx
@@ -246,89 +487,85 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
         }
       );
       
-      // Check if verification was successful
       if (verifyResponse.data?.data?.response_code !== "accepted") {
-        return errorResponseHelper(res, 400, "Invalid or expired OTP");
+        return errorResponseHelper(res, 400, "Invalid or expired verification code");
       }
       
     } catch (otpError) {
       userLogger.error("OTP verification failed", otpError);
-      return errorResponseHelper(res, 400, "Invalid or expired OTP");
+      return errorResponseHelper(res, 400, "Invalid or expired verification code");
     }
-    
-    // OTP verified, now create user account
-    const passwordError = validatePasswordStrength(password);
-    if (passwordError) {
-      return errorResponseHelper(res, 400, passwordError);
-    }
-    const newPassword = hashPassword(password);
     
     // Double-check mobile doesn't exist
-    const mobileExists = await userModel.findOne({
-      where: { mobile }
-    });
-    
+    const mobileExists = await userModel.findOne({ where: { mobile } });
     if (mobileExists) {
-      return errorResponseHelper(res, 400, "Mobile number already registered");
+      return errorResponseHelper(res, 400, "This phone number is already registered.");
     }
+
+    // Retrieve referral code if stored
+    const referralData = await getRedisItem(`reg-referral-phone:${mobile}`);
+    const referral_code = referralData?.referral_code || null;
+    if (referralData) await deleteRedisItem(`reg-referral-phone:${mobile}`);
     
-    // Download default user image
     const photoLocation = await downloadUserImage();
     const photo = process.env.SERVER_URL + photoLocation;
+    const userReferralCode = generateReferralCode();
     
-    // Create user with mobile as primary identifier
+    // Create user with mobile only — no name, no password
     const createdUser = await userModel.create({
-      name,
+      name: null,
       mobile,
-      email: null, // Email is optional for phone registration
+      email: null,
       photo,
-      password: newPassword,
-      login_type: "SMS", // Mark as SMS-based login
+      password: null,
+      login_type: "SMS",
+      referral_code: userReferralCode,
+      referred_by_code: referral_code,
     });
     
-    // Create wallets for the new user
-    const walletData = await adminWalletModel.findAll();
-    const fiatData = walletData.filter(
-      (x) => x.dataValues.currency_type === "FIAT"
-    );
-    const cryptoData = walletData.filter(
-      (x) => x.dataValues.currency_type === "CRYPTO"
-    );
-    
-    for (let i = 0; i < fiatData.length; i++) {
-      await userWalletModel.create({
-        id: crypto.randomUUID(),
-        user_id: createdUser.dataValues.user_id,
-        wallet_type: fiatData[i].dataValues.wallet_type,
-        currency_type: "FIAT",
-      });
+    // Create wallets
+    await createUserWallets(createdUser.dataValues.user_id);
+
+    // Handle referral
+    if (referral_code) {
+      try {
+        const referrer = await userModel.findOne({ where: { referral_code } });
+        if (referrer) {
+          const Referral = require('../models/referralModels/referralModel').default;
+          await Referral.create({
+            referrer_user_id: referrer.dataValues.user_id,
+            referred_user_id: createdUser.dataValues.user_id,
+            referral_code,
+            status: 'pending',
+            activation_requirement: 'first_transaction_100',
+            bonus_amount: 10.00,
+            bonus_currency: 'USD',
+            referee_discount_percent: 50.00,
+            referee_discount_duration_days: 30,
+            referred_at: new Date(),
+            expires_at: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000),
+          });
+        }
+      } catch (refError) {
+        userLogger.error("Error creating referral record:", refError);
+      }
     }
     
-    for (let i = 0; i < cryptoData.length; i++) {
-      await userWalletModel.create({
-        id: crypto.randomUUID(),
-        user_id: createdUser.dataValues.user_id,
-        wallet_type: cryptoData[i].dataValues.wallet_type,
-        currency_type: "CRYPTO",
-      });
-    }
-    
-    // Generate access token
     const resData = await getAccessToken(createdUser.dataValues.user_id);
     
-    userLogger.info(`New user registered via phone: ${mobile}`);
+    userLogger.info(`[RegisterPhone] User registered via simplified phone flow: ${mobile}`);
 
-    // Notify admin of new user registration (non-blocking)
     emailService.sendNewUserAdminNotification({
-      name, mobile, login_type: "SMS",
+      name: mobile, mobile, login_type: "SMS",
       user_id: createdUser.dataValues.user_id,
     }).catch(err => userLogger.error("Admin notification error:", err));
     
-    successResponseHelper(res, 200, "Registration successful!", resData);
+    successResponseHelper(res, 200, "Account created successfully!", {
+      ...resData,
+      referral_code: userReferralCode,
+    });
     
   } catch (e) {
-
-    
       handleControllerError(res, e, userLogger);
   }
 };
@@ -2985,6 +3222,9 @@ const verifyAddPhone = async (req: express.Request, res: express.Response) => {
 
 export default {
   registerUser,
+  registerEmailStep1,
+  registerEmailVerifyOtp,
+  phoneTypeCheck,
   registerPhoneStep1,
   registerPhoneStep2,
   login,

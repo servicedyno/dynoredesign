@@ -17,6 +17,11 @@ userRouter.post("/registerUser", moderateRateLimiter, validate(registerSchema), 
 userRouter.post("/registerPhone", moderateRateLimiter, userController.registerPhoneStep1);
 userRouter.post("/registerPhone/verify", moderateRateLimiter, userController.registerPhoneStep2);
 
+// Simplified registration (email/phone + OTP only, no password)
+userRouter.post("/registerEmail", otpRateLimiter, userController.registerEmailStep1);
+userRouter.post("/registerEmail/verify-otp", moderateRateLimiter, userController.registerEmailVerifyOtp);
+userRouter.post("/phone-type-check", moderateRateLimiter, userController.phoneTypeCheck);
+
 // Login endpoint - strict rate limiting (5 per 15 min per IP+email combo) to prevent brute force
 userRouter.post("/login", loginRateLimiter, validate(loginSchema), userMiddleware, userController.login);
 
