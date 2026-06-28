@@ -5,40 +5,34 @@ USDT-TRC20 payment gateway platform. Users can create companies, wallets, paymen
 
 ## What's Been Implemented
 
+### 2026-06-28 — Company Page Redesign & Settings Fix
+- **Company Page**: Replaced old DataTable with modern card-based layout (matching wallet page pattern). Cards show company logo/initials, email, phone, website, location, and "Manage" button that opens `CompanySettingsDialog`. Empty state with business icon and "Add Company" CTA. Loading spinner with proper fallback via saga error handling fix.
+- **Settings Page**: Redesigned from accordion to 8-card grid (3 columns desktop, 2 tablet, 1 mobile). Each card has colored icon, title, description, and navigates correctly: Company Profile→/company, Wallet Addresses→/wallet, Payment Settings→/company?section=payment, Webhook Configuration→/company?section=webhook, API Keys→/developer-keys, Profile & Security→/profile, Notifications→/notifications, My Account→/referrals.
+- **Saga Error Fix**: Fixed all 4 catch blocks in `CompanySaga.ts` — changed `e.response.data.message` to `e?.response?.data?.message` to prevent crashes on network errors (CORS, timeouts).
+- **Verified**: Testing agent Iteration 15 — all features verified, 100% frontend pass rate.
+
 ### 2026-06-28 — Dark Mode & UI/UX QA Fixes
-- **Bug Fix 1 (Critical)**: Dashboard crash — `user_image.png` relative path without leading `/` crashed Next.js `<Image>` component. Fixed in Header, AdminHeader, UserMenu, AccountSetting (4 files).
-- **Bug Fix 2 (High)**: Empty state text invisible in dark mode — `EmptyDataModel` used hardcoded `#242428` / `#676768` colors. Fixed to `theme.palette.text.primary` / `theme.palette.text.secondary`.
-- **Bug Fix 3 (Medium)**: `NoData` subtext barely visible in dark mode — changed `text.disabled` to `text.secondary`.
-- **Bug Fix 4 (Medium)**: Payment-link `TableBodyCell` hardcoded `#242428`. Fixed to `theme.palette.text.primary`.
-- **Bug Fix 5 (Medium)**: Wallet dialog hardcoded text/border colors. Fixed to theme-aware `text.secondary` / `divider`.
-- **Verified**: Testing agent Iteration 14 — all 5 fixes verified, 8 pages tested in both light/dark modes, all PASS.
+- Dashboard crash from `user_image.png` relative path (4 files fixed)
+- Empty state text invisible in dark mode — `EmptyDataModel`, `NoData`, `PaymentLink`, `Wallet` dialog all fixed to use theme-aware colors
+- **Verified**: Testing agent Iteration 14
 
 ### 2026-06-28 — Password Update OTP Bug Fixes
-- Removed "current password" requirement, replaced with OTP channel selector (email/phone)
-- Fixed OTP dialog close (X) button overflow clipping
-- Changed OTP button text to "Verify" + auto-submit on 6-digit completion
+- Removed "current password" requirement, replaced with OTP channel selector
+- Fixed OTP dialog close button overflow, "Verify" text, auto-submit
 - **Verified**: Testing agent Iteration 13
 
-### 2026-06-28 — Email Template Standardization (Dark Mode)
-- Dark mode CSS overhaul for `baseEmailTemplate` with 60+ dark mode overrides
-- 11 new email helper functions (warnText, alertBox, statCard, feeTable, etc.)
-- Converted all templates to use `dynoPayEmailTemplate`. Removed Inter font references.
+### 2026-06-28 — Email Template Standardization
+- Dark mode CSS overhaul, 11 new helper functions, converted all templates
 - **Verified**: Iteration 12
 
-### 2026-06-28 — Login Activity Notifications & History
-- Email notification on every login (device/browser/OS/IP/geolocation, "Not you?" link)
-- Login Activity section on Profile page (paginated, with device icons, location, flagged badges)
-- Secure account flow (`/auth/secure-account?token=<token>`)
-
-### 2026-06-28 — Profile Settings Refactor with OTP-based Updates
-- Account Settings: Name fields read-only, Email/Phone with OTP-verified Change/Add
-- Update Password: OTP identity verification only (no old password required)
-- Backend: `has_password`, `request-password-otp`, `set-password` endpoints
+### 2026-06-28 — Login Activity & Profile Settings
+- Login notification emails, Login Activity section on Profile, Secure Account flow
+- Profile: OTP-based email/phone/password updates
+- **Verified**: Iterations 10-11
 
 ### Earlier Work
-- Dashboard stats fix, registration UI fix, phone validation, login page UI fix
-- Forgot Password → OTP flow, Onboarding → OTP-only registration
-- Company Creation → collects First/Last Name
+- Dashboard stats, registration UI, phone validation, login page fixes
+- Forgot Password OTP, Onboarding OTP-only, Company Creation with Name fields
 
 ## Prioritized Backlog
 
