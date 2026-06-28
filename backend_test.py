@@ -12,7 +12,7 @@ import json
 from datetime import datetime
 
 # Backend URL from review request
-BASE_URL = "https://ce2180d8-0900-4392-9fd8-2bca8d774e59.preview.emergentagent.com"
+BASE_URL = "https://payment-config-stage.preview.emergentagent.com"
 
 def test_health_check():
     """Test GET /api/ - Health check endpoint"""
