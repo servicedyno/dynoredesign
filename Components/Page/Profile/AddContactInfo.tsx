@@ -262,7 +262,7 @@ const AddContactInfo: React.FC<AddContactInfoProps> = ({ tokenData }) => {
             onClearError={() => setEmailOtpError("")}
             countdown={emailOtpCountdown}
             loading={emailOtpLoading}
-            preventClose={emailOtpCountdown > 0}
+            preventClose={false}
             error={emailOtpError || undefined}
           />
         </PanelCard>
@@ -358,7 +358,7 @@ const AddContactInfo: React.FC<AddContactInfoProps> = ({ tokenData }) => {
             onClearError={() => setPhoneOtpError("")}
             countdown={phoneOtpCountdown}
             loading={phoneOtpLoading}
-            preventClose={phoneOtpCountdown > 0}
+            preventClose={false}
             error={phoneOtpError || undefined}
           />
         </PanelCard>

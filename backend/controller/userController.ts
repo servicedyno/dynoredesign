@@ -3286,6 +3286,7 @@ const verifyAddPhone = async (req: express.Request, res: express.Response) => {
 const requestPasswordOtp = async (req: express.Request, res: express.Response) => {
   const userData = jwt.decode(res.locals.token) as IUserType;
   try {
+    const { channel } = req.body || {};
     const user = await userModel.findOne({ where: { user_id: userData.user_id } });
     if (!user) {
       return errorResponseHelper(res, 404, "User not found");
@@ -3299,9 +3300,21 @@ const requestPasswordOtp = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 400, "No email or phone on account. Please add one first.");
     }
 
-    // Prefer email, fallback to phone
+    // Use requested channel if provided and available, otherwise prefer email → phone
     let sentVia = "";
-    if (userEmail) {
+    if (channel === "phone" && userPhone) {
+      const sent = await sendTelnyxSMS(userPhone);
+      if (!sent) {
+        return errorResponseHelper(res, 503, "Failed to send OTP. Please try again.");
+      }
+      sentVia = "phone";
+    } else if (channel === "email" && userEmail) {
+      const sent = await sendEmailOTP(userEmail, userName);
+      if (!sent) {
+        return errorResponseHelper(res, 503, "Failed to send OTP. Please try again.");
+      }
+      sentVia = "email";
+    } else if (userEmail) {
       const sent = await sendEmailOTP(userEmail, userName);
       if (!sent) {
         return errorResponseHelper(res, 503, "Failed to send OTP. Please try again.");

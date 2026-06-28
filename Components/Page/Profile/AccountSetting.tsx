@@ -527,13 +527,13 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
         contactType="email"
         resendCodeLabel="Resend Code"
         resendCodeCountdownLabel={(s) => `Code in ${s}s`}
-        primaryButtonLabel="Verify & Save"
+        primaryButtonLabel="Verify"
         onResendCode={handleSendEmailOtp}
         onVerify={handleVerifyEmailOtp}
         onClearError={() => setEmailOtpError("")}
         countdown={emailOtpCountdown}
         loading={emailOtpLoading}
-        preventClose={emailOtpCountdown > 0}
+        preventClose={false}
         error={emailOtpError || undefined}
       />
 
@@ -547,13 +547,13 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
         contactType="phone"
         resendCodeLabel="Resend Code"
         resendCodeCountdownLabel={(s) => `Code in ${s}s`}
-        primaryButtonLabel="Verify & Save"
+        primaryButtonLabel="Verify"
         onResendCode={handleSendPhoneOtp}
         onVerify={handleVerifyPhoneOtp}
         onClearError={() => setPhoneOtpError("")}
         countdown={phoneOtpCountdown}
         loading={phoneOtpLoading}
-        preventClose={phoneOtpCountdown > 0}
+        preventClose={false}
         error={phoneOtpError || undefined}
       />
     </PanelCard>

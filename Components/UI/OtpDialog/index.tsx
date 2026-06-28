@@ -85,7 +85,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
   const dialogResendCodeCountdownLabel =
     resendCodeCountdownLabel ||
     ((seconds: number) => `${t("codeIn")} ${seconds}s`);
-  const dialogPrimaryButtonLabel = primaryButtonLabel || t("checkAndAdd");
+  const dialogPrimaryButtonLabel = primaryButtonLabel || t("verify") || "Verify";
 
   const inputSize = isMobile ? "32px" : "40px";
 
@@ -209,8 +209,8 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
   );
 
   const attemptAutoSubmit = React.useCallback(
-    (values: OtpFormValues, submitDisable: boolean, loadingFlag: boolean) => {
-      if (submitDisable || loadingFlag) {
+    (values: OtpFormValues, _submitDisable: boolean, loadingFlag: boolean) => {
+      if (loadingFlag) {
         return;
       }
       const { isValid, otp } = validateOtp(values);
@@ -577,6 +577,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
           transform: "translate(-50%, -50%)",
           margin: 0,
           position: "fixed",
+          overflow: "visible",
         },
       }}
     >

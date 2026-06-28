@@ -1801,7 +1801,7 @@ export default function Login() {
             }}
             countdown={phoneLoginOtpCountdown}
             loading={userState.loading}
-            preventClose={phoneLoginOtpCountdown > 0}
+            preventClose={false}
             error={
               phoneLoginOtpTouched && phoneLoginOtpError
                 ? phoneLoginOtpError.includes(" ")
@@ -1913,7 +1913,7 @@ export default function Login() {
           contactType="email"
           resendCodeLabel={t("resendCode")}
           resendCodeCountdownLabel={(seconds) => `${t("codeIn")} ${seconds}s`}
-          primaryButtonLabel={t("checkAndAdd")}
+          primaryButtonLabel={t("verify") || "Verify"}
           onResendCode={handleSendEmailOtp}
           onVerify={handleEmailOtpVerify}
           onClearError={() => {
@@ -1922,7 +1922,7 @@ export default function Login() {
           }}
           countdown={emailOtpCountdown}
           loading={userState.loading}
-          preventClose={emailOtpCountdown > 0}
+          preventClose={false}
           error={
             emailOtpTouched && emailOtpError
               ? emailOtpError.includes(" ")
@@ -1949,7 +1949,7 @@ export default function Login() {
           contactType="phone"
           resendCodeLabel={t("resendCode")}
           resendCodeCountdownLabel={(seconds) => `${t("codeIn")} ${seconds}s`}
-          primaryButtonLabel={t("checkAndAdd")}
+          primaryButtonLabel={t("verify") || "Verify"}
           onResendCode={handleSendSmsOtp}
           onVerify={handleSmsOtpVerify}
           onClearError={() => {
@@ -1958,7 +1958,7 @@ export default function Login() {
           }}
           countdown={smsOtpCountdown}
           loading={userState.loading}
-          preventClose={smsOtpCountdown > 0}
+          preventClose={false}
           error={
             otpTouched && otpError
               ? otpError.includes(" ")
