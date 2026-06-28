@@ -1,39 +1,40 @@
-import FormManager from "@/Components/Page/Common/FormManager";
-import DataTable from "@/Components/UI/DataTable";
-import PopupModal from "@/Components/UI/PopupModal";
-import TextBox from "@/Components/UI/TextBox";
-
-import {
-  AddCircleOutlineRounded,
-  AddRounded,
-  CloudUploadRounded,
-  DeleteRounded,
-  PlusOneRounded,
-  Search,
-} from "@mui/icons-material";
+import React, { useEffect, useRef, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { useRouter } from "next/router";
+import Head from "next/head";
 import {
   Box,
   Button,
+  CircularProgress,
   Grid,
-  InputAdornment,
   Typography,
   useTheme,
 } from "@mui/material";
+import {
+  AddCircleOutlineRounded,
+  BusinessRounded,
+  EditRounded,
+  EmailRounded,
+  LanguageRounded,
+  PhoneRounded,
+} from "@mui/icons-material";
 import { MuiTelInput } from "mui-tel-input";
-import Head from "next/head";
-import { useEffect, useRef, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
-import Dummy from "@/assets/Images/dummy.jpg";
 import * as yup from "yup";
+
+import FormManager from "@/Components/Page/Common/FormManager";
+import PanelCard from "@/Components/UI/PanelCard";
+import PopupModal from "@/Components/UI/PopupModal";
+import TextBox from "@/Components/UI/TextBox";
+import CompanySettingsDialog from "@/Components/UI/CompanySettingsDialog";
+import useIsMobile from "@/hooks/useIsMobile";
 import { CompanyAction } from "@/Redux/Actions";
 import {
-  COMPANY_DELETE,
   COMPANY_FETCH,
   COMPANY_INSERT,
-  COMPANY_UPDATE,
 } from "@/Redux/Actions/CompanyAction";
-import CustomAlert from "@/Components/UI/CustomAlert";
-import { pageProps, rootReducer } from "@/utils/types";
+import { ICompany, pageProps, rootReducer } from "@/utils/types";
+import Dummy from "@/assets/Images/dummy.jpg";
+import { CloudUploadRounded } from "@mui/icons-material";
 
 const companyInitial = {
   company_name: "",
@@ -42,36 +43,35 @@ const companyInitial = {
   website: "",
 };
 
-const regex: RegExp = new RegExp("^((http|https)://)");
-
-const Company = ({ setPageName }: pageProps) => {
+const Company = ({ setPageName, setPageDescription, setPageAction }: pageProps) => {
   const dispatch = useDispatch();
   const theme = useTheme();
+  const router = useRouter();
+  const isMobile = useIsMobile("md");
+  const fileRef = useRef<any>();
   const companyState = useSelector(
     (state: rootReducer) => state.companyReducer
   );
   const userState = useSelector((state: rootReducer) => state.userReducer);
-  const fileRef = useRef<any>();
+
+  const [addOpen, setAddOpen] = useState(false);
   const [mediaFile, setMediaFile] = useState<any>();
   const [fileName, setFileName] = useState<any>();
-
   const [image, setImage] = useState(Dummy.src);
-  const [localData, setLocalData] = useState<any[]>([]);
   const [initialValue, setInitialValue] = useState(
     structuredClone(companyInitial)
   );
 
-  const [searchValue, setSearchValue] = useState("");
-  const [open, setOpen] = useState(false);
-  const [alertOpen, setAlertOpen] = useState(false);
-  const [ID, setID] = useState(0);
+  // Manage dialog state
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<ICompany | null>(null);
 
   const companySchema = yup.object().shape({
     company_name: yup.string().required("Company Name is required!"),
     email: yup
       .string()
       .email("Please enter a valid email")
-      .required("email is required!"),
+      .required("Email is required!"),
     mobile: yup
       .string()
       .notRequired()
@@ -83,65 +83,36 @@ const Company = ({ setPageName }: pageProps) => {
   });
 
   useEffect(() => {
-    setPageName("Company");
+    setPageName("Companies");
+    setPageDescription?.("Manage your business profiles and company settings");
+    setPageAction?.(null);
     dispatch(CompanyAction(COMPANY_FETCH));
   }, []);
 
+  // Auto-open settings dialog when ?section= is provided
   useEffect(() => {
-    if (companyState?.companyList?.length > 0) {
-      const tempArray: any[] = [];
-      companyState.companyList.map((x, i) => {
-        const tempObj = {
-          no: i + 1,
-          name: (
-            <Box
-              sx={{
-                display: "flex",
-                alignItems: "center",
-                gap: 2,
-              }}
-            >
-              {x.photo ? (
-                <img
-                  src={x.photo}
-                  className="round-img"
-                  crossOrigin="anonymous"
-                />
-              ) : (
-                <Box
-                  className="round-img"
-                  sx={{
-                    background: theme.palette.secondary.main + "44",
-                    color: "text.secondary",
-                    border: "3px solid",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    lineHeight: 0,
-                  }}
-                >
-                  {x.company_name.slice(0, 1)}
-                </Box>
-              )}
-              {x.company_name}
-            </Box>
-          ),
-          hidden: x.company_name,
-          email: x.email,
-          mobile: x.mobile,
-          id: x.company_id,
-        };
-        tempArray.push({ ...tempObj });
-      });
-      setLocalData(tempArray);
+    const section = router.query.section as string | undefined;
+    if (section && companyState?.companyList?.length > 0 && !settingsOpen) {
+      setSelectedCompany(companyState.companyList[0]);
+      setSettingsOpen(true);
     }
-  }, [companyState.companyList]);
+  }, [router.query.section, companyState?.companyList]);
 
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchValue(e.target.value);
+  const handleAddClose = () => {
+    setInitialValue(structuredClone(companyInitial));
+    setFileName(undefined);
+    setMediaFile(undefined);
+    setImage(Dummy.src);
+    setAddOpen(false);
   };
 
-  const columns = ["#", "Company Name", "Email", "Mobile"];
+  const handleAddSubmit = (values: any) => {
+    const formData = new FormData();
+    formData.append("data", JSON.stringify(values));
+    if (mediaFile) formData.append("image", mediaFile);
+    dispatch(CompanyAction(COMPANY_INSERT, formData));
+    handleAddClose();
+  };
 
   const handleFileChange = (file: File) => {
     if (file) {
@@ -151,161 +122,372 @@ const Company = ({ setPageName }: pageProps) => {
     }
   };
 
-  const handleClose = () => {
-    setInitialValue(structuredClone(companyInitial));
-    setFileName(undefined);
-    setMediaFile(undefined);
-    setImage(Dummy.src);
-    setOpen(false);
-    setID(0);
+  const handleManage = (company: ICompany) => {
+    setSelectedCompany(company);
+    setSettingsOpen(true);
   };
 
-  const handleSubmit = (values: any) => {
-    const formData = new FormData();
-    if (ID === 0) {
-      formData.append("data", JSON.stringify(values));
-      formData.append("image", mediaFile);
-      dispatch(CompanyAction(COMPANY_INSERT, formData));
-    } else {
-      formData.append("data", JSON.stringify(values));
-      formData.append("image", mediaFile);
-      dispatch(CompanyAction(COMPANY_UPDATE, { id: ID, formData }));
-    }
-    setInitialValue(structuredClone(companyInitial));
-    setFileName(undefined);
-    setMediaFile(undefined);
-    setImage(Dummy.src);
-    setOpen(false);
-  };
+  const companies = companyState?.companyList || [];
+  const isLoading = companyState?.loading && !companyState?.fetched;
 
-  const handleDelete = () => {
-    dispatch(CompanyAction(COMPANY_DELETE, { id: ID }));
-    setID(0);
-    setAlertOpen(false);
-  };
+  // Loading state (only show on initial fetch, not indefinitely)
+  if (isLoading && companies.length === 0) {
+    return (
+      <Box
+        sx={{
+          height: "60vh",
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+        }}
+      >
+        <CircularProgress sx={{ color: theme.palette.primary.main }} />
+      </Box>
+    );
+  }
 
   return (
     <>
       <Head>
-        <meta name="description" content="Generated by create next app" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
-        <link rel="icon" href="/favicon.ico" />
       </Head>
-      <CustomAlert
-        open={alertOpen}
-        handleClose={() => {
-          setAlertOpen(false);
-          setID(0);
+
+      {/* Header with Add button */}
+      <Box
+        sx={{
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "flex-end",
+          mb: 2,
+          px: { xs: 2, md: 0 },
         }}
-        message={
-          "you want to remove this company? as it will remove all the users, transactions and API keys."
-        }
-        confirmText="Delete"
-        onConfirm={handleDelete}
-      />
-      <Box sx={{ m: 2, mb: 5 }}>
-        <Box
-          sx={{
-            mt: 2,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
+      >
+        <Button
+          data-testid="add-company-btn"
+          variant="rounded"
+          sx={{ display: "flex", alignItems: "center" }}
+          onClick={() => {
+            setInitialValue({
+              ...structuredClone(companyInitial),
+              email: userState.email || "",
+              mobile: userState.mobile || "",
+            });
+            setAddOpen(true);
           }}
         >
-          <TextBox
-            customWidth="auto"
-            placeholder="Search"
-            value={searchValue}
-            onChange={handleSearchChange}
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <Search />
-                </InputAdornment>
-              ),
+          <AddCircleOutlineRounded fontSize="small" sx={{ mr: 0.5 }} />
+          Add Company
+        </Button>
+      </Box>
+
+      {/* Empty State */}
+      {companies.length === 0 && !companyState?.loading && (
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            py: 10,
+            gap: 2,
+          }}
+        >
+          <Box
+            sx={{
+              width: 64,
+              height: 64,
+              borderRadius: "16px",
+              bgcolor: theme.palette.primary.main + "15",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
-          />
+          >
+            <BusinessRounded
+              sx={{ fontSize: 32, color: theme.palette.primary.main }}
+            />
+          </Box>
+          <Typography
+            sx={{
+              fontFamily: "UrbanistSemibold",
+              fontSize: "20px",
+              fontWeight: 600,
+              color: theme.palette.text.primary,
+              mt: 1,
+            }}
+          >
+            No companies yet
+          </Typography>
+          <Typography
+            sx={{
+              fontFamily: "UrbanistMedium",
+              fontSize: "14px",
+              color: theme.palette.text.secondary,
+              textAlign: "center",
+              maxWidth: 360,
+            }}
+          >
+            Create your first company profile to start accepting payments and managing your business.
+          </Typography>
           <Button
+            data-testid="empty-add-company-btn"
             variant="rounded"
-            sx={{ display: "flex", alignItems: "center" }}
+            sx={{ mt: 1, display: "flex", alignItems: "center", gap: 0.5 }}
             onClick={() => {
-              setID(0);
-              setImage(Dummy.src);
               setInitialValue({
                 ...structuredClone(companyInitial),
                 email: userState.email || "",
                 mobile: userState.mobile || "",
               });
-              setOpen(true);
+              setAddOpen(true);
             }}
           >
-            <AddCircleOutlineRounded fontSize="small" sx={{ mr: 0.5 }} />
-            Add New
+            <AddCircleOutlineRounded fontSize="small" />
+            Add Company
           </Button>
         </Box>
-        <Box>
-          <DataTable
-            columns={columns}
-            data={localData}
-            hasAction
-            searchValue={searchValue}
-            actionColumn={(index) => (
-              <Box
+      )}
+
+      {/* Company Cards Grid */}
+      {companies.length > 0 && (
+        <Box
+          sx={{
+            width: "100%",
+            display: "flex",
+            flexDirection: "column",
+            gap: "16px",
+            pb: { xs: "70px", lg: "0" },
+            px: { xs: 2, md: 0 },
+          }}
+        >
+          <Grid container spacing={isMobile ? "12px" : 2.7}>
+            {companies.map((company: ICompany, index: number) => (
+              <Grid
+                item
+                xs={12}
+                md={6}
+                xl={4}
+                key={company.company_id}
                 sx={{
-                  "& button": {
-                    mr: 1,
+                  opacity: 0,
+                  transform: "translateY(20px)",
+                  animation: "cardFadeUp 0.5s ease forwards",
+                  animationDelay: `${index * 0.12}s`,
+                  "@keyframes cardFadeUp": {
+                    "0%": { opacity: 0, transform: "translateY(20px)" },
+                    "100%": { opacity: 1, transform: "translateY(0)" },
                   },
                 }}
               >
-                <Button
-                  variant="pills"
-                  onClick={() => {
-                    const id = localData[index].id;
-                    setID(id);
-                    const singleCompany = companyState.companyList[index];
-                    if (singleCompany) {
-                      setInitialValue({
-                        company_name: singleCompany.company_name,
-                        email: singleCompany.email,
-                        mobile: singleCompany.mobile,
-                        website: singleCompany.website,
-                      });
-                      setImage(singleCompany.photo);
-                      setOpen(true);
-                    }
-                  }}
+                <PanelCard
+                  title={company.company_name}
+                  headerIcon={
+                    <Box
+                      sx={{
+                        width: 48,
+                        height: 48,
+                        borderRadius: "50%",
+                        border: `1px solid ${theme.palette.divider}`,
+                        bgcolor: theme.palette.mode === "dark"
+                          ? "rgba(255,255,255,0.06)"
+                          : theme.palette.grey[100],
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        overflow: "hidden",
+                        flexShrink: 0,
+                      }}
+                    >
+                      {company.photo ? (
+                        <img
+                          src={company.photo}
+                          alt={company.company_name}
+                          crossOrigin="anonymous"
+                          style={{
+                            width: "100%",
+                            height: "100%",
+                            objectFit: "cover",
+                          }}
+                        />
+                      ) : (
+                        <Typography
+                          sx={{
+                            fontFamily: "UrbanistSemibold",
+                            fontWeight: 700,
+                            fontSize: "18px",
+                            color: theme.palette.primary.main,
+                          }}
+                        >
+                          {company.company_name?.charAt(0)?.toUpperCase()}
+                        </Typography>
+                      )}
+                    </Box>
+                  }
+                  showHeaderBorder={false}
+                  headerPadding={theme.spacing(2.5, 2.5, 0, 2.5)}
+                  bodyPadding={
+                    isMobile
+                      ? theme.spacing(1.75, 2, 2, 2)
+                      : theme.spacing(2, 2.5, 2.5, 2.5)
+                  }
                 >
-                  Edit
-                </Button>
-                <Button
-                  variant="outlined"
-                  color="error"
-                  disableRipple={false}
-                  sx={{ borderRadius: "20px" }}
-                  onClick={() => {
-                    const id = localData[index].id;
-                    setID(id);
-                    setAlertOpen(true);
-                  }}
-                >
-                  <DeleteRounded />
-                </Button>
-              </Box>
-            )}
-          />
+                  <Box sx={{ display: "flex", flexDirection: "column", gap: 1.5 }}>
+                    {/* Email */}
+                    {company.email && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <EmailRounded
+                          sx={{
+                            fontSize: 16,
+                            color: theme.palette.text.secondary,
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            fontSize: isMobile ? "13px" : "14px",
+                            fontFamily: "UrbanistMedium",
+                            color: theme.palette.text.secondary,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {company.email}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Phone */}
+                    {company.mobile && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <PhoneRounded
+                          sx={{
+                            fontSize: 16,
+                            color: theme.palette.text.secondary,
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            fontSize: isMobile ? "13px" : "14px",
+                            fontFamily: "UrbanistMedium",
+                            color: theme.palette.text.secondary,
+                          }}
+                        >
+                          {company.mobile}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Website */}
+                    {company.website && (
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 1,
+                        }}
+                      >
+                        <LanguageRounded
+                          sx={{
+                            fontSize: 16,
+                            color: theme.palette.text.secondary,
+                          }}
+                        />
+                        <Typography
+                          sx={{
+                            fontSize: isMobile ? "13px" : "14px",
+                            fontFamily: "UrbanistMedium",
+                            color: theme.palette.primary.main,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                          }}
+                        >
+                          {company.website}
+                        </Typography>
+                      </Box>
+                    )}
+
+                    {/* Location */}
+                    {(company.city || company.country) && (
+                      <Typography
+                        sx={{
+                          fontSize: isMobile ? "12px" : "13px",
+                          fontFamily: "UrbanistMedium",
+                          color: theme.palette.text.secondary,
+                          opacity: 0.8,
+                        }}
+                      >
+                        {[company.city, company.state, company.country]
+                          .filter(Boolean)
+                          .join(", ")}
+                      </Typography>
+                    )}
+
+                    {/* Manage Button */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        mt: 0.5,
+                      }}
+                    >
+                      <Button
+                        data-testid={`manage-company-${company.company_id}`}
+                        variant="outlined"
+                        size="small"
+                        onClick={() => handleManage(company)}
+                        sx={{
+                          borderRadius: "8px",
+                          textTransform: "none",
+                          fontFamily: "UrbanistMedium",
+                          fontWeight: 500,
+                          fontSize: "13px",
+                          borderColor: theme.palette.divider,
+                          color: theme.palette.text.primary,
+                          "&:hover": {
+                            borderColor: theme.palette.primary.main,
+                            bgcolor: theme.palette.primary.main + "08",
+                          },
+                        }}
+                        startIcon={
+                          <EditRounded sx={{ fontSize: "16px !important" }} />
+                        }
+                      >
+                        Manage
+                      </Button>
+                    </Box>
+                  </Box>
+                </PanelCard>
+              </Grid>
+            ))}
+          </Grid>
         </Box>
-      </Box>
+      )}
+
+      {/* Add Company Modal */}
       <PopupModal
-        open={open}
+        open={addOpen}
         showClose
-        headerText={`${ID === 0 ? "Add" : "Update"} Company`}
-        handleClose={handleClose}
+        headerText="Add Company"
+        handleClose={handleAddClose}
       >
-        <Box sx={{ minWidth: "800px" }}>
+        <Box sx={{ minWidth: isMobile ? "auto" : "700px", maxWidth: "100%" }}>
           <FormManager
             initialValues={initialValue}
             yupSchema={companySchema}
-            onSubmit={handleSubmit}
+            onSubmit={handleAddSubmit}
           >
             {({
               errors,
@@ -316,185 +498,170 @@ const Company = ({ setPageName }: pageProps) => {
               values,
             }) => (
               <>
-                <Grid container columnSpacing={3}>
-                  <Grid item md={6}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexDirection: "column",
-                        rowGap: "20px",
-                        width: "100%",
-                      }}
-                    >
-                      <TextBox
-                        fullWidth={true}
-                        label={"Company Name"}
-                        placeholder="Enter your Company Name"
-                        name="company_name"
-                        value={values.company_name}
-                        error={touched.company_name && errors.company_name}
-                        helperText={
-                          touched.company_name &&
-                          errors.company_name &&
-                          errors.company_name
-                        }
-                        onChange={handleChange}
+                <Grid container columnSpacing={3} rowSpacing={2.5}>
+                  <Grid item xs={12} md={6}>
+                    <TextBox
+                      fullWidth
+                      label="Company Name"
+                      placeholder="Enter your Company Name"
+                      name="company_name"
+                      value={values.company_name}
+                      error={touched.company_name && errors.company_name}
+                      helperText={
+                        touched.company_name && errors.company_name
+                      }
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <TextBox
+                      fullWidth
+                      placeholder="Enter your email"
+                      name="email"
+                      label="Email"
+                      value={values.email}
+                      error={touched.email && errors.email}
+                      helperText={touched.email && errors.email}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </Grid>
+                  <Grid item xs={12} md={6}>
+                    <Box sx={{ width: "100%" }}>
+                      <Typography
+                        sx={{
+                          ml: 1,
+                          fontSize: "11px",
+                          fontWeight: 500,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        Mobile (optional)
+                      </Typography>
+                      <MuiTelInput
+                        fullWidth
+                        placeholder="Enter your mobile number"
+                        name="mobile"
+                        forceCallingCode
+                        disableFormatting
+                        defaultCountry="US"
+                        value={values.mobile}
+                        error={touched.mobile && !!errors.mobile}
+                        helperText={touched.mobile && errors.mobile}
+                        onChange={(newValue) => {
+                          const e: any = {
+                            target: { name: "mobile", value: newValue },
+                          };
+                          handleChange(e);
+                        }}
                         onBlur={handleBlur}
                       />
-
-                      <TextBox
-                        fullWidth={true}
-                        placeholder="Enter your email"
-                        name="email"
-                        label={"Email"}
-                        value={values.email}
-                        error={touched.email && errors.email}
-                        helperText={
-                          touched.email && errors.email && errors.email
-                        }
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                      />
-                      <Box sx={{ width: "100%" }}>
-                        <Typography
-                          sx={{
-                            ml: 1,
-                            fontSize: "11px",
-                            fontWeight: 500,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          Mobile (optional)
-                        </Typography>
-                        <MuiTelInput
-                          fullWidth={true}
-                          placeholder="Enter your mobile number"
-                          name="mobile"
-                          forceCallingCode
-                          disableFormatting
-                          defaultCountry="US"
-                          value={values.mobile}
-                          error={touched.mobile && errors.mobile}
-                          helperText={
-                            touched.mobile && errors.mobile && errors.mobile
-                          }
-                          onChange={(newValue, info) => {
-                            console.log(newValue, info);
-                            const e: any = {
-                              target: {
-                                name: "mobile",
-                                value: newValue,
-                              },
-                            };
-                            handleChange(e);
-                          }}
-                          onBlur={handleBlur}
-                        />
-                      </Box>
                     </Box>
                   </Grid>
-                  <Grid item md={6}>
-                    <Box
-                      sx={{
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        flexDirection: "column",
-                        rowGap: "20px",
-                        width: "100%",
-                      }}
-                    >
-                      <TextBox
-                        fullWidth={true}
-                        placeholder="Enter your website"
-                        name="website"
-                        label={"Website (optional)"}
-                        value={values.website}
-                        onChange={handleChange}
-                        onBlur={handleBlur}
-                      />
-                      <Box sx={{ width: "100%" }}>
-                        <Typography
-                          sx={{
-                            ml: 1,
-                            fontSize: "11px",
-                            fontWeight: 600,
-                            textTransform: "capitalize",
-                          }}
-                        >
-                          Brand Logo (Optional)
-                        </Typography>
+                  <Grid item xs={12} md={6}>
+                    <TextBox
+                      fullWidth
+                      placeholder="Enter your website"
+                      name="website"
+                      label="Website (optional)"
+                      value={values.website}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                    />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Box sx={{ width: "100%" }}>
+                      <Typography
+                        sx={{
+                          ml: 1,
+                          fontSize: "11px",
+                          fontWeight: 600,
+                          textTransform: "capitalize",
+                          mb: 0.5,
+                        }}
+                      >
+                        Brand Logo (Optional)
+                      </Typography>
+                      <Box
+                        sx={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 2,
+                        }}
+                      >
                         <Box
                           sx={{
-                            mt: 0.5,
-                            background: "#F8F8F8",
-                            borderRadius: "20px",
                             display: "flex",
                             alignItems: "center",
                             gap: 1,
+                            bgcolor:
+                              theme.palette.mode === "dark"
+                                ? "rgba(255,255,255,0.04)"
+                                : "#F8F8F8",
+                            borderRadius: "12px",
+                            px: 1,
+                            flex: 1,
                           }}
                         >
                           <Button
                             variant="rounded"
+                            size="small"
                             sx={{
                               display: "flex",
                               alignItems: "center",
-                              gap: 1,
+                              gap: 0.5,
+                              whiteSpace: "nowrap",
                             }}
-                            onClick={() => {
-                              fileRef.current.click();
-                            }}
+                            onClick={() => fileRef.current?.click()}
                           >
                             <CloudUploadRounded fontSize="small" />
                             {fileName ? "Change" : "Upload"} File
                           </Button>
-                          <Typography>
+                          <Typography
+                            sx={{
+                              fontSize: "13px",
+                              color: theme.palette.text.secondary,
+                              overflow: "hidden",
+                              textOverflow: "ellipsis",
+                              whiteSpace: "nowrap",
+                            }}
+                          >
                             {fileName ?? "No file chosen"}
                           </Typography>
                           <input
                             type="file"
                             ref={fileRef}
                             hidden
+                            accept="image/*"
                             onChange={(e: any) =>
                               handleFileChange(e.target.files[0])
                             }
                           />
                         </Box>
-                      </Box>
-                      <Box sx={{ width: "100%" }}>
-                        <Box
-                          sx={{
-                            display: "flex",
-                            alignItems: "center",
-                            gap: 3,
-                            "& img": {
-                              width: "100px",
-                              height: "100px",
-                              objectFit: "cover",
-                              objectPosition: "center",
-                              borderRadius: "100%",
-                              boxShadow: "0 0 3px #000",
-                            },
-                          }}
-                        >
-                          <Typography
+                        {image && image !== Dummy.src && (
+                          <Box
                             sx={{
-                              ml: 1,
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              textTransform: "capitalize",
+                              width: 48,
+                              height: 48,
+                              borderRadius: "50%",
+                              overflow: "hidden",
+                              border: `1px solid ${theme.palette.divider}`,
+                              flexShrink: 0,
                             }}
                           >
-                            Logo Preview
-                          </Typography>
-                          <img
-                            src={image}
-                            alt="no picture"
-                            crossOrigin="anonymous"
-                          />
-                        </Box>
+                            <img
+                              src={image}
+                              alt="preview"
+                              crossOrigin="anonymous"
+                              style={{
+                                width: "100%",
+                                height: "100%",
+                                objectFit: "cover",
+                              }}
+                            />
+                          </Box>
+                        )}
                       </Box>
                     </Box>
                   </Grid>
@@ -507,15 +674,27 @@ const Company = ({ setPageName }: pageProps) => {
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "flex-end",
+                    gap: 1.5,
                   }}
                 >
+                  <Button
+                    variant="outlined"
+                    onClick={handleAddClose}
+                    sx={{
+                      borderRadius: "10px",
+                      textTransform: "none",
+                      fontFamily: "UrbanistMedium",
+                    }}
+                  >
+                    Cancel
+                  </Button>
                   <Button
                     variant="rounded"
                     type="submit"
                     disabled={submitDisable}
                     sx={{ py: 1.5 }}
                   >
-                    {ID === 0 ? "Add" : "Update"}
+                    Add Company
                   </Button>
                 </Box>
               </>
@@ -523,6 +702,22 @@ const Company = ({ setPageName }: pageProps) => {
           </FormManager>
         </Box>
       </PopupModal>
+
+      {/* Company Settings Dialog (Manage) */}
+      <CompanySettingsDialog
+        open={settingsOpen}
+        company={selectedCompany}
+        onClose={() => {
+          setSettingsOpen(false);
+          setSelectedCompany(null);
+          // Re-fetch companies after changes
+          dispatch(CompanyAction(COMPANY_FETCH));
+          // Clear the section query param
+          if (router.query.section) {
+            router.replace("/company", undefined, { shallow: true });
+          }
+        }}
+      />
     </>
   );
 };

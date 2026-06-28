@@ -62,7 +62,7 @@ export function* addCompany(payload: any): unknown {
       payload: data,
     });
   } catch (e: any) {
-    const message = e.response.data.message ?? e.message;
+    const message = e?.response?.data?.message ?? e?.message ?? "An error occurred";
     yield put({
       type: TOAST_SHOW,
       payload: {
@@ -95,7 +95,7 @@ export function* updateCompany(payload: any): unknown {
       payload: { id, data },
     });
   } catch (e: any) {
-    const message = e.response.data.message ?? e.message;
+    const message = e?.response?.data?.message ?? e?.message ?? "An error occurred";
     yield put({
       type: TOAST_SHOW,
       payload: {
@@ -120,7 +120,7 @@ export function* getCompany(): unknown {
       payload: data,
     });
   } catch (e: any) {
-    const message = e.response.data.message ?? e.message;
+    const message = e?.response?.data?.message ?? e?.message ?? "An error occurred";
     yield put({
       type: TOAST_SHOW,
       payload: {
@@ -153,7 +153,7 @@ export function* deleteCompany(payload: any): unknown {
       payload: id,
     });
   } catch (e: any) {
-    const message = e.response.data.message ?? e.message;
+    const message = e?.response?.data?.message ?? e?.message ?? "An error occurred";
     yield put({
       type: TOAST_SHOW,
       payload: {

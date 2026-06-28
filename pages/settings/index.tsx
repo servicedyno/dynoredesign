@@ -41,6 +41,13 @@ const SettingsPage = ({
 
   const settingsCards: SettingsCard[] = [
     {
+      title: "Company Profile",
+      description: "Manage your business profiles, logos, and company details",
+      icon: <BusinessRounded sx={{ fontSize: 28 }} />,
+      path: "/company",
+      color: "#8B5CF6",
+    },
+    {
       title: "Wallet Addresses",
       description: "Manage your crypto wallet addresses for receiving payments",
       icon: <AccountBalanceWalletRounded sx={{ fontSize: 28 }} />,
@@ -48,18 +55,18 @@ const SettingsPage = ({
       color: "#6366F1",
     },
     {
-      title: "Company Profile",
-      description: "Update your business information, logo, and company details",
-      icon: <BusinessRounded sx={{ fontSize: 28 }} />,
-      path: "/company",
-      color: "#8B5CF6",
-    },
-    {
       title: "Payment Settings",
       description: "Configure payment tolerance, accepted currencies, and checkout options",
       icon: <CurrencyExchangeRounded sx={{ fontSize: 28 }} />,
-      path: "/company",
+      path: "/company?section=payment",
       color: "#EC4899",
+    },
+    {
+      title: "Webhook Configuration",
+      description: "Set up webhook endpoints for real-time payment event notifications",
+      icon: <WebhookRounded sx={{ fontSize: 28 }} />,
+      path: "/company?section=webhook",
+      color: "#EF4444",
     },
     {
       title: "API Keys",
@@ -77,23 +84,16 @@ const SettingsPage = ({
     },
     {
       title: "Notifications",
-      description: "Configure email, push, and webhook notification preferences",
+      description: "View and configure email, push, and notification preferences",
       icon: <NotificationsRounded sx={{ fontSize: 28 }} />,
       path: "/notifications",
       color: "#3B82F6",
     },
     {
-      title: "Webhook Configuration",
-      description: "Set up webhook endpoints for real-time payment event notifications",
-      icon: <WebhookRounded sx={{ fontSize: 28 }} />,
-      path: "/company",
-      color: "#EF4444",
-    },
-    {
       title: "My Account",
-      description: "View account details, referral code, and manage your subscription",
+      description: "View account details, referral code, and fee tier information",
       icon: <PersonRounded sx={{ fontSize: 28 }} />,
-      path: "/profile",
+      path: "/referrals",
       color: "#14B8A6",
     },
   ];
@@ -118,6 +118,7 @@ const SettingsPage = ({
           {settingsCards.map((card, index) => (
             <Box
               key={index}
+              data-testid={`settings-card-${card.title.toLowerCase().replace(/\s+/g, "-")}`}
               onClick={() => router.push(card.path)}
               sx={{
                 p: { xs: "16px", md: "20px 24px" },
