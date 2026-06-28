@@ -53,7 +53,7 @@ const TitleDescription: React.FC<TitleDescriptionProps> = ({
             color: "text.primary",
             lineHeight: "1.2",
             letterSpacing: 0,
-            ...(isMobile && { fontSize: "15px" }),
+            ...(isMobile && { fontSize: "20px" }),
           }}
         >
           {title}
@@ -66,9 +66,9 @@ const TitleDescription: React.FC<TitleDescriptionProps> = ({
             fontSize: "15px",
             fontFamily: "UrbanistMedium",
             color: "text.secondary",
-            lineHeight: "1.2",
+            lineHeight: "1.4",
             letterSpacing: 0,
-            ...(isMobile && { fontSize: "13px" }),
+            ...(isMobile && { fontSize: "14px" }),
           }}
         >
           {description}

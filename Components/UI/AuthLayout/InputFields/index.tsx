@@ -272,7 +272,7 @@ const InputField: React.FC<InputFieldProps> = ({
           sx={{
             fontWeight: 500,
             fontFamily: "UrbanistMedium",
-            fontSize: isMobile ? "13px" : "15px",
+            fontSize: isMobile ? "14px" : "15px",
             textAlign: "start",
             color: theme.palette.text.primary,
             lineHeight: 1.2,
@@ -376,26 +376,26 @@ const InputField: React.FC<InputFieldProps> = ({
               "& .MuiInputBase-root": {
                 ...(multiline
                   ? {
-                      minHeight: inputHeight ?? (isMobile ? "32px" : "40px"),
+                      minHeight: inputHeight ?? (isMobile ? "44px" : "40px"),
                       alignItems: "flex-start",
                       padding: "0px !important",
                     }
                   : {
-                      height: inputHeight ?? (isMobile ? "32px" : "40px"),
+                      height: inputHeight ?? (isMobile ? "44px" : "40px"),
                     }),
                 borderRadius: "6px",
                 boxSizing: "border-box",
                 "& input, & textarea": {
                   padding: "11px 14px",
                   boxSizing: "border-box",
-                  fontSize: isMobile ? "10px" : "13px",
+                  fontSize: isMobile ? "14px" : "13px",
                   lineHeight: "1.5",
                   color: disabled ? "#B0BEC5" : theme.palette.text.primary,
                   "&::placeholder": {
                     color: theme.palette.text.secondary,
                     opacity: 1,
                     fontFamily: "UrbanistMedium",
-                    fontSize: isMobile ? "10px" : "13px",
+                    fontSize: isMobile ? "14px" : "13px",
                     lineHeight: 1.2,
                   },
                   fontFamily: "UrbanistMedium",
@@ -466,7 +466,7 @@ const InputField: React.FC<InputFieldProps> = ({
           <Typography
             sx={{
               margin: "6px 0 0 0",
-              fontSize: isMobile ? "10px" : "13px",
+              fontSize: isMobile ? "12px" : "13px",
               fontFamily: "UrbanistMedium",
               fontWeight: 500,
               color: error

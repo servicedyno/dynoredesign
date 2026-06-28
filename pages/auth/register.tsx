@@ -535,8 +535,8 @@ const Register = () => {
           <Image
             src={mounted && muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
             alt="logo"
-            width={isMobile ? 86 : 114}
-            height={isMobile ? 29 : 39}
+            width={isMobile ? 120 : 114}
+            height={isMobile ? 41 : 39}
             draggable={false}
             onClick={() => router.push("/")}
             style={{ cursor: "pointer" }}
@@ -743,7 +743,7 @@ const Register = () => {
               <CustomButton
                 label={t("sendVerificationCode")}
                 variant="primary"
-                size={isMobile ? "small" : "medium"}
+                size="medium"
                 fullWidth
                 disabled={phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword || !passwordRegex.test(phonePassword)}
                 onClick={handlePhoneRegisterStep1}

@@ -941,8 +941,8 @@ export default function Login() {
           <Image
             src={mounted && theme.palette.mode === "dark" ? WhiteLogo : Logo}
             alt="logo"
-            width={isMobile ? 86 : 114}
-            height={isMobile ? 29 : 39}
+            width={isMobile ? 120 : 114}
+            height={isMobile ? 41 : 39}
             draggable={false}
             onClick={() => router.push("/")}
             style={{ cursor: "pointer" }}
@@ -990,10 +990,10 @@ export default function Login() {
               sx={{
                 flex: 1,
                 textAlign: "center",
-                padding: isMobile ? "8px 0" : "10px 0",
+                padding: isMobile ? "10px 0" : "10px 0",
                 cursor: "pointer",
                 fontFamily: "UrbanistMedium",
-                fontSize: isMobile ? "13px" : "14px",
+                fontSize: isMobile ? "14px" : "14px",
                 fontWeight: loginMode === "email" ? 600 : 500,
                 color: loginMode === "email" ? "#fff" : "text.secondary",
                 backgroundColor: loginMode === "email" ? "primary.main" : "transparent",
@@ -1008,10 +1008,10 @@ export default function Login() {
               sx={{
                 flex: 1,
                 textAlign: "center",
-                padding: isMobile ? "8px 0" : "10px 0",
+                padding: isMobile ? "10px 0" : "10px 0",
                 cursor: "pointer",
                 fontFamily: "UrbanistMedium",
-                fontSize: isMobile ? "13px" : "14px",
+                fontSize: isMobile ? "14px" : "14px",
                 fontWeight: loginMode === "phone" ? 600 : 500,
                 color: loginMode === "phone" ? "#fff" : "text.secondary",
                 backgroundColor: loginMode === "phone" ? "primary.main" : "transparent",
@@ -1114,7 +1114,7 @@ export default function Login() {
               <CustomButton
                 label={t("continue")}
                 variant="primary"
-                size={isMobile ? "small" : "medium"}
+                size="medium"
                 fullWidth
                 disabled={phoneCheckLoading}
                 onClick={handlePhoneCheck}
@@ -1196,7 +1196,7 @@ export default function Login() {
               <CustomButton
                 label={t("continue")}
                 variant="primary"
-                size={isMobile ? "small" : "medium"}
+                size="medium"
                 fullWidth
                 disabled={userState.loading}
                 onClick={() => {
@@ -1296,7 +1296,7 @@ export default function Login() {
               <CustomButton
                 label={t("continue")}
                 variant="primary"
-                size={isMobile ? "small" : "medium"}
+                size="medium"
                 fullWidth
                 disabled={emailCheckLoading}
                 onClick={handleEmailCheck}
@@ -1713,7 +1713,7 @@ export default function Login() {
               <CustomButton
                 label={t("continue")}
                 variant="primary"
-                size={isMobile ? "small" : "medium"}
+                size="medium"
                 fullWidth
                 disabled={
                   userState.loading &&

@@ -111,9 +111,9 @@ export const FormPanel = styled(Box)(({ theme }) => ({
   },
 
   [theme.breakpoints.down("sm")]: {
-    padding: "32px 20px 40px",
-    alignItems: "flex-start",
-    justifyContent: "flex-start",
+    padding: "24px 24px 40px",
+    alignItems: "center",
+    justifyContent: "center",
   },
 }));
 
@@ -133,7 +133,7 @@ export const AuthContainer = styled(Box)(({ theme }) => ({
   maxWidth: "480px",
 
   [theme.breakpoints.down("sm")]: {
-    gap: "16px",
+    gap: "20px",
     padding: "0",
     width: "100%",
   },

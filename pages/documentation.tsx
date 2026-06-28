@@ -898,7 +898,7 @@ const DocumentationPage = () => {
             <Box sx={{ display: "flex", justifyContent: "center", mt: 3 }}>
               <Box sx={{ display: "inline-flex", gap: 1.5, background: dk ? "#0D0F1A" : "#1E1E2E", borderRadius: "12px", px: 2.5, py: 1.5, border: `1px solid ${dk ? "#2A2D42" : "rgba(255,255,255,0.06)"}` }}>
                 <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "rgba(255,255,255,0.5)" }}>Base URL</Typography>
-                <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#CDD6F4", fontWeight: 600 }}>https://api.dynopay.com/api/user</Typography>
+                <Typography sx={{ fontFamily: "'JetBrains Mono', monospace", fontSize: 13, color: "#CDD6F4", fontWeight: 600 }}>https://dynopay.com/api/user</Typography>
               </Box>
             </Box>
           </section>
@@ -992,19 +992,19 @@ const DocumentationPage = () => {
                 <CodeBlock
                   lang="bash"
                   code={`# Create a checkout payment — just your API key, no customer setup!
-curl -X POST https://api.dynopay.com/api/user/createPayment \\
+curl -X POST https://dynopay.com/api/user/createPayment \\
   -H "x-api-key: your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"amount": 50, "redirect_uri": "https://yoursite.com/thanks"}'
 
 # Or create a direct crypto payment with QR code:
-curl -X POST https://api.dynopay.com/api/user/cryptoPayment \\
+curl -X POST https://dynopay.com/api/user/cryptoPayment \\
   -H "x-api-key: your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"amount": 25, "currency": "BTC", "redirect_uri": "https://yoursite.com/done"}'
 
 # Optional: Create a customer for per-customer tracking
-curl -X POST https://api.dynopay.com/api/user/createUser \\
+curl -X POST https://dynopay.com/api/user/createUser \\
   -H "x-api-key: your_api_key" \\
   -H "Content-Type: application/json" \\
   -d '{"name": "Jane Smith", "email": "jane@example.com"}'`}
