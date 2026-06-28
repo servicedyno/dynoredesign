@@ -69,10 +69,21 @@ const isProduction = process.env.NODE_ENV === 'production' || !!process.env.RAIL
 // Set ENABLE_BACKGROUND_JOBS=true explicitly to override (e.g., for staging).
 const enableBackgroundJobs = process.env.ENABLE_BACKGROUND_JOBS === 'true' || 
   (process.env.ENABLE_BACKGROUND_JOBS !== 'false' && isProduction);
+
+// WORKER_ROLE: Multi-environment isolation for shared DB/Redis setups.
+//   'primary'   — Runs all cron jobs, sweeps, and webhook processing (designate ONE environment)
+//   'secondary' — API-only, zero cron jobs (safe to run alongside primary)
+//   unset       — Legacy behavior, same as 'primary' (backward compatible)
+const workerRole = (process.env.WORKER_ROLE || 'primary').toLowerCase();
+const isCronEnabled = enableBackgroundJobs && workerRole !== 'secondary';
+
 if (!enableBackgroundJobs) {
   console.warn('⚠️  BACKGROUND JOBS DISABLED — cron jobs, webhook migration, and reconciliation will NOT run on this instance');
   console.warn(`   Reason: ENABLE_BACKGROUND_JOBS=${process.env.ENABLE_BACKGROUND_JOBS || 'not set'}, isProduction=${isProduction}`);
   console.warn('   Set ENABLE_BACKGROUND_JOBS=true in .env to enable on non-production instances');
+} else if (workerRole === 'secondary') {
+  console.warn('⚠️  WORKER_ROLE=secondary — This instance serves API requests only. Cron jobs, sweeps, and webhook migration are DISABLED.');
+  console.warn('   Set WORKER_ROLE=primary on your designated cron runner (e.g., DigitalOcean).');
 }
 if (isProduction) {
   // Force unbuffered output for Railway
@@ -691,28 +702,37 @@ app.post("/diagnostics/clear-stale-reconciliation", adminAuthMiddleware, async (
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
-// CRON JOBS — Only run on production or when ENABLE_BACKGROUND_JOBS=true
+// CRON JOBS — Only run when background jobs enabled AND WORKER_ROLE != secondary
 // ═══════════════════════════════════════════════════════════════════════════
-if (enableBackgroundJobs) {
+if (isCronEnabled) {
+log(`✅ CRON JOBS ENABLED — WORKER_ROLE=${workerRole}, environment=${isProduction ? 'production' : 'dev'}`, "info");
 
 // OPTIMIZED: Reduced from */30 to every 2h — legacy system, rarely has pending addresses
 cron.schedule("0 */2 * * *", async function () {
+  const lockAcquired = await acquireLock("cron:checkingUSDT", 300, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     log("Cron: USDT check running", "info");
     await paymentController.checkingUSDT();
   } catch (err) {
     log(`Cron: checkingUSDT failed: ${(err as Error).message}`, "error");
     captureError(err as Error, 'cron', { extraContext: 'checkingUSDT' });
+  } finally {
+    await releaseLock("cron:checkingUSDT");
   }
 });
 
 // TATUM CREDIT OPTIMIZATION: Reduced from */15 to */30 — sweeps are rare, 30-min check is safe
 cron.schedule("*/30 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:sweepNativeAdminFees", 300, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     await paymentController.sweepNativeAdminFees();
   } catch (err) {
     log(`Cron: sweepNativeAdminFees failed: ${(err as Error).message}`, "error");
     captureError(err as Error, 'cron', { extraContext: 'sweepNativeAdminFees' });
+  } finally {
+    await releaseLock("cron:sweepNativeAdminFees");
   }
 });
 
@@ -728,21 +748,29 @@ cron.schedule("*/30 * * * *", async () => {
 
 // TATUM CREDIT OPTIMIZATION: Reduced from */15 to hourly — fee balance doesn't change rapidly
 cron.schedule("0 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:checkFeeBalance", 300, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     await paymentController.checkFeeBalance();
   } catch (err) {
     log(`Cron: checkFeeBalance failed: ${(err as Error).message}`, "error");
     captureError(err as Error, 'cron', { extraContext: 'checkFeeBalance' });
+  } finally {
+    await releaseLock("cron:checkFeeBalance");
   }
 });
 
 cron.schedule("0 0 * * *", async function () {
+  const lockAcquired = await acquireLock("cron:removeUnwantedSubscriptions", 300, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     log("Cron: removeUnwantedSubscriptions running", "info");
     await paymentController.removeUnwantedSubscriptions();
   } catch (err) {
     log(`Cron: removeUnwantedSubscriptions failed: ${(err as Error).message}`, "error");
     captureError(err as Error, 'cron', { extraContext: 'removeUnwantedSubscriptions' });
+  } finally {
+    await releaseLock("cron:removeUnwantedSubscriptions");
   }
 });
 
@@ -768,9 +796,13 @@ cron.schedule("*/30 * * * *", async function () {
 
 // Merchant Pool: Release expired reservations every 15 minutes
 // PERF: Increased from 5min to 15min — reservations have 30min TTL, 15min check is safe
-cron.schedule("*/15 * * * *", function () {
-  merchantPoolService.releaseExpiredReservations().catch(async (err) => {
-    const errMsg = err.message || '';
+cron.schedule("*/15 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:releaseExpiredReservations", 120, 1, 100, true);
+  if (!lockAcquired) return;
+  try {
+    await merchantPoolService.releaseExpiredReservations();
+  } catch (err) {
+    const errMsg = (err as Error).message || '';
     // Retry once for transient connection errors
     if (errMsg.includes('Connection terminated') || errMsg.includes('ECONNRESET') || errMsg.includes('ETIMEDOUT')) {
       log(`Cron: Release expired hit transient DB error (${errMsg}), retrying in 5s...`, "error");
@@ -784,14 +816,24 @@ cron.schedule("*/15 * * * *", function () {
       }
     } else {
       log(`Cron: Release expired failed, will retry next cycle: ${errMsg}`, "error");
-      captureError(err, 'cron', { extraContext: 'releaseExpiredReservations' });
+      captureError(err as Error, 'cron', { extraContext: 'releaseExpiredReservations' });
     }
-  });
+  } finally {
+    await releaseLock("cron:releaseExpiredReservations");
+  }
 });
 
 // Merchant Pool: Cleanup stuck addresses every 15 minutes (safety net)
-cron.schedule("*/15 * * * *", function () {
-  merchantPoolService.cleanupStaleAddresses();
+cron.schedule("*/15 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:cleanupStaleAddresses", 120, 1, 100, true);
+  if (!lockAcquired) return;
+  try {
+    await merchantPoolService.cleanupStaleAddresses();
+  } catch (err) {
+    log(`Cron: cleanupStaleAddresses failed: ${(err as Error).message}`, "error");
+  } finally {
+    await releaseLock("cron:cleanupStaleAddresses");
+  }
 });
 
 // ═══════════════════════════════════════════════════════════════════════
@@ -815,12 +857,18 @@ cron.schedule("*/2 * * * *", async function () {
 // Merchant Pool: Subscription health monitor every 6 hours
 // Ensures all pool addresses have valid Tatum webhook subscriptions
 // TATUM CREDIT OPTIMIZATION: Reduced from 2h to 6h — subscriptions rarely break on their own
-cron.schedule("0 */6 * * *", function () {
-  log("Cron: ensurePoolSubscriptions running", "info");
-  merchantPoolService.ensurePoolSubscriptions().catch(err => {
-    log(`Cron: Subscription health check failed: ${err.message}`, "error");
-    captureError(err, 'cron', { extraContext: 'ensurePoolSubscriptions' });
-  });
+cron.schedule("0 */6 * * *", async function () {
+  const lockAcquired = await acquireLock("cron:ensurePoolSubscriptions", 600, 1, 100, true);
+  if (!lockAcquired) return;
+  try {
+    log("Cron: ensurePoolSubscriptions running", "info");
+    await merchantPoolService.ensurePoolSubscriptions();
+  } catch (err) {
+    log(`Cron: Subscription health check failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'ensurePoolSubscriptions' });
+  } finally {
+    await releaseLock("cron:ensurePoolSubscriptions");
+  }
 });
 
 // Merchant Pool: Check for missed webhooks every hour
@@ -862,16 +910,19 @@ cron.schedule("0 */6 * * *", async function () {
 // Ensures each active merchant has AVAILABLE addresses ready for instant reservation
 // Eliminates ~3-4s Tatum API call bottleneck during payment creation
 // TATUM CREDIT OPTIMIZATION: Reduced from 15min to 30min — pool rarely needs new addresses
-cron.schedule("*/30 * * * *", function () {
-  merchantPoolService.prewarmPoolAddresses().catch(err => {
-    log(`Cron: Pool pre-warming failed: ${err.message}`, "error");
-    captureError(err, 'cron', { extraContext: 'prewarmPoolAddresses' });
-  });
-  // Also retry any RLUSD addresses with pending trust lines
-  merchantPoolService.retryPendingTrustLines().catch(err => {
-    log(`Cron: Trust line retry failed: ${err.message}`, "error");
-    captureError(err, 'cron', { extraContext: 'retryPendingTrustLines' });
-  });
+cron.schedule("*/30 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:prewarmPoolAddresses", 300, 1, 100, true);
+  if (!lockAcquired) return;
+  try {
+    await merchantPoolService.prewarmPoolAddresses();
+    // Also retry any RLUSD addresses with pending trust lines
+    await merchantPoolService.retryPendingTrustLines();
+  } catch (err) {
+    log(`Cron: Pool pre-warming failed: ${(err as Error).message}`, "error");
+    captureError(err as Error, 'cron', { extraContext: 'prewarmPoolAddresses' });
+  } finally {
+    await releaseLock("cron:prewarmPoolAddresses");
+  }
 });
 
 // Setup weekly summary cron job (every Monday at 9:00 AM UTC)
@@ -916,12 +967,16 @@ setupFirstPaymentMonitorCron();
 // RELIABILITY: Payment Watchdog — detect stuck payments every 2 minutes
 // ═══════════════════════════════════════════════════════════════════════
 cron.schedule("*/2 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:paymentWatchdog", 90, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     const { watchdogCheck } = await import("./services/paymentReliability");
     await watchdogCheck();
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     log(`Cron: Payment watchdog failed: ${errMsg}`, "error");
+  } finally {
+    await releaseLock("cron:paymentWatchdog");
   }
 });
 
@@ -947,6 +1002,8 @@ cron.schedule(`*/${convertIntervalMinutes} * * * *`, async function () {
 // Webhook Retry Queue: Process failed webhooks with exponential backoff
 // PERF: Increased from 2min to 10min — queue is almost always empty
 cron.schedule("*/10 * * * *", async function () {
+  const lockAcquired = await acquireLock("cron:webhookRetryQueue", 120, 1, 100, true);
+  if (!lockAcquired) return;
   try {
     const stats = await processWebhookRetryQueue();
     if (stats.processed > 0) {
@@ -955,10 +1012,12 @@ cron.schedule("*/10 * * * *", async function () {
   } catch (err: unknown) {
     const errMsg = err instanceof Error ? err.message : String(err);
     log(`Cron: Webhook retry queue failed: ${errMsg}`, "error");
+  } finally {
+    await releaseLock("cron:webhookRetryQueue");
   }
 });
 
-} // end if (enableBackgroundJobs) — cron jobs block
+} // end if (isCronEnabled) — cron jobs block
 
 // ═══════════════════════════════════════════════════════════════════════════
 // ALWAYS-ON: Background rate cache refresh (not destructive, needed for conversions)
@@ -1150,7 +1209,7 @@ const startServer = async () => {
     startErrorMonitoring();
 
     // Start fee wallet monitoring (checks TRX balance every 30min)
-    if (enableBackgroundJobs) {
+    if (isCronEnabled) {
       import("./services/feeWalletMonitor")
         .then(({ startFeeWalletMonitoring }) => {
           startFeeWalletMonitoring(30);
@@ -1162,7 +1221,7 @@ const startServer = async () => {
 
     // Migrate stale webhook URLs from previous deployments (runs once on startup)
     // SAFETY: Only on production — dev instances would overwrite production webhook URLs
-    if (enableBackgroundJobs) {
+    if (isCronEnabled) {
     migrateWebhookUrls()
       .then(stats => {
         log(`Webhook URL migration complete: ${stats.updated} updated, ${stats.alreadyCorrect} already correct, ${stats.errors} errors (of ${stats.total} total)`, "info");
@@ -1184,7 +1243,7 @@ const startServer = async () => {
 
     // ── Run startup reconciliation (catch missed webhooks during downtime) ────
     // SAFETY: Only on production — dev instances shouldn't re-queue production payments
-    if (enableBackgroundJobs) {
+    if (isCronEnabled) {
 
     // ── Fee-free balance reconciliation (corrects users with $500+ volume) ────
     import("./services/feeFreeReconciliation")

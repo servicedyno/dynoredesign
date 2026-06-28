@@ -331,6 +331,11 @@
             "scope": "RUN_TIME"
           },
           {
+            "key": "WORKER_ROLE",
+            "value": "primary",
+            "scope": "RUN_TIME"
+          },
+          {
             "key": "BREVO_API_KEY",
             "value": "REPLACE_ME",
             "scope": "RUN_TIME",

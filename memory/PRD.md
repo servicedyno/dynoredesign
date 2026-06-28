@@ -103,7 +103,16 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - **P1 — Merchant webhook 404**: outbound webhook to merchant URL returning 404; verify routing/payload targeting in `webhooks/index.ts`.
 - **P2 — Landing page "Network Error" (USER ACTION)**: needs a clean Railway frontend rebuild to bake the new `NEXT_PUBLIC_BASE_URL`.
 
-### 2026-02-XX — DO Environment Variables Audit (P2)
+### 2026-02-XX — Cron Worker Isolation & Lock Coverage (P1)
+- Added `WORKER_ROLE=primary|secondary` env var system for multi-environment isolation
+  - `primary` (DO) → runs all cron jobs, sweeps, webhook migration, reconciliation
+  - `secondary` (Railway) → API-only, zero cron jobs
+  - Backward compatible: unset defaults to `primary`
+- Added Redis distributed locks (`acquireLock/releaseLock`) to ALL 16 cron jobs (was 10/16)
+  - Newly locked: `checkingUSDT`, `sweepNativeAdminFees`, `checkFeeBalance`, `removeUnwantedSubscriptions`, `releaseExpiredReservations`, `cleanupStaleAddresses`, `ensurePoolSubscriptions`, `prewarmPoolAddresses`, `paymentWatchdog`, `webhookRetryQueue`
+- `refreshBackgroundRateCache` (always-on, idempotent) intentionally left unlocked — runs on both environments
+- Updated DO app spec (`app.yaml`, `app-create.json`) with `WORKER_ROLE=primary`
+- **Railway action required:** Set `WORKER_ROLE=secondary` in Railway environment variables
 - Cross-referenced all `process.env.*` usage in backend codebase against DO App Spec (`app.yaml`/`app-create.json`)
 - **Added 8 missing variables to DO spec:** `CORS_ALLOWED_ORIGINS`, `TELNYX_PHONE_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL`
 - 13 other code-referenced variables have graceful fallbacks or are script-only — documented in `/app/docs/DO_ENV_AUDIT.md`
