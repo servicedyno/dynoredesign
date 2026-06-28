@@ -4,6 +4,7 @@ import { TokenData } from "@/utils/types";
 import AccountSetting from "./AccountSetting";
 import UpdatePassword from "./UpdatePassword";
 import AddContactInfo from "./AddContactInfo";
+import LoginActivity from "./LoginActivity";
 
 const ProfilePage = ({ tokenData }: { tokenData: TokenData }) => {
   return (
@@ -16,6 +17,9 @@ const ProfilePage = ({ tokenData }: { tokenData: TokenData }) => {
       </Grid>
       <Grid item xs={12}>
         <AddContactInfo tokenData={tokenData} />
+      </Grid>
+      <Grid item xs={12}>
+        <LoginActivity />
       </Grid>
     </Grid>
   );

@@ -1084,6 +1084,11 @@ const startServer = async () => {
     const { selfTransactionModel } = await import("./models/userModels");
     await selfTransactionModel.sync(syncOptions);
     log('Self-transaction table synced successfully.', 'info');
+
+    // Sync login activity table
+    const { loginActivityModel } = await import("./models");
+    await loginActivityModel.sync(syncOptions);
+    log('Login activity table synced successfully.', 'info');
     
     // One-time migration: shorten old long referral codes (DYNO2026XXXYYY → DYNO-XXXXXX)
     try {

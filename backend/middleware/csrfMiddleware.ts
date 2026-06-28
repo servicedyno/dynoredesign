@@ -65,6 +65,8 @@ const EXEMPT_PATHS = [
   "/api/pay/encrypt-payload",
   // Visitor tracking — public, rate-limited, fire-and-forget from landing page
   "/api/track/visitor",
+  // Security: Flag suspicious login — public, uses one-time security token from email
+  "/api/user/security/flag-login",
 ];
 
 /**

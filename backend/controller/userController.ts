@@ -9,7 +9,7 @@ import {
 } from "../helper/index";
 import { handleControllerError } from "../helper/controllerErrorHandler";
 import emailService from "../services/emailService";
-import { adminWalletModel, userModel, userWalletModel, companyModel, apiModel } from "../models";
+import { adminWalletModel, userModel, userWalletModel, companyModel, apiModel, loginActivityModel } from "../models";
 import { userWalletAddressModel } from "../models/userModels";
 import notificationModel from "../models/notificationModel";
 import notificationPreferencesModel from "../models/notificationPreferencesModel";
@@ -32,6 +32,41 @@ import { is2FARequired } from "../services/twoFactorService";
 
 // Cache TTL for profile data (60 seconds)
 const PROFILE_CACHE_TTL = 60;
+
+// ── User-Agent Parser ─────────────────────────────────────────────────────
+function parseUserAgent(ua: string): { device: string; browser: string; os: string } {
+  let device = 'Unknown Device';
+  let browser = 'Unknown';
+  let os = 'Unknown';
+
+  // OS detection
+  if (ua.includes('Windows NT 10')) os = 'Windows 10/11';
+  else if (ua.includes('Windows NT')) os = 'Windows';
+  else if (ua.includes('Mac OS X')) os = 'macOS';
+  else if (ua.includes('iPhone')) os = 'iOS';
+  else if (ua.includes('iPad')) os = 'iPadOS';
+  else if (ua.includes('Android')) os = 'Android';
+  else if (ua.includes('Linux')) os = 'Linux';
+  else if (ua.includes('CrOS')) os = 'ChromeOS';
+
+  // Device detection
+  if (ua.includes('iPhone')) device = 'iPhone';
+  else if (ua.includes('iPad')) device = 'iPad';
+  else if (ua.includes('Android') && ua.includes('Mobile')) device = 'Android Phone';
+  else if (ua.includes('Android')) device = 'Android Tablet';
+  else if (ua.includes('Windows') || ua.includes('Mac') || ua.includes('Linux') || ua.includes('CrOS')) device = 'Desktop';
+  else if (ua.includes('Mobile')) device = 'Mobile';
+
+  // Browser detection
+  if (ua.includes('Edg/') || ua.includes('EdgA/')) browser = 'Edge';
+  else if (ua.includes('OPR/') || ua.includes('Opera')) browser = 'Opera';
+  else if (ua.includes('Brave')) browser = 'Brave';
+  else if (ua.includes('Chrome/') && !ua.includes('Chromium')) browser = 'Chrome';
+  else if (ua.includes('Safari/') && !ua.includes('Chrome') && !ua.includes('Chromium')) browser = 'Safari';
+  else if (ua.includes('Firefox/')) browser = 'Firefox';
+
+  return { device, browser, os };
+}
 
 const registerUser = async (req: express.Request, res: express.Response) => {
   try {
@@ -774,49 +809,65 @@ const verifyLoginOTP = async (req: express.Request, res: express.Response) => {
     // Check for new device/IP login
     const rawIp = req.headers['x-forwarded-for'] as string || req.ip || 'Unknown';
     const ipAddress = rawIp.split(',')[0].trim().substring(0, 45);
-    const userAgent = req.headers['user-agent'] || 'Unknown';
-    const lastLoginIp = userData.dataValues.last_login_ip;
+    const userAgent = (req.headers['user-agent'] || 'Unknown') as string;
+    const { device, browser, os } = parseUserAgent(userAgent);
 
-    userLogger.info(`[Login OTP Verify] User ${otpData.email} - Current IP: ${ipAddress}, Last IP: ${lastLoginIp || 'none'}`);
+    userLogger.info(`[Login OTP Verify] User ${otpData.email} - IP: ${ipAddress}, Device: ${device}, Browser: ${browser}`);
 
-    const alertCacheKey = `new_device_alert:${userData.dataValues.user_id}:${ipAddress}`;
-    const alertCacheValue = await getRedisItem(alertCacheKey);
-    const alertAlreadySent = alertCacheValue && Object.keys(alertCacheValue).length > 0;
+    // Geo-locate the IP (best-effort, non-blocking)
+    let location: string | null = null;
+    try {
+      const geoResponse = await axios.get(`http://ip-api.com/json/${ipAddress}?fields=status,city,country`, { timeout: 3000 });
+      if (geoResponse.data && geoResponse.data.status === 'success') {
+        const { city, country } = geoResponse.data;
+        location = city && country ? `${city}, ${country}` : (country || null);
+      }
+    } catch (geoError: any) {
+      userLogger.info(`[Login OTP Verify] IP geolocation failed: ${geoError.message}`);
+    }
 
-    if (lastLoginIp && lastLoginIp !== ipAddress && !alertAlreadySent) {
-      try {
-        await setRedisItem(alertCacheKey, 'sent');
-        await setRedisTTL(alertCacheKey, 300);
+    // Generate a unique security token for the "Not you?" link
+    const securityToken = crypto.randomBytes(32).toString('hex');
 
-        let location: string | null = null;
-        try {
-          const axiosLib = (await import("axios")).default;
-          const geoResponse = await axiosLib.get(`http://ip-api.com/json/${ipAddress}?fields=status,city,country`, { timeout: 3000 });
-          if (geoResponse.data && geoResponse.data.status === 'success') {
-            const { city, country } = geoResponse.data;
-            location = city && country ? `${city}, ${country}` : (country || null);
-          }
-        } catch (geoError) {
-          userLogger.info(`[Login OTP Verify] IP geolocation failed: ${geoError.message}`);
-        }
+    // Record login activity in the database
+    try {
+      await loginActivityModel.create({
+        user_id: userData.dataValues.user_id,
+        ip_address: ipAddress,
+        user_agent: userAgent,
+        device,
+        browser,
+        os,
+        location,
+        security_token: securityToken,
+      });
+    } catch (activityError: any) {
+      userLogger.error(`[Login OTP Verify] Failed to record login activity: ${activityError.message}`);
+    }
 
-        const { sendNewDeviceLoginEmail } = await import("../services/emailService");
+    // Send login notification email (every login)
+    try {
+      if (userData.dataValues.email) {
+        const { sendLoginNotificationEmail } = await import("../services/emailService");
         const now = new Date();
         const date = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
         const time = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-        await sendNewDeviceLoginEmail(
+        // Fire and forget — don't block the login response
+        sendLoginNotificationEmail(
           userData.dataValues.email,
           userData.dataValues.name || 'User',
           ipAddress,
-          userAgent,
+          device,
+          browser,
+          os,
           location,
           date,
-          time
-        );
-        userLogger.info(`[Login OTP Verify] New device alert sent to ${otpData.email}`);
-      } catch (emailError) {
-        userLogger.error("[Login OTP Verify] Failed to send new device alert:", emailError);
+          time,
+          securityToken
+        ).catch(err => userLogger.error("[Login OTP Verify] Login notification email failed:", err));
       }
+    } catch (emailError) {
+      userLogger.error("[Login OTP Verify] Failed to send login notification:", emailError);
     }
 
     // Update last login IP
@@ -3400,6 +3451,98 @@ const setPasswordWithOtp = async (req: express.Request, res: express.Response) =
   }
 };
 
+/**
+ * Get login activity history
+ * GET /api/user/login-activity
+ */
+const getLoginActivity = async (req: express.Request, res: express.Response) => {
+  const userData = jwt.decode(res.locals.token) as IUserType;
+  try {
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = Math.min(50, Math.max(1, parseInt(req.query.limit as string) || 20));
+    const offset = (page - 1) * limit;
+
+    const { count, rows } = await loginActivityModel.findAndCountAll({
+      where: { user_id: userData.user_id },
+      order: [['login_at', 'DESC']],
+      limit,
+      offset,
+      attributes: ['id', 'ip_address', 'device', 'browser', 'os', 'location', 'flagged', 'flagged_at', 'login_at'],
+    });
+
+    return successResponseHelper(res, 200, "Login activity retrieved", {
+      activities: rows.map((r: any) => r.dataValues),
+      pagination: {
+        page,
+        limit,
+        total: count,
+        totalPages: Math.ceil(count / limit),
+      },
+    });
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
+/**
+ * Flag a login as suspicious ("Not you?" link from email)
+ * POST /api/user/security/flag-login
+ * Public endpoint — uses security_token from email link
+ */
+const flagLogin = async (req: express.Request, res: express.Response) => {
+  try {
+    const { token } = req.body;
+    if (!token) {
+      return errorResponseHelper(res, 400, "Security token is required");
+    }
+
+    const activity = await loginActivityModel.findOne({
+      where: { security_token: token, flagged: false },
+    }) as any;
+
+    if (!activity) {
+      return errorResponseHelper(res, 404, "Invalid or already processed security token");
+    }
+
+    // Flag the login
+    await loginActivityModel.update(
+      { flagged: true, flagged_at: new Date() },
+      { where: { id: activity.dataValues.id } }
+    );
+
+    // Lock the account: clear password and invalidate sessions
+    const userId = activity.dataValues.user_id;
+
+    // Set a temporary lock flag in Redis (24 hours)
+    await setRedisItemWithTTL(`account_locked:${userId}`, { locked: true, reason: "suspicious_login", flagged_login_id: activity.dataValues.id }, 86400);
+
+    // Log the security event
+    userLogger.warn(`[SECURITY] Account ${userId} flagged suspicious login ID ${activity.dataValues.id} from IP ${activity.dataValues.ip_address}`);
+
+    // Send security alert email
+    try {
+      const user = await userModel.findOne({ where: { user_id: userId } });
+      if (user && user.dataValues.email) {
+        const { sendSecurityAlertEmail } = await import("../services/emailService");
+        await sendSecurityAlertEmail(
+          user.dataValues.email,
+          user.dataValues.name || 'User',
+          'Suspicious Login Flagged',
+          `A login from ${activity.dataValues.location || activity.dataValues.ip_address} was flagged as suspicious. Your account has been temporarily locked for 24 hours. Please reset your password to regain access.`
+        );
+      }
+    } catch (emailError) {
+      userLogger.error("[flagLogin] Failed to send security alert email:", emailError);
+    }
+
+    return successResponseHelper(res, 200, "Login flagged as suspicious. Your account has been temporarily locked for your protection. Please reset your password to regain access.", {
+      flagged: true,
+    });
+  } catch (e) {
+    handleControllerError(res, e, userLogger);
+  }
+};
+
 export default {
   registerUser,
   registerEmailStep1,
@@ -3443,4 +3586,6 @@ export default {
   verifyAddPhone,
   requestPasswordOtp,
   setPasswordWithOtp,
+  getLoginActivity,
+  flagLogin,
 };

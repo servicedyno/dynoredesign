@@ -372,6 +372,49 @@ export const sendNewDeviceLoginEmail = async (
 };
 
 /**
+ * Template 23b: Login Activity Notification (sent on EVERY login)
+ * Includes a "Not you?" security link
+ */
+export const sendLoginNotificationEmail = async (
+  email: string,
+  name: string,
+  ipAddress: string,
+  device: string,
+  browser: string,
+  os: string,
+  location: string | null,
+  date: string,
+  time: string,
+  securityToken: string
+) => {
+  try {
+    const subject = "New sign-in to your DynoPay account";
+    const locationDisplay = location || 'Unknown location';
+    const deviceDisplay = `${device}${browser ? ` · ${browser}` : ''}${os ? ` · ${os}` : ''}`;
+    const secureAccountUrl = `${FRONTEND_BASE_URL}/auth/secure-account?token=${securityToken}`;
+
+    const content = `${p(`Hi ${name},`)}
+    ${p(`We detected a new sign-in to your DynoPay account.`)}
+    ${infoBox(`
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+        ${dataRow('Device', deviceDisplay)}
+        ${dataRow('Location', locationDisplay)}
+        ${dataRow('IP Address', `<span style="font-family: monospace; font-size: 13px;">${ipAddress}</span>`)}
+        ${dataRow('Time', `${date} at ${time}`, true)}
+      </table>
+    `)}
+    ${p(`<strong>Was this you?</strong><br />If you recognize this activity, no further action is needed.`)}
+    ${p(`<strong>Not you?</strong><br />If you don't recognize this login, click the button below to secure your account immediately. We'll lock your account and require identity verification to regain access.`)}`;
+
+    const html = dynoPayEmailTemplate("Sign-in Activity", content, true, "This wasn't me — Secure my account", secureAccountUrl);
+    await mailTransporter({ to: email, name, subject, body: html });
+    apiLogger.info(`[Email] Login notification sent to ${email} (${deviceDisplay}, ${locationDisplay})`);
+  } catch (e) {
+    apiLogger.error("Login notification email error:", e);
+  }
+};
+
+/**
  * Template 24: Failed Login Attempts Alert
  */
 export const sendFailedLoginAttemptsEmail = async (
@@ -2889,6 +2932,7 @@ export default {
   sendUserProfileUpdatedEmail,
   sendSecurityAlertEmail,
   sendNewDeviceLoginEmail,
+  sendLoginNotificationEmail,
   sendFailedLoginAttemptsEmail,
   // Company
   sendCompanyProfileCreatedEmail,

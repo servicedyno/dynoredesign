@@ -129,7 +129,7 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
     setEmailError("");
     setEmailLoading(true);
     try {
-      await axiosBaseApi.post("/user/addEmail", { email });
+      await axiosBaseApi.post("user/addEmail", { email });
       setEmailOtpOpen(true);
       setEmailOtpCountdown(30);
       dispatch({ type: TOAST_SHOW, payload: { message: "Verification code sent to your email" } });
@@ -150,7 +150,7 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
     setEmailOtpError("");
     setEmailOtpLoading(true);
     try {
-      const res = await axiosBaseApi.post("/user/verifyAddEmail", { email: emailInput.trim(), otp });
+      const res = await axiosBaseApi.post("user/verifyAddEmail", { email: emailInput.trim(), otp });
       const { data, message } = res.data || {};
       if (data?.userData && data?.accessToken) {
         dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });
@@ -199,7 +199,7 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
     setPhoneOtpLoading(true);
     try {
       const cleaned = phoneInput.replace(/[^0-9]/g, "");
-      const res = await axiosBaseApi.post("/user/verifyAddPhone", { phone: cleaned, otp });
+      const res = await axiosBaseApi.post("user/verifyAddPhone", { phone: cleaned, otp });
       const { data, message } = res.data || {};
       if (data?.userData && data?.accessToken) {
         dispatch({ type: USER_LOGIN, payload: { ...data.userData, accessToken: data.accessToken } });

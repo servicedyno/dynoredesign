@@ -47,6 +47,9 @@ import pushSubscriptionModel from "./pushSubscriptionModel";
 // Onboarding analytics
 import onboardingEventModel from "./onboardingEventModel";
 
+// Login Activity
+import loginActivityModel from "./loginActivityModel";
+
 // USDT Pool System models (legacy - to be deprecated)
 import {
   usdtPoolAddressModel,
@@ -125,4 +128,6 @@ export {
   pushSubscriptionModel,
   // Onboarding analytics
   onboardingEventModel,
+  // Login Activity
+  loginActivityModel,
 };

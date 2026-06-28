@@ -68,7 +68,7 @@ const UpdatePassword = () => {
   const handleRequestOtp = async () => {
     setOtpStep("requesting");
     try {
-      const res = await axiosBaseApi.post("/user/profile/request-password-otp");
+      const res = await axiosBaseApi.post("user/profile/request-password-otp");
       const { data } = res.data || {};
       setOtpSentVia(data?.sent_via || "email");
       setOtpMaskedContact(data?.masked_contact || "");
@@ -86,7 +86,7 @@ const UpdatePassword = () => {
   // Resend OTP
   const handleResendOtp = async () => {
     try {
-      const res = await axiosBaseApi.post("/user/profile/request-password-otp");
+      const res = await axiosBaseApi.post("user/profile/request-password-otp");
       const { data } = res.data || {};
       setOtpCountdown(30);
       dispatch({ type: TOAST_SHOW, payload: { message: `New verification code sent to your ${data?.sent_via || "email"}` } });
@@ -115,7 +115,7 @@ const UpdatePassword = () => {
     const { newPassword } = values;
     setSavingPassword(true);
     try {
-      const res = await axiosBaseApi.post("/user/profile/set-password", {
+      const res = await axiosBaseApi.post("user/profile/set-password", {
         otp: verifiedOtp,
         newPassword,
       });
@@ -143,7 +143,7 @@ const UpdatePassword = () => {
     const { oldPassword, newPassword } = values;
     setSavingPassword(true);
     try {
-      await axiosBaseApi.put("/user/changePassword", { oldPassword, newPassword });
+      await axiosBaseApi.put("user/changePassword", { oldPassword, newPassword });
       dispatch({ type: TOAST_SHOW, payload: { message: "Password updated successfully!" } });
       setFormKey((prev) => prev + 1);
     } catch (e: any) {

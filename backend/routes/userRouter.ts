@@ -72,6 +72,12 @@ userRouter.post("/verifyAddPhone", authMiddleware, otpRateLimiter, userControlle
 userRouter.post("/profile/request-password-otp", authMiddleware, otpRateLimiter, userController.requestPasswordOtp);
 userRouter.post("/profile/set-password", authMiddleware, otpRateLimiter, userController.setPasswordWithOtp);
 
+// Login activity (requires auth)
+userRouter.get("/login-activity", authMiddleware, userController.getLoginActivity);
+
+// Security: Flag suspicious login (public — uses security token from email)
+userRouter.post("/security/flag-login", userController.flagLogin);
+
 // Last company persistence (requires auth)
 userRouter.put("/last-company", authMiddleware, userController.updateLastCompany);
 
