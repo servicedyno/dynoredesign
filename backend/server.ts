@@ -1,5 +1,4 @@
 import express from "express";
-import fs from "fs";
 import { apiLogger } from "./utils/loggers";
 import dotenv from "dotenv";
 import cors from "cors";
@@ -11,7 +10,6 @@ import sanitizeInputMiddleware from "./middleware/sanitizeInput";
 import requestLoggerMiddleware from "./middleware/requestLogger";
 import botProtectionMiddleware from "./middleware/botProtection";
 import adminAuthMiddleware from "./middleware/adminAuthMiddleware";
-import authMiddleware from "./middleware/authMiddleware";
 
 // Load environment variables FIRST
 dotenv.config();
@@ -21,15 +19,8 @@ import { validateEnvironment } from "./utils/envValidator";
 validateEnvironment();
 
 // Redis imports
-import { connectRedis, acquireLock, releaseLock, cleanupStaleLocks, getRedisItem, setRedisItem } from "./utils/redisInstance";
+import { connectRedis, acquireLock, releaseLock, cleanupStaleLocks } from "./utils/redisInstance";
 import {
-  adminFeeModel,
-  adminFeeTransactionModel,
-  adminTransferFeeModel,
-  adminWalletModel,
-  customerModel,
-  feesModel,
-  userTempAddressModel,
   companyModel,
 } from "./models";
 // Unused imports removed: currencyConvert, encrypt, sendEmail
@@ -51,7 +42,7 @@ import { runStartupReconciliation, clearStaleTatumWebhooks } from "./services/re
 import { startVolatilityMonitor, getAllMarketStates, runMonitorCycle } from "./services/volatilityMonitorService";
 import { startBinanceWebSocket, getStatus as getWsStatus } from "./services/binanceWebSocketService";
 import { detectBinanceAccess, forceProxyState, getProxyState } from "./services/binanceService";
-import { startTunnelManager, getTunnelStatus } from "./services/sshTunnelManager";
+import { startTunnelManager } from "./services/sshTunnelManager";
 import { getAllFeeRates, getFeeRates } from "./services/feeRateService";
 import { captureError, startErrorMonitoring, stopErrorMonitoring, getMonitoringStats, flushErrorDigest, sendErrorDigest } from "./services/errorMonitoringService";
 import * as merchantPoolService from "./services/merchantPoolService";
@@ -369,7 +360,7 @@ app.get("/diagnostics/fee-optimization", adminAuthMiddleware, async (req: expres
 });
 
 // ─── Webhook URL Migration (Admin-protected) ─────────────────────────────────
-app.post("/diagnostics/migrate-webhook-urls", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/diagnostics/migrate-webhook-urls", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     log("Admin triggered webhook URL migration", "info");
     const stats = await migrateWebhookUrls();
@@ -380,7 +371,7 @@ app.post("/diagnostics/migrate-webhook-urls", adminAuthMiddleware, async (req: e
 });
 
 // Diagnostics: Stablecoin conversion stats and manual trigger
-app.get("/diagnostics/conversion-stats", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.get("/diagnostics/conversion-stats", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const stats = await getConversionStats();
     res.status(200).json({ success: true, ...stats });
@@ -389,7 +380,7 @@ app.get("/diagnostics/conversion-stats", adminAuthMiddleware, async (req: expres
   }
 });
 
-app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.post("/diagnostics/trigger-conversion", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     log("Admin triggered manual stablecoin conversion cycle", "info");
     const result = await processStablecoinConversions();
@@ -425,7 +416,7 @@ app.post("/diagnostics/recover-payment", adminAuthMiddleware, async (req: expres
       return res.status(400).json({ success: false, error: "temp_address_id and link_id are required" });
     }
 
-    const { Sequelize, QueryTypes } = require("sequelize");
+    const { QueryTypes } = require("sequelize");
     const sequelize = require("./utils/dbInstance").default;
     const { getRedisItem, setRedisItem } = require("./utils/redisInstance");
     const { getCryptoRedisKey } = require("./services/merchantPool/merchantPoolConfig");
@@ -539,7 +530,7 @@ app.post("/diagnostics/recover-payment", adminAuthMiddleware, async (req: expres
 
 
 // Diagnostics: Binance proxy state
-app.get("/diagnostics/binance-proxy", adminAuthMiddleware, async (req: express.Request, res: express.Response) => {
+app.get("/diagnostics/binance-proxy", adminAuthMiddleware, async (_req: express.Request, res: express.Response) => {
   try {
     const proxyState = getProxyState();
     const wsStatus = getWsStatus();

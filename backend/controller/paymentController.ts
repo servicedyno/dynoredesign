@@ -2,11 +2,7 @@ import express from "express";
 import {
   PAYMENT_TIMING,
   ADMIN_CONFIG,
-  RETRY_CONFIG,
-  TAX_DATA_API_URL,
-  TAX_DATA_API_KEY,
 } from "./payment/paymentConfig";
-import { convertToUSD, withRetry, getCryptoPriceForPayment } from "./payment/paymentHelpers";
 import {
   createPaymentLink,
   getPaymentLinks,
@@ -28,44 +24,32 @@ import {
   errorResponseHelper,
   getErrorMessage,
   sendEmail,
-  sendPaymentReceivedEmail,
   sendAdminFeeReceivedEmail,
-  sendAdminFeeSweepEmail,
   successResponseHelper,
 } from "../helper";
+import { apiLogger, cronLogger } from "../utils/loggers";
 import { handleControllerError } from "../helper/controllerErrorHandler";
-import { apiLogger, cronLogger, webhookLogs, log } from "../utils/loggers";
 import {
   deleteRedisItem,
   getRedisItem,
   setRedisItem,
-  setRedisItemWithTTL,
-  softDeleteRedisItem,
-  setRedisTTL,
 } from "../utils/redisInstance";
-import { formatAmountForDisplay, getCurrencyInfo } from "../utils/currencyUtils";
 import sequelize from "../utils/dbInstance";
 import { Op, QueryTypes } from "sequelize";
 import jwt from "jsonwebtoken";
 import {
   adminFeeModel,
   adminFeeTransactionModel,
-  adminWalletModel,
   companyModel,
   customerModel,
   customerTransactionModel,
   customerWalletModel,
-  userModel,
   userWalletModel,
 } from "../models";
 import { createNotification, NOTIFICATION_TYPES } from "./notificationController";
 import {
-  sendPartialPaymentNotification,
   sendPartialPaymentExpiredNotification,
 } from "../services/pendingPaymentService";
-import {
-  sendCustomerPaymentConfirmationEmail,
-} from "../services/emailService";
 import {
   FW_API_Response,
   IFundData,
@@ -77,45 +61,28 @@ import {
 } from "../utils/types";
 import { paymentTypes } from "../utils/enums";
 import flw from "../apis/flutterwaveApi";
-import crypto from "crypto";
 import axios from "axios";
-import { autoGenerateInvoice } from "./invoiceController";
-import { getClientIP, getCountryFromIP, getCountryFromTimezone } from "../utils/geolocation";
+import { getCountryFromIP } from "../utils/geolocation";
 import { safeDeleteSubscription } from "../helper/subscriptionHelpers";
-import { checkKycEnforcement, KYC_THRESHOLD_USD } from "../helper/kycEnforcement";
-import { incrementAdminFee, incrementUserWallet, incrementCustomerWallet } from "../helper/walletHelpers";
+import { incrementAdminFee, incrementUserWallet } from "../helper/walletHelpers";
 
 import {
   userTempAddressModel,
   userTransactionModel,
-  paymentLinkModel,
   merchantTempAddressModel,
 } from "../models";
-import QR_Code from "qrcode";
-import { generateQRCodeWithLogo } from "../utils/qrCodeWithLogo";
 import tatumApi from "../apis/tatumApi";
 import blockchairApi from "../apis/blockchairApi";
 import { getAdminWalletAddress } from "../utils/adminUtils";
 import {
-  getTransactionFee,
-  getBlockchainFee,
-  getDiscountedTransactionFee,
   calculateTransactionFees,
 } from "../services/feeService";
 import { 
-  getBlockchainNetworkFee, 
-  getAllBlockchainFees, 
-  calculateCustomerPaymentAmount 
+  getBlockchainNetworkFee,
+  getAllBlockchainFees,
 } from "../services/blockchainFeeService";
-import * as merchantPoolService from "../services/merchantPoolService";
-import { callMerchantWebhook } from "../webhooks";
-import { isTagBasedChain, getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
-import { recordTransactionVolume, reverseTransactionVolume } from "../services/feeFreeService";
-import { isStablecoin, isVolatileCrypto } from "../services/binanceService";
-import { createConversionRecord } from "../services/conversionService";
-import { stablecoinConversionModel, TOKEN_CHAINS } from "../models";
-import { PaymentState, parseState, toRedisStatus, toExternalStatus, isTerminal } from "../services/paymentStateMachine";
-import { calculateDynamicTRC20Fee } from "../services/tronEnergyService";
+import { getCryptoRedisKey } from "../services/merchantPool/merchantPoolConfig";
+import { PaymentState, toRedisStatus } from "../services/paymentStateMachine";
 
 // ============================================
 // CENTRALIZED TIMING CONFIGURATION

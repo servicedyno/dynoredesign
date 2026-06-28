@@ -118,3 +118,9 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - 13 other code-referenced variables have graceful fallbacks or are script-only — documented in `/app/docs/DO_ENV_AUDIT.md`
 - Confirmed 160 env vars in DO spec now, YAML and JSON in sync, no duplicates
 - All dynamically accessed vars (FEE_TIER, SWEEP, THRESHOLD, TRIAL) confirmed present
+
+### 2026-02-XX — Code Cleanup
+- Deleted 97 archived script files from `scripts/_archive/` (528KB dead weight)
+- Removed ~100 unused imports across the 4 largest files: `server.ts`, `cryptoCheckout.ts`, `cryptoSettlement.ts`, `paymentController.ts`
+- TypeScript compiles cleanly with zero errors
+- Remaining ~105 unused-local warnings are local variables and chain interface params (no imports)
