@@ -68,6 +68,10 @@ userRouter.post("/verifyAddEmail", authMiddleware, otpRateLimiter, userControlle
 userRouter.post("/addPhone", authMiddleware, otpRateLimiter, userController.addPhone);
 userRouter.post("/verifyAddPhone", authMiddleware, otpRateLimiter, userController.verifyAddPhone);
 
+// Profile password management with OTP verification (requires auth)
+userRouter.post("/profile/request-password-otp", authMiddleware, otpRateLimiter, userController.requestPasswordOtp);
+userRouter.post("/profile/set-password", authMiddleware, otpRateLimiter, userController.setPasswordWithOtp);
+
 // Last company persistence (requires auth)
 userRouter.put("/last-company", authMiddleware, userController.updateLastCompany);
 
