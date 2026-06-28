@@ -1,289 +1,781 @@
 import CloseIcon from "@/assets/Icons/close-icon.svg";
 import LockIcon from "@/assets/Icons/lock-icon.svg";
 import InputField from "@/Components/UI/AuthLayout/InputFields";
+import PasswordValidation from "@/Components/UI/AuthLayout/PasswordValidation";
 import CustomButton from "@/Components/UI/Buttons";
 import PanelCard from "@/Components/UI/PanelCard";
 import PopupModal from "@/Components/UI/PopupModal";
+import CountryPhoneInput from "@/Components/UI/CountryPhoneInput";
 import useIsMobile from "@/hooks/useIsMobile";
-import { ArrowBack } from "@mui/icons-material";
-import { Box, Link, Typography, useTheme } from "@mui/material";
+import { ArrowBack, CheckCircleOutline } from "@mui/icons-material";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
+import { Box, Link, Typography, useTheme, ToggleButtonGroup, ToggleButton } from "@mui/material";
 import Image from "next/image";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import * as yup from "yup";
-import { DialogCloseButton } from "../OtpDialog/styled";
+import axiosBaseApi from "@/axiosConfig";
+
+const LoadingIcon = ({ size = 20 }: { size?: number }) => (
+  <Box
+    sx={{
+      width: size,
+      height: size,
+      border: "2px solid rgba(255,255,255,0.3)",
+      borderTop: "2px solid #fff",
+      borderRadius: "50%",
+      animation: "spin 0.8s linear infinite",
+      "@keyframes spin": { "0%": { transform: "rotate(0deg)" }, "100%": { transform: "rotate(360deg)" } },
+    }}
+  />
+);
 
 export interface ForgotPasswordDialogProps {
   open: boolean;
   onClose: () => void;
-  onEmailSubmit?: (email: string) => void;
-  onOtpVerify?: (otp: string, email: string) => void;
-  onResendCode?: (email: string) => void;
-  countdown?: number;
-  loading?: boolean;
   currentEmail?: string;
-  emailError?: string;
-  otpError?: string;
 }
+
+type ResetMethod = "email" | "phone";
+type Step = "method" | "otp" | "newPassword" | "success";
+
+const passwordRegex = /^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[!@#$%^&*()\-=_+{}\[\]:;<>,.?/~]).{8,20}$/;
 
 const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
   open,
   onClose,
-  onEmailSubmit,
-  loading = false,
   currentEmail,
-  emailError,
 }) => {
   const { t } = useTranslation("auth");
   const theme = useTheme();
   const isMobile = useIsMobile("sm");
-  const [step, setStep] = useState<"email" | "otp">("email");
+
+  // State
+  const [step, setStep] = useState<Step>("method");
+  const [method, setMethod] = useState<ResetMethod>("email");
   const [email, setEmail] = useState(currentEmail || "");
-  const [emailTouched, setEmailTouched] = useState(false);
-  const [localEmailError, setLocalEmailError] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState(["", "", "", "", "", ""]);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [showPasswordValidation, setShowPasswordValidation] = useState(false);
+  const [resetToken, setResetToken] = useState("");
 
-  // Create email schema with translations
-  const emailSchema = React.useMemo(
-    () =>
-      yup.object().shape({
-        email: yup
-          .string()
-          .email(t("emailInvalid"))
-          .required(t("emailRequired")),
-      }),
-    [t],
-  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState(0);
 
-  // Reset state when dialog closes
+  const passwordFieldRef = useRef<HTMLDivElement | null>(null);
+  const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
+
+  // Reset on close
   useEffect(() => {
     if (!open) {
-      setStep("email");
-      setEmail("");
-      setEmailTouched(false);
-      setLocalEmailError("");
+      setTimeout(() => {
+        setStep("method");
+        setMethod("email");
+        setEmail(currentEmail || "");
+        setPhone("");
+        setOtp(["", "", "", "", "", ""]);
+        setNewPassword("");
+        setConfirmPassword("");
+        setShowNewPassword(false);
+        setShowConfirmPassword(false);
+        setShowPasswordValidation(false);
+        setResetToken("");
+        setLoading(false);
+        setError("");
+        setCountdown(0);
+      }, 300);
     }
-  }, [open]);
+  }, [open, currentEmail]);
 
-  // Update email state when currentEmail prop changes
+  // Countdown timer
   useEffect(() => {
-    if (currentEmail) {
-      setEmail(currentEmail);
-    }
-  }, [currentEmail]);
+    if (countdown <= 0) return;
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
 
-  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setEmail(e.target.value);
-    if (emailTouched && localEmailError) {
-      setLocalEmailError("");
+  // Auto-focus first OTP input
+  useEffect(() => {
+    if (step === "otp") {
+      setTimeout(() => otpRefs.current[0]?.focus(), 200);
     }
-  };
-
-  const validateEmail = async (emailToValidate?: string) => {
-    const emailValue = emailToValidate || currentEmail || email;
-    if (!emailValue) {
-      setLocalEmailError(t("emailRequired"));
-      return false;
-    }
-    try {
-      await emailSchema.validate({ email: emailValue });
-      setLocalEmailError("");
-      return true;
-    } catch (err: any) {
-      setLocalEmailError(err.message);
-      return false;
-    }
-  };
-
-  const handleEmailSubmit = async () => {
-    setEmailTouched(true);
-    const emailToUse = currentEmail || email;
-    const isValid = await validateEmail(emailToUse);
-    if (!isValid) return;
-
-    if (onEmailSubmit) {
-      onEmailSubmit(emailToUse);
-      setStep("otp");
-    }
-  };
-
-  const handleReturnToAuth = () => {
-    onClose();
-  };
+  }, [step]);
 
   const handleClose = () => {
-    setStep("email");
-    setEmail("");
-    setEmailTouched(false);
-    setLocalEmailError("");
     onClose();
   };
 
-  if (step === "email") {
+  // ─── Step 1: Send OTP ───
+  const handleSendOtp = useCallback(async () => {
+    setError("");
+    setLoading(true);
+
+    try {
+      if (method === "email") {
+        if (!email || !email.includes("@")) {
+          setError("Please enter a valid email address");
+          setLoading(false);
+          return;
+        }
+        await axiosBaseApi.post("/user/forgot-password", { email: email.toLowerCase() });
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        if (digits.length < 10) {
+          setError("Please enter a valid phone number");
+          setLoading(false);
+          return;
+        }
+        await axiosBaseApi.post("/user/forgot-password-phone", { mobile: digits });
+      }
+
+      setStep("otp");
+      setOtp(["", "", "", "", "", ""]);
+      setCountdown(60);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to send OTP. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [method, email, phone]);
+
+  // ─── Step 2: Verify OTP ───
+  const handleVerifyOtp = useCallback(async () => {
+    const otpCode = otp.join("");
+    if (otpCode.length !== 6) {
+      setError("Please enter the complete 6-digit code");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      let response;
+      if (method === "email") {
+        response = await axiosBaseApi.post("/user/forgot-password/verify-otp", {
+          email: email.toLowerCase(),
+          otp: otpCode,
+        });
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        response = await axiosBaseApi.post("/user/forgot-password-phone/verify-otp", {
+          mobile: digits,
+          otp: otpCode,
+        });
+      }
+
+      const token = response?.data?.data?.resetToken;
+      if (token) {
+        setResetToken(token);
+        setStep("newPassword");
+      } else {
+        setError("Verification failed. Please try again.");
+      }
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Invalid OTP. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [otp, method, email, phone]);
+
+  // ─── Step 3: Reset Password ───
+  const handleResetPassword = useCallback(async () => {
+    if (!passwordRegex.test(newPassword)) {
+      setError("Password doesn't meet the requirements");
+      setShowPasswordValidation(true);
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    setError("");
+    setLoading(true);
+
+    try {
+      await axiosBaseApi.post("/user/reset-password", {
+        token: resetToken,
+        newPassword,
+      });
+      setStep("success");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to reset password. Please try again.";
+      setError(msg);
+    } finally {
+      setLoading(false);
+    }
+  }, [newPassword, confirmPassword, resetToken]);
+
+  // ─── Resend OTP ───
+  const handleResendOtp = useCallback(async () => {
+    if (countdown > 0) return;
+    setError("");
+    setLoading(true);
+
+    try {
+      if (method === "email") {
+        await axiosBaseApi.post("/user/forgot-password", { email: email.toLowerCase() });
+      } else {
+        const digits = phone.replace(/[^\d]/g, "");
+        await axiosBaseApi.post("/user/forgot-password-phone", { mobile: digits });
+      }
+      setCountdown(60);
+      setOtp(["", "", "", "", "", ""]);
+      otpRefs.current[0]?.focus();
+    } catch (err: any) {
+      setError("Failed to resend code. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }, [countdown, method, email, phone]);
+
+  // ─── OTP Input Handlers ───
+  const handleOtpChange = (index: number, value: string) => {
+    if (!/^\d*$/.test(value)) return;
+    const newOtp = [...otp];
+    newOtp[index] = value.slice(-1);
+    setOtp(newOtp);
+    setError("");
+
+    if (value && index < 5) {
+      otpRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index: number, e: React.KeyboardEvent) => {
+    if (e.key === "Backspace" && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus();
+    }
+    if (e.key === "Enter" && otp.join("").length === 6) {
+      handleVerifyOtp();
+    }
+  };
+
+  const handleOtpPaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pastedData = e.clipboardData.getData("text").replace(/\D/g, "").slice(0, 6);
+    if (pastedData.length > 0) {
+      const newOtp = [...otp];
+      pastedData.split("").forEach((char, i) => {
+        if (i < 6) newOtp[i] = char;
+      });
+      setOtp(newOtp);
+      const focusIdx = Math.min(pastedData.length, 5);
+      otpRefs.current[focusIdx]?.focus();
+    }
+  };
+
+  // ─── Shared Modal Wrapper ───
+  const modalSx = {
+    "& .MuiDialog-paper": {
+      borderRadius: "16px",
+      maxWidth: "480px",
+      width: "100%",
+      background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
+      boxShadow: theme.palette.mode === "dark"
+        ? "0 24px 80px rgba(0,0,0,0.5)"
+        : "0 24px 80px rgba(47,47,101,0.12)",
+    },
+    [theme.breakpoints.down("sm")]: {
+      "& .MuiDialog-paper": {
+        margin: "16px",
+        maxWidth: "calc(100vw - 32px)",
+      },
+    },
+  };
+
+  const panelSx = {
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: "16px",
+    padding: isMobile ? "24px 20px" : "32px 28px",
+    boxShadow: "none",
+    outline: "none",
+  };
+
+  const closeBtn = (
+    <Box
+      onClick={handleClose}
+      sx={{
+        position: "absolute",
+        top: isMobile ? "-10px" : "-16px",
+        right: isMobile ? "-10px" : "-16px",
+        width: 32,
+        height: 32,
+        borderRadius: "50%",
+        background: theme.palette.mode === "dark" ? "#1f2237" : "#f3f4f6",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        transition: "all 0.2s",
+        "&:hover": { background: theme.palette.mode === "dark" ? "#2a2d45" : "#e5e7eb" },
+      }}
+    >
+      <Image src={CloseIcon.src} alt="close" width={12} height={12} draggable={false} className="themed-icon" />
+    </Box>
+  );
+
+  // ════════════════════════════════════════════
+  // STEP 1: Choose Method + Enter Email/Phone
+  // ════════════════════════════════════════════
+  if (step === "method") {
     return (
-      <PopupModal
-        open={open}
-        handleClose={handleClose}
-        showHeader={false}
-        transparent
-        sx={{
-          "& .MuiDialog-paper": {
-            borderRadius: "14px",
-            maxWidth: "536px",
-            width: "100%",
-          },
-          [theme.breakpoints.down("md")]: {
-            "& .MuiDialog-paper": {
-              top: "50%",
-              left: "50%",
-              transform: "translate(-50%, -50%)",
-              borderRadius: "14px",
-              maxWidth: "536px",
-              width: "90%",
-              margin: 0,
-              position: "fixed",
-            },
-          },
-        }}
-      >
+      <PopupModal open={open} handleClose={handleClose} showHeader={false} transparent sx={modalSx}>
         <PanelCard
-          title={t("passwordRecovery")}
-          headerIcon={
-            <Image
-              src={LockIcon.src}
-              alt="lock icon"
-              width={isMobile ? 18 : 24}
-              height={isMobile ? 18 : 24}
-              draggable={false}
-              className="themed-icon"
-            />
-          }
-          headerAction={
-            <DialogCloseButton
-              onClick={handleClose}
-              sx={{
-                position: "absolute",
-                top: isMobile ? "-15px" : "-25px",
-                right: isMobile ? "-15px" : "-25px",
-              }}
-            >
-              <Image
-                src={CloseIcon.src}
-                alt="close icon"
-                width={isMobile ? 10 : 16}
-                height={isMobile ? 10 : 16}
-                draggable={false}
-                className="themed-icon"
-              />
-            </DialogCloseButton>
-          }
+          title=""
           showHeaderBorder={false}
           bodyPadding="0"
           headerPadding="0 !important"
-          headerSx={{
-            "& .MuiTypography-root": {
-              fontWeight: 500,
-              fontSize: "20px",
-              color: "#242428",
-            },
-          }}
-          sx={{
-            backgroundColor: theme.palette.background.paper,
-            borderRadius: "14px",
-            padding: "24px",
-            boxShadow: "none",
-            outline: "none",
-            [theme.breakpoints.down("sm")]: {
-              padding: "20px",
-            },
-          }}
-          bodySx={{
-            padding: "0",
-          }}
+          headerAction={closeBtn}
+          sx={panelSx}
+          bodySx={{ padding: "0" }}
         >
-          {/* Instructions */}
-          <Typography
-            sx={{
-              fontSize: isMobile ? "13px" : "15px",
-              color: "#6B7280",
-              fontFamily: "UrbanistMedium",
-              marginBottom: isMobile ? "14px" : "16px",
-              marginTop: isMobile ? "10px" : "12px",
-              lineHeight: "1.5",
-            }}
-          >
-            {t("passwordRecoveryInstructions")}
-          </Typography>
-
-          {/* Email Input Field */}
-          <Box sx={{ marginBottom: "14px" }}>
-            <InputField
-              label={`${t("email")} *`}
-              type="email"
-              readOnly={!!currentEmail}
-              value={currentEmail || email}
-              onChange={handleEmailChange}
-              placeholder={t("emailPlaceHolder")}
-              error={emailTouched && (!!localEmailError || !!emailError)}
-              helperText={
-                emailTouched ? localEmailError || emailError || "" : ""
-              }
-            />
-          </Box>
-
-          {/* Get Code Button */}
-          <Box sx={{ marginBottom: "16px" }}>
-            <CustomButton
-              variant="primary"
-              size={isMobile ? "small" : "medium"}
-              label={t("Send Reset Link")}
-              onClick={handleEmailSubmit}
-              disabled={loading}
-              fullWidth
+          {/* Header */}
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 1 }}>
+            <Box
               sx={{
-                fontWeight: 700,
-                padding: "15px 24px",
-                fontSize: isMobile ? "13px" : "15px",
+                width: 40, height: 40, borderRadius: "12px",
+                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                flexShrink: 0,
               }}
-            />
+            >
+              <Image src={LockIcon.src} alt="lock" width={20} height={20} draggable={false} style={{ filter: "brightness(10)" }} />
+            </Box>
+            <Box>
+              <Typography sx={{ fontWeight: 700, fontSize: "20px", color: "text.primary", fontFamily: "UrbanistBold", lineHeight: 1.2 }}>
+                Reset Password
+              </Typography>
+              <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium", mt: 0.25 }}>
+                Choose how to verify your identity
+              </Typography>
+            </Box>
           </Box>
 
-          {/* Return to authorization link */}
-          <Box
-            sx={{
-              display: "flex",
-              justifyContent: "center",
-              alignItems: "center",
-              marginTop: "8px",
-            }}
-          >
-            <Link
-              component="button"
-              onClick={handleReturnToAuth}
+          {/* Method Toggle */}
+          <Box sx={{ mt: 2.5, mb: 2 }}>
+            <ToggleButtonGroup
+              value={method}
+              exclusive
+              onChange={(_, val) => { if (val) { setMethod(val); setError(""); } }}
               sx={{
-                fontSize: "13px",
-                color: "#6B7280",
-                fontFamily: "UrbanistMedium",
-                textDecoration: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: "6px",
-                backgroundColor: "transparent",
-                border: "none",
-                padding: 0,
-                "&:hover": {
-                  textDecoration: "underline",
+                width: "100%",
+                background: theme.palette.mode === "dark" ? "#1a1d2e" : "#f3f4f6",
+                borderRadius: "12px",
+                padding: "4px",
+                "& .MuiToggleButton-root": {
+                  flex: 1,
+                  border: "none",
+                  borderRadius: "10px !important",
+                  textTransform: "none",
+                  fontFamily: "UrbanistSemiBold",
+                  fontSize: "14px",
+                  color: "text.secondary",
+                  padding: "10px 0",
+                  transition: "all 0.25s",
+                  "&.Mui-selected": {
+                    background: theme.palette.mode === "dark" ? "#2a2d45" : "#fff",
+                    color: "text.primary",
+                    boxShadow: "0 2px 8px rgba(0,0,0,0.08)",
+                    "&:hover": { background: theme.palette.mode === "dark" ? "#2a2d45" : "#fff" },
+                  },
+                  "&:hover": { background: "transparent" },
                 },
               }}
             >
-              <ArrowBack sx={{ fontSize: "16px", color: "#6B7280" }} />
-              {t("returnToAuthorization")}
+              <ToggleButton value="email">E-mail</ToggleButton>
+              <ToggleButton value="phone">Phone Number</ToggleButton>
+            </ToggleButtonGroup>
+          </Box>
+
+          {/* Input */}
+          {method === "email" ? (
+            <Box sx={{ mb: 2 }}>
+              <InputField
+                label="Email Address"
+                type="email"
+                value={email}
+                onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                onKeyDown={(e) => { if (e.key === "Enter") handleSendOtp(); }}
+                placeholder="Enter your email address"
+                error={!!error}
+                helperText=""
+              />
+            </Box>
+          ) : (
+            <Box sx={{ mb: 2 }}>
+              <CountryPhoneInput
+                value={phone}
+                onChange={(value) => { setPhone(value); setError(""); }}
+                label="Phone Number"
+                error={!!error}
+                helperText=""
+                placeholder="Enter phone number"
+              />
+            </Box>
+          )}
+
+          {/* Error */}
+          {error && (
+            <Typography sx={{ fontSize: "13px", color: theme.palette.error.main, fontFamily: "UrbanistMedium", mb: 1.5, textAlign: "center" }}>
+              {error}
+            </Typography>
+          )}
+
+          {/* Send Code Button */}
+          <CustomButton
+            variant="primary"
+            size="medium"
+            label="Send Verification Code"
+            onClick={handleSendOtp}
+            disabled={loading}
+            fullWidth
+            sx={{ fontWeight: 700, padding: "14px 24px", borderRadius: "12px", fontSize: "15px" }}
+            endIcon={loading ? <LoadingIcon size={18} /> : undefined}
+            hideLabelWhenLoading={true}
+          />
+
+          {/* Back to login */}
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2 }}>
+            <Link
+              component="button"
+              onClick={handleClose}
+              sx={{
+                fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium",
+                textDecoration: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+                background: "transparent", border: "none", padding: 0,
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              <ArrowBack sx={{ fontSize: "16px" }} />
+              Back to login
             </Link>
           </Box>
         </PanelCard>
       </PopupModal>
     );
   }
+
+  // ════════════════════════════════════════════
+  // STEP 2: Enter OTP
+  // ════════════════════════════════════════════
+  if (step === "otp") {
+    const maskedTarget = method === "email"
+      ? email.replace(/(.{2}).*(@.*)/, "$1***$2")
+      : phone.replace(/(\d{3})\d+(\d{2})/, "$1****$2");
+
+    return (
+      <PopupModal open={open} handleClose={handleClose} showHeader={false} transparent sx={modalSx}>
+        <PanelCard
+          title=""
+          showHeaderBorder={false}
+          bodyPadding="0"
+          headerPadding="0 !important"
+          headerAction={closeBtn}
+          sx={panelSx}
+          bodySx={{ padding: "0" }}
+        >
+          {/* Header */}
+          <Box sx={{ textAlign: "center", mb: 2.5 }}>
+            <Box
+              sx={{
+                width: 56, height: 56, borderRadius: "16px",
+                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 12px",
+              }}
+            >
+              <Typography sx={{ fontSize: "28px" }}>🔐</Typography>
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: "20px", color: "text.primary", fontFamily: "UrbanistBold" }}>
+              Enter Verification Code
+            </Typography>
+            <Typography sx={{ fontSize: "14px", color: "text.secondary", fontFamily: "UrbanistMedium", mt: 0.5, lineHeight: 1.5 }}>
+              We sent a 6-digit code to{" "}
+              <Typography component="span" sx={{ fontWeight: 600, color: "text.primary", fontSize: "14px" }}>
+                {maskedTarget}
+              </Typography>
+            </Typography>
+          </Box>
+
+          {/* OTP Inputs */}
+          <Box sx={{ display: "flex", gap: isMobile ? "8px" : "10px", justifyContent: "center", mb: 2.5 }}>
+            {otp.map((digit, index) => (
+              <Box
+                key={index}
+                component="input"
+                ref={(el: HTMLInputElement | null) => { otpRefs.current[index] = el; }}
+                type="text"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) => handleOtpChange(index, e.target.value)}
+                onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => handleOtpKeyDown(index, e)}
+                onPaste={index === 0 ? handleOtpPaste : undefined}
+                sx={{
+                  width: isMobile ? "44px" : "52px",
+                  height: isMobile ? "52px" : "60px",
+                  textAlign: "center",
+                  fontSize: "22px",
+                  fontWeight: 700,
+                  fontFamily: "UrbanistBold",
+                  color: "text.primary",
+                  background: theme.palette.mode === "dark" ? "#1a1d2e" : "#f9fafb",
+                  border: `2px solid ${digit ? (theme.palette.mode === "dark" ? "#4F46E5" : "#4F46E5") : (theme.palette.mode === "dark" ? "#2a2d45" : "#e5e7eb")}`,
+                  borderRadius: "14px",
+                  outline: "none",
+                  transition: "all 0.2s",
+                  caretColor: "#4F46E5",
+                  "&:focus": {
+                    borderColor: "#4F46E5",
+                    boxShadow: "0 0 0 3px rgba(79, 70, 229, 0.15)",
+                  },
+                }}
+              />
+            ))}
+          </Box>
+
+          {/* Error */}
+          {error && (
+            <Typography sx={{ fontSize: "13px", color: theme.palette.error.main, fontFamily: "UrbanistMedium", mb: 1.5, textAlign: "center" }}>
+              {error}
+            </Typography>
+          )}
+
+          {/* Verify Button */}
+          <CustomButton
+            variant="primary"
+            size="medium"
+            label="Verify Code"
+            onClick={handleVerifyOtp}
+            disabled={loading || otp.join("").length !== 6}
+            fullWidth
+            sx={{ fontWeight: 700, padding: "14px 24px", borderRadius: "12px", fontSize: "15px" }}
+            endIcon={loading ? <LoadingIcon size={18} /> : undefined}
+            hideLabelWhenLoading={true}
+          />
+
+          {/* Resend */}
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 2, gap: 0.5 }}>
+            <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium" }}>
+              Didn't receive the code?
+            </Typography>
+            {countdown > 0 ? (
+              <Typography sx={{ fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistSemiBold" }}>
+                Resend in {countdown}s
+              </Typography>
+            ) : (
+              <Typography
+                component="button"
+                onClick={handleResendOtp}
+                sx={{
+                  fontSize: "13px", color: theme.palette.primary.main, fontFamily: "UrbanistSemiBold",
+                  cursor: "pointer", background: "none", border: "none", padding: 0,
+                  textDecoration: "underline", textUnderlineOffset: "2px",
+                  "&:hover": { opacity: 0.8 },
+                }}
+              >
+                Resend
+              </Typography>
+            )}
+          </Box>
+
+          {/* Back */}
+          <Box sx={{ display: "flex", justifyContent: "center", mt: 1.5 }}>
+            <Link
+              component="button"
+              onClick={() => { setStep("method"); setError(""); setOtp(["", "", "", "", "", ""]); }}
+              sx={{
+                fontSize: "13px", color: "text.secondary", fontFamily: "UrbanistMedium",
+                textDecoration: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "6px",
+                background: "transparent", border: "none", padding: 0,
+                "&:hover": { textDecoration: "underline" },
+              }}
+            >
+              <ArrowBack sx={{ fontSize: "16px" }} />
+              Change {method === "email" ? "email" : "phone number"}
+            </Link>
+          </Box>
+        </PanelCard>
+      </PopupModal>
+    );
+  }
+
+  // ════════════════════════════════════════════
+  // STEP 3: New Password
+  // ════════════════════════════════════════════
+  if (step === "newPassword") {
+    return (
+      <PopupModal open={open} handleClose={handleClose} showHeader={false} transparent sx={modalSx}>
+        <PanelCard
+          title=""
+          showHeaderBorder={false}
+          bodyPadding="0"
+          headerPadding="0 !important"
+          headerAction={closeBtn}
+          sx={panelSx}
+          bodySx={{ padding: "0" }}
+        >
+          {/* Header */}
+          <Box sx={{ textAlign: "center", mb: 2.5 }}>
+            <Box
+              sx={{
+                width: 56, height: 56, borderRadius: "16px",
+                background: "linear-gradient(135deg, #4F46E5, #7C3AED)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                margin: "0 auto 12px",
+              }}
+            >
+              <Image src={LockIcon.src} alt="lock" width={24} height={24} draggable={false} style={{ filter: "brightness(10)" }} />
+            </Box>
+            <Typography sx={{ fontWeight: 700, fontSize: "20px", color: "text.primary", fontFamily: "UrbanistBold" }}>
+              Create New Password
+            </Typography>
+            <Typography sx={{ fontSize: "14px", color: "text.secondary", fontFamily: "UrbanistMedium", mt: 0.5 }}>
+              Your new password must be different from your previous one
+            </Typography>
+          </Box>
+
+          {/* New Password */}
+          <Box ref={passwordFieldRef} sx={{ position: "relative", width: "100%", mb: 1.5 }}>
+            <InputField
+              type={showNewPassword ? "text" : "password"}
+              value={newPassword}
+              autoComplete="new-password"
+              label="New Password"
+              onChange={(e) => {
+                const val = e.target.value.replace(/\s/g, "");
+                setNewPassword(val);
+                setError("");
+                if (!val) setShowPasswordValidation(false);
+                else if (passwordRegex.test(val)) setShowPasswordValidation(false);
+                else setShowPasswordValidation(true);
+              }}
+              onFocus={() => {
+                if (newPassword && !passwordRegex.test(newPassword)) setShowPasswordValidation(true);
+              }}
+              onBlur={() => { setTimeout(() => setShowPasswordValidation(false), 200); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleResetPassword(); }}
+              placeholder="Enter new password"
+              error={!!error && error.includes("requirements")}
+              sideButton={true}
+              sideButtonType="primary"
+              sideButtonIcon={showNewPassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
+              sideButtonIconWidth="18px"
+              sideButtonIconHeight="18px"
+              onSideButtonClick={() => setShowNewPassword(!showNewPassword)}
+              showPasswordToggle={true}
+            />
+            <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", position: "absolute", zIndex: 5 }}>
+              <PasswordValidation
+                password={newPassword}
+                anchorEl={passwordFieldRef.current}
+                open={showPasswordValidation}
+                onClose={() => setShowPasswordValidation(false)}
+                showOnMobile={showPasswordValidation}
+              />
+            </Box>
+          </Box>
+
+          {/* Confirm Password */}
+          <Box sx={{ mb: 2 }}>
+            <InputField
+              type={showConfirmPassword ? "text" : "password"}
+              value={confirmPassword}
+              autoComplete="new-password"
+              label="Confirm Password"
+              onChange={(e) => { setConfirmPassword(e.target.value.replace(/\s/g, "")); setError(""); }}
+              onKeyDown={(e) => { if (e.key === "Enter") handleResetPassword(); }}
+              placeholder="Confirm new password"
+              error={(!!confirmPassword && newPassword !== confirmPassword) || (!!error && error.includes("match"))}
+              helperText={confirmPassword && newPassword !== confirmPassword ? "Passwords do not match" : ""}
+              sideButton={true}
+              sideButtonType="primary"
+              sideButtonIcon={showConfirmPassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
+              sideButtonIconWidth="18px"
+              sideButtonIconHeight="18px"
+              onSideButtonClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              showPasswordToggle={true}
+            />
+          </Box>
+
+          {/* Error */}
+          {error && !error.includes("match") && !error.includes("requirements") && (
+            <Typography sx={{ fontSize: "13px", color: theme.palette.error.main, fontFamily: "UrbanistMedium", mb: 1.5, textAlign: "center" }}>
+              {error}
+            </Typography>
+          )}
+
+          {/* Reset Button */}
+          <CustomButton
+            variant="primary"
+            size="medium"
+            label="Reset Password"
+            onClick={handleResetPassword}
+            disabled={loading || !newPassword || !confirmPassword}
+            fullWidth
+            sx={{ fontWeight: 700, padding: "14px 24px", borderRadius: "12px", fontSize: "15px" }}
+            endIcon={loading ? <LoadingIcon size={18} /> : undefined}
+            hideLabelWhenLoading={true}
+          />
+        </PanelCard>
+      </PopupModal>
+    );
+  }
+
+  // ════════════════════════════════════════════
+  // STEP 4: Success
+  // ════════════════════════════════════════════
+  return (
+    <PopupModal open={open} handleClose={handleClose} showHeader={false} transparent sx={modalSx}>
+      <PanelCard
+        title=""
+        showHeaderBorder={false}
+        bodyPadding="0"
+        headerPadding="0 !important"
+        sx={panelSx}
+        bodySx={{ padding: "0" }}
+      >
+        <Box sx={{ textAlign: "center", py: 2 }}>
+          <Box
+            sx={{
+              width: 72, height: 72, borderRadius: "50%",
+              background: "linear-gradient(135deg, #10B981, #059669)",
+              display: "flex", alignItems: "center", justifyContent: "center",
+              margin: "0 auto 20px",
+              boxShadow: "0 8px 32px rgba(16, 185, 129, 0.3)",
+            }}
+          >
+            <CheckCircleOutline sx={{ fontSize: 40, color: "#fff" }} />
+          </Box>
+
+          <Typography sx={{ fontWeight: 700, fontSize: "22px", color: "text.primary", fontFamily: "UrbanistBold", mb: 1 }}>
+            Password Reset Successful
+          </Typography>
+          <Typography sx={{ fontSize: "14px", color: "text.secondary", fontFamily: "UrbanistMedium", lineHeight: 1.6, mb: 3, maxWidth: "320px", mx: "auto" }}>
+            Your password has been updated. You can now log in with your new password.
+          </Typography>
+
+          <CustomButton
+            variant="primary"
+            size="medium"
+            label="Back to Login"
+            onClick={handleClose}
+            fullWidth
+            sx={{ fontWeight: 700, padding: "14px 24px", borderRadius: "12px", fontSize: "15px" }}
+          />
+        </Box>
+      </PanelCard>
+    </PopupModal>
+  );
 };
 
 export default ForgotPasswordDialog;

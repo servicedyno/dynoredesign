@@ -2925,3 +2925,43 @@ The fix is architecturally sound:
   5. Navigate back to /auth/login, verify no regression on the login form
   6. DO NOT submit any forms — LIVE production DB
 
+
+## Forgot Password: OTP-Based Reset + Logo Link + Forgot Password Visible (2026-06-28)
+### Changes Made:
+
+**Backend (controller/userController.ts + routes/userRouter.ts):**
+- `POST /api/user/forgot-password` — Modified to send 6-digit OTP email (via existing sendEmailOTP) instead of reset link
+- `POST /api/user/forgot-password-phone` — NEW: Send OTP via Telnyx SMS (falls back to email if SMS fails)
+- `POST /api/user/forgot-password/verify-otp` — NEW: Verify email OTP from Redis, return short-lived reset session token (15min TTL)
+- `POST /api/user/forgot-password-phone/verify-otp` — NEW: Verify phone OTP via Telnyx API, return reset session token
+- `POST /api/user/reset-password` — Modified: Accepts OTP reset session token (+ legacy link token fallback)
+
+**Frontend (Components/UI/ForgotPasswordDialog/index.tsx):**
+- Complete redesign as multi-step dialog:
+  - Step 1: Email/Phone toggle + input + "Send Verification Code"
+  - Step 2: 6-digit OTP input (paste support, auto-focus, countdown, resend)
+  - Step 3: New Password + Confirm Password with PasswordValidation checklist
+  - Step 4: Success state with "Back to Login"
+
+**Frontend (Components/UI/AuthLayout/AuthBrandPanel.tsx):**
+- Logo wrapped with <Link href="/"> — clicks navigate to landing page
+
+**Frontend (pages/auth/login.tsx):**
+- "Forgot your password?" link added to initial login step (always visible)
+- Step 2 forgot password moved outside loginMethod === "password" conditional
+
+### Test Request
+- test_type: frontend
+- test_url: https://payment-config-stage.preview.emergentagent.com
+- test_scope: Forgot password dialog, logo link, forgot password link
+- test_steps:
+  1. Navigate to /auth/login
+  2. Verify "Forgot your password?" link visible on initial login view
+  3. Click "Forgot your password?" → verify dialog opens with "Reset Password" title
+  4. Verify Email tab shows email input + "Send Verification Code" button
+  5. Click "Phone Number" tab → verify phone input with country selector appears
+  6. Click close (X) → dialog closes
+  7. Click DynoPay logo in left brand panel → verify navigation to landing page (/)
+  8. Navigate to /auth/register → click logo → verify navigation to landing page
+  9. DO NOT submit any forms — LIVE production DB
+

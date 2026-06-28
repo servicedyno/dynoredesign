@@ -2003,24 +2003,7 @@ export default function Login() {
           setForgotPasswordOtpError("");
           setIsPasswordRecoveryMode(false);
         }}
-        onEmailSubmit={handleForgotPasswordEmailSubmit}
-        countdown={forgotPasswordOtpCountdown}
-        loading={userState.loading}
         currentEmail={verifiedEmail}
-        emailError={
-          forgotPasswordEmailError
-            ? forgotPasswordEmailError.includes(" ")
-              ? forgotPasswordEmailError
-              : t(forgotPasswordEmailError)
-            : undefined
-        }
-        otpError={
-          forgotPasswordOtpError
-            ? forgotPasswordOtpError.includes(" ")
-              ? forgotPasswordOtpError
-              : t(forgotPasswordOtpError)
-            : undefined
-        }
       />
     </AuthPageBackground>
   );
