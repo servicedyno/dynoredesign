@@ -186,3 +186,18 @@ a {
 #nprogress .peg {
   box-shadow: 0 0 10px #6C5CE7, 0 0 5px #6C5CE7 !important;
 }
+
+/* ── Themed SVG icon handling for dark/light mode ── */
+.themed-icon {
+  transition: filter 0.2s ease;
+}
+html[data-theme="dark"] .themed-icon {
+  filter: brightness(0) saturate(100%) invert(85%) sepia(0%) saturate(0%) brightness(105%) contrast(85%);
+}
+/* Blue-accent icons: remap brand blue to lighter blue in dark mode */
+.themed-icon-primary {
+  transition: filter 0.2s ease;
+}
+html[data-theme="dark"] .themed-icon-primary {
+  filter: brightness(0) saturate(100%) invert(55%) sepia(60%) saturate(3000%) hue-rotate(220deg) brightness(105%) contrast(100%);
+}

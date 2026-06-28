@@ -200,7 +200,7 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
                     readOnly
                     label={
                       <WalletLabel>
-                        <Image src={LinkIcon} alt="Address" draggable={false} />
+                        <Image src={LinkIcon} alt="Address" draggable={false} className="themed-icon" />
                         <span>{tWallet("address")}</span>
                       </WalletLabel>
                     }
@@ -338,7 +338,7 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
       >
         <DialogContent sx={{ px: "30px", pt: "30px" }}>
           <Box sx={{ display: "flex", gap: "10px", alignItems: "center" }}>
-            <Image src={WalletIcon} alt="wallet" width={14} height={14} />
+            <Image src={WalletIcon} alt="wallet" width={14} height={14} className="themed-icon" />
             <Typography
               sx={{
                 fontFamily: "UrbanistMedium",

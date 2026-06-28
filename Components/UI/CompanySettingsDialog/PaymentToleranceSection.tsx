@@ -46,9 +46,7 @@ export default function PaymentToleranceSection({
           alt="rounded stack"
           width={16}
           height={16}
-          style={{
-            filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-          }}
+          className="themed-icon"
           draggable={false}
         />
       }
@@ -140,10 +138,7 @@ export default function PaymentToleranceSection({
               alt="time"
               width={isMobile ? 12 : 16}
               height={isMobile ? 12 : 16}
-              style={{
-                filter:
-                  "brightness(0) saturate(100%) invert(41%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(92%) contrast(88%)",
-              }}
+              className="themed-icon"
             />
           }
           endAdornment={tSettings("paymentToleranceFields.minutes")}

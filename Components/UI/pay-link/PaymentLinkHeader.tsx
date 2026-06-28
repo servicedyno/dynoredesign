@@ -32,7 +32,7 @@ const DisabledNotice: React.FC<{
       width={16}
       height={16}
       draggable={false}
-      style={{ filter: "brightness(0)" }}
+      className="themed-icon"
     />
     <Text
       sx={{
@@ -71,9 +71,7 @@ const PaymentLinkHeader: React.FC<PaymentLinkHeaderProps> = React.memo(
             alt="Transaction Icon"
             height={isMobile ? 14 : 13}
             width={isMobile ? 18 : 17}
-            style={{
-              filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-            }}
+            className="themed-icon"
             draggable={false}
           />
 

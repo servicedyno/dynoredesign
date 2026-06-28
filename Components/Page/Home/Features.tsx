@@ -140,7 +140,7 @@ const FeaturesSection = () => {
                   }}
                 >
                   <FeatureIcon sx={{ mb: 2 }}>
-                    <Image src={card.icon} alt={`${t(card.titleKey)} icon`} width={24} height={24} />
+                    <Image src={card.icon} alt={`${t(card.titleKey)} icon`} width={24} height={24} className="themed-icon-primary" />
                   </FeatureIcon>
 
                   <FeatureTitle sx={{ mb: 1 }}>{t(card.titleKey)}</FeatureTitle>
@@ -206,7 +206,7 @@ const FeaturesSection = () => {
                   }}
                 >
                   <FeatureIcon sx={{ mb: 2 }}>
-                    <Image src={card.icon} alt={`${t(card.titleKey)} icon`} width={24} height={24} />
+                    <Image src={card.icon} alt={`${t(card.titleKey)} icon`} width={24} height={24} className="themed-icon-primary" />
                   </FeatureIcon>
 
                   <FeatureTitle sx={{ mb: 1 }}>{t(card.titleKey)}</FeatureTitle>

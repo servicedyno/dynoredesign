@@ -21,7 +21,7 @@ const DescriptionSection: React.FC<DescriptionSectionProps> = ({
     <InputField
       label={
         <PaymentSettingsLabel>
-          <Image src={NoteIcon} alt="note" draggable={false} />
+          <Image src={NoteIcon} alt="note" draggable={false} className="themed-icon" />
           <span>{tPaymentLink("description")}</span>
           <Typography
             component="span"

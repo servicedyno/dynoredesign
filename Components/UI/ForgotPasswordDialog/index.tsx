@@ -154,6 +154,7 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
               width={isMobile ? 18 : 24}
               height={isMobile ? 18 : 24}
               draggable={false}
+              className="themed-icon"
             />
           }
           headerAction={
@@ -171,6 +172,7 @@ const ForgotPasswordDialog: React.FC<ForgotPasswordDialogProps> = ({
                 width={isMobile ? 10 : 16}
                 height={isMobile ? 10 : 16}
                 draggable={false}
+                className="themed-icon"
               />
             </DialogCloseButton>
           }

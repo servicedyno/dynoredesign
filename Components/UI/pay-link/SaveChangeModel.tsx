@@ -33,7 +33,7 @@ const SaveChangeModel = ({ open, onClose, onSave }: SaveChangeModelProps) => {
             width={isMobile ? 14 : 16}
             height={isMobile ? 14 : 16}
             draggable={false}
-            style={{ filter: "brightness(0)" }}
+            className="themed-icon"
           />
           <Typography
             sx={{

@@ -189,7 +189,7 @@ const TransactionsTopBar: React.FC<TransactionsTopBarProps & { initialWallet?: s
           onKeyDown={handleSearchKeyPress}
         />
         <SearchIconButton onClick={handleSearch}>
-          <Image src={SearchIcon} alt="search" width={20} height={20} />
+          <Image src={SearchIcon} alt="search" width={20} height={20} className="themed-icon-primary" />
         </SearchIconButton>
       </SearchContainer>
 
@@ -204,8 +204,8 @@ const TransactionsTopBar: React.FC<TransactionsTopBarProps & { initialWallet?: s
               alt="calendar"
               width={14}
               height={14}
+              className="themed-icon"
               style={{
-                filter: "brightness(0) saturate(100%) invert(0%)",
                 marginTop: "-3px",
               }}
             />
@@ -242,7 +242,7 @@ const TransactionsTopBar: React.FC<TransactionsTopBarProps & { initialWallet?: s
           }}
         >
           <WalletSelectorButton onClick={handleWalletButtonClick}>
-            <Image src={WalletIcon} alt="wallet" width={17} height={17} />
+            <Image src={WalletIcon} alt="wallet" width={17} height={17} className="themed-icon" />
             <Typography className="wallet-text">
               {selectedWalletData.label}
             </Typography>
@@ -262,7 +262,7 @@ const TransactionsTopBar: React.FC<TransactionsTopBarProps & { initialWallet?: s
             <WalletDropdownContainer isMobile={isMobile}>
               <Box className="dropdown-header" onClick={handleWalletMenuClose}>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                  <Image src={WalletIcon} alt="wallet" width={17} height={17} />
+                  <Image src={WalletIcon} alt="wallet" width={17} height={17} className="themed-icon" />
                   <Typography className="header-text">
                     {selectedWalletData.label}
                   </Typography>

@@ -92,7 +92,7 @@ const CryptoSelection: React.FC<CryptoSelectionProps> = ({
               sx={{ width: "100%" }}
             />
             <SearchIconButton onClick={handleSearch}>
-              <Image src={SearchIcon} alt="search" width={20} height={20} />
+              <Image src={SearchIcon} alt="search" width={20} height={20} className="themed-icon-primary" />
             </SearchIconButton>
           </Box>
         )}

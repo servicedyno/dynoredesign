@@ -92,10 +92,9 @@ const Header = React.memo(({ label }: { label: string }) => {
           height={isMobile ? 15 : 18}
           draggable={false}
           style={{
-            filter:
-              "brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) brightness(95%) contrast(100%)",
             marginTop: "-1px",
           }}
+          className="themed-icon"
         />
       )}
 
@@ -326,7 +325,7 @@ const PaymentLinksTable = ({
                     <Box sx={{ display: "flex", gap: "6px" }}>
                       {row.status !== "expired" && (
                         <CopyButton onClick={() => handleCopy(row.paymentUrl)} sx={{ width: 28, height: 28, minWidth: 28, p: "5px" }}>
-                          <Image src={CopyIcon} alt="Copy" width={12} height={12} draggable={false} />
+                          <Image src={CopyIcon} alt="Copy" width={12} height={12} draggable={false} className="themed-icon-primary" />
                         </CopyButton>
                       )}
                       <CopyButton
@@ -339,14 +338,14 @@ const PaymentLinksTable = ({
                         }}
                         sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
                       >
-                        <Image src={EyeIcon} alt="View" width={12} height={12} draggable={false} />
+                        <Image src={EyeIcon} alt="View" width={12} height={12} draggable={false} className="themed-icon" />
                       </CopyButton>
                       {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
                         <CopyButton
                           onClick={() => router.push(`/pay-links/${row?.id}`)}
                           sx={{ width: 28, height: 28, minWidth: 28, p: "5px", borderColor: theme.palette.text.primary }}
                         >
-                          <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} style={{ filter: "brightness(0) saturate(100%) invert(0%)" }} />
+                          <Image src={EditIcon} alt="Edit" width={12} height={12} draggable={false} className="themed-icon" />
                         </CopyButton>
                       )}
                       {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
@@ -496,6 +495,7 @@ const PaymentLinksTable = ({
                             width={isMobile ? 12 : 14}
                             height={isMobile ? 12 : 14}
                             draggable={false}
+                            className="themed-icon-primary"
                           />
                         </CopyButton>
                       )}
@@ -521,6 +521,7 @@ const PaymentLinksTable = ({
                           width={isMobile ? 12 : 20}
                           height={isMobile ? 12 : 14}
                           draggable={false}
+                          className="themed-icon"
                         />
                       </CopyButton>
                       {row.status !== "expired" && row.status !== "paid" && row.status !== "completed" && (
@@ -540,9 +541,7 @@ const PaymentLinksTable = ({
                             width={isMobile ? 12 : 20}
                             height={isMobile ? 12 : 16}
                             draggable={false}
-                            style={{
-                              filter: "brightness(0) saturate(100%) invert(0%)",
-                            }}
+                            className="themed-icon"
                           />
                         </CopyButton>
                       )}
@@ -567,7 +566,7 @@ const PaymentLinksTable = ({
                             height={isMobile ? 12 : 16}
                             draggable={false}
                             style={{
-                              filter: "brightness(0) saturate(100%) invert(0%)",
+                              filter: "brightness(0) saturate(100%) invert(27%) sepia(86%) saturate(5000%) hue-rotate(355deg) brightness(97%) contrast(120%)",
                             }}
                           />
                         </CopyButton>

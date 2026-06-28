@@ -590,6 +590,7 @@ const OtpDialog: React.FC<OtpDialogProps> = ({
               width={isMobile ? 18 : 24}
               height={isMobile ? 11 : 24}
               draggable={false}
+              className="themed-icon"
             />
           ) : undefined
         }

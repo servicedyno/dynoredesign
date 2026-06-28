@@ -88,7 +88,7 @@ const PaymentLinksTopBar = ({
           }}
         />
         <SearchIconButton>
-          <Image src={SearchIcon} alt="search" width={20} height={20} />
+          <Image src={SearchIcon} alt="search" width={20} height={20} className="themed-icon-primary" />
         </SearchIconButton>
       </Box>
 

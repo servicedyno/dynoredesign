@@ -94,7 +94,7 @@ const PaymentSettingsBasic: React.FC<PaymentSettingsBasicProps> = ({
             }}
           >
             <PaymentSettingsLabel>
-              <Image src={CurrencyIcon} alt="currency" draggable={false} />
+              <Image src={CurrencyIcon} alt="currency" draggable={false} className="themed-icon" />
               <span>{tPaymentLink("currency")}</span>
             </PaymentSettingsLabel>
 
@@ -125,9 +125,7 @@ const PaymentSettingsBasic: React.FC<PaymentSettingsBasicProps> = ({
                 src={ClientIcon}
                 alt="clientName"
                 draggable={false}
-                style={{
-                  filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-                }}
+                className="themed-icon"
               />
               <span>{tPaymentLink("clientName")}</span>
             </PaymentSettingsLabel>
@@ -152,7 +150,7 @@ const PaymentSettingsBasic: React.FC<PaymentSettingsBasicProps> = ({
           }}
         >
           <PaymentSettingsLabel>
-            <Image src={HourglassIcon} alt="expire" draggable={false} />
+            <Image src={HourglassIcon} alt="expire" draggable={false} className="themed-icon" />
             <span>{tPaymentLink("expire")}</span>
           </PaymentSettingsLabel>
 
@@ -173,7 +171,7 @@ const PaymentSettingsBasic: React.FC<PaymentSettingsBasicProps> = ({
 
         <Box>
           <PaymentSettingsLabel>
-            <Image src={PaymentIcon} alt="blockchain fees" draggable={false} />
+            <Image src={PaymentIcon} alt="blockchain fees" draggable={false} className="themed-icon" />
             <span>{tPaymentLink("blockchainFeesPaidBy")}</span>
           </PaymentSettingsLabel>
           <Box sx={{ marginTop: { xs: "8px", md: "8px" } }}>

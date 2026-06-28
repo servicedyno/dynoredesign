@@ -333,9 +333,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                 <Image
                   src={item.icon}
                   alt={item.label}
-                  style={{
-                    filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-                  }}
+                  className="themed-icon"
                   draggable={false}
                 />
                 <span>{item.label}</span>
@@ -409,10 +407,7 @@ const TransactionsTable: React.FC<TransactionsTableProps> = ({
                           width={15}
                           height={15}
                           draggable={false}
-                          style={{
-                            filter:
-                              "brightness(0) saturate(100%) invert(41%) sepia(2%) saturate(168%) hue-rotate(201deg) brightness(95%) contrast(88%)",
-                          }}
+                          className="themed-icon"
                         />
                         <ArrowOutwardIcon
                           sx={{

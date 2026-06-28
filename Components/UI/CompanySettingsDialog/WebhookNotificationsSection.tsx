@@ -133,6 +133,7 @@ export default function WebhookNotificationsSection({
               width={isMobile ? 12 : 14}
               height={isMobile ? 12 : 14}
               draggable={false}
+              className="themed-icon-primary"
             />
           }
           sideButtonType="secondary"
@@ -235,10 +236,7 @@ export default function WebhookNotificationsSection({
                   width={isMobile ? 12 : 22}
                   height={isMobile ? 12 : 16}
                   draggable={false}
-                  style={{
-                    filter:
-                      "brightness(0) saturate(100%) invert(0%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0%) contrast(100%)",
-                  }}
+                  className="themed-icon"
                 />
               </IconButton>
             </Tooltip>
@@ -304,6 +302,7 @@ export default function WebhookNotificationsSection({
               width={isMobile ? 12 : 22}
               height={isMobile ? 12 : 16}
               draggable={false}
+              className="themed-icon"
             />
             <Typography
               sx={{
@@ -340,6 +339,7 @@ export default function WebhookNotificationsSection({
               width={isMobile ? 12 : 22}
               height={isMobile ? 12 : 16}
               draggable={false}
+              className="themed-icon"
             />
           </IconButton>
         </DialogTitle>

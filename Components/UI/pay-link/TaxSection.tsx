@@ -170,7 +170,7 @@ const TaxSection: React.FC<TaxSectionProps> = ({
             width={16}
             height={16}
             draggable={false}
-            style={{ filter: "brightness(0)" }}
+            className="themed-icon"
           />
           <Text
             sx={{

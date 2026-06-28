@@ -226,7 +226,7 @@ const HelpAndSupport = () => {
                         />
                     </Box>
                     <SearchIconButton onClick={handleSearch}>
-                        <Image src={SearchIcon} alt="search" width={20} height={20} />
+                        <Image src={SearchIcon} alt="search" width={20} height={20} className="themed-icon-primary" />
                     </SearchIconButton>
                 </Box>
             </Box>
@@ -323,7 +323,7 @@ const HelpAndSupport = () => {
                                         borderColor: "#D7D7D7",
                                     }}
                                 >
-                                    <Image src={item.icon} alt="search" width={24} height={24} />
+                                    <Image src={item.icon} alt="search" width={24} height={24} className="themed-icon-primary" />
                                 </FooterIconButton>
                             </Box>
                             <TextDecoration style={{ fontSize: isMobile ? "10px" :"13px" }}>

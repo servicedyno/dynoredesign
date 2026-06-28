@@ -42,7 +42,8 @@ export default function InfoBanner({ message, children, sx }: InfoBannerProps) {
           width={16}
           height={16}
           draggable={false}
-          style={{ filter: "brightness(0)", marginTop: "-2px" }}
+          style={{ marginTop: "-2px" }}
+          className="themed-icon"
         />
       </WarningIconContainer>
       {children ?? (

@@ -88,7 +88,7 @@ const HomeFooter: FC = () => {
           rel="noopener noreferrer"
         >
           <SocialItem>
-            <Image src={item.icon} alt={item.label} width={20} height={20} />
+            <Image src={item.icon} alt={item.label} width={20} height={20} className="themed-icon" />
           </SocialItem>
         </Link>
       )),

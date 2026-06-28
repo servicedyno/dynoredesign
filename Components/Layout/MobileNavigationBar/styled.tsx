@@ -81,7 +81,9 @@ export const IconButton = styled(Box, {
     "& img": {
       filter: active
         ? "brightness(0) saturate(100%) invert(13%) sepia(94%) saturate(7151%) hue-rotate(240deg) brightness(101%) contrast(150%)"
-        : "brightness(0) saturate(100%) invert(0%)",
+        : theme.palette.mode === "dark"
+          ? "brightness(0) saturate(100%) invert(85%) sepia(0%) saturate(0%) brightness(105%) contrast(85%)"
+          : "brightness(0) saturate(100%) invert(0%)",
     },
     "& svg": {
       color: active ? theme.palette.primary.main : theme.palette.text.primary,

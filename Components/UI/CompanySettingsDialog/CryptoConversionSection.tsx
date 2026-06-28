@@ -41,9 +41,7 @@ export default function CryptoConversionSection({
           alt="swap horiz"
           width={16}
           height={16}
-          style={{
-            filter: `brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(95%) contrast(100%)`,
-          }}
+          className="themed-icon"
           draggable={false}
         />
       }
