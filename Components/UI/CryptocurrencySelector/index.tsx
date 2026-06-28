@@ -65,11 +65,18 @@ const CryptocurrencySelector: React.FC<CryptocurrencySelectorProps> = ({
 
   const selectedCrypto = cryptocurrencies.find((c) => c.code === value) || {
     value: "",
-    name: "",
+    name: value || "",
     icon: null,
-    code: "",
+    code: value || "",
   };
   const isOpen = Boolean(anchorEl);
+
+  // In edit mode the currency may already be in the wallet (filtered out of `cryptocurrencies`).
+  // Import ALLCRYPTOCURRENCIES so we can always resolve the icon/name.
+  const { allCryptocurrencies } = useWalletData();
+  const resolvedCrypto = selectedCrypto.icon
+    ? selectedCrypto
+    : allCryptocurrencies?.find((c: any) => c.code === value) || selectedCrypto;
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -153,15 +160,17 @@ const CryptocurrencySelector: React.FC<CryptocurrencySelectorProps> = ({
                   height: isMobile ? "25px" : "30px",
                 }}
               >
-                <CryptocurrencyIcon
-                  src={selectedCrypto.icon}
-                  alt={selectedCrypto.name}
-                  width={isMobile ? 14 : 20}
-                  height={isMobile ? 14 : 20}
-                />
-                <span>{selectedCrypto.code}</span>
+                {resolvedCrypto.icon && (
+                  <CryptocurrencyIcon
+                    src={resolvedCrypto.icon}
+                    alt={resolvedCrypto.name}
+                    width={isMobile ? 14 : 20}
+                    height={isMobile ? 14 : 20}
+                  />
+                )}
+                <span>{resolvedCrypto.code}</span>
               </IconChip>
-              <CryptocurrencyText>{selectedCrypto.name}</CryptocurrencyText>
+              <CryptocurrencyText>{resolvedCrypto.name}</CryptocurrencyText>
             </Box>
           )}
 
@@ -214,7 +223,7 @@ const CryptocurrencySelector: React.FC<CryptocurrencySelectorProps> = ({
                 <CryptocurrencyText>
                   {value === ""
                     ? "Bitcoin (BTC)"
-                    : `${selectedCrypto.name} (${value})`}
+                    : `${resolvedCrypto.name} (${value})`}
                 </CryptocurrencyText>
               </Box>
 

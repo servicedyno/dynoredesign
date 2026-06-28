@@ -224,5 +224,6 @@ export const useWalletData = () => {
     cryptocurrencies,
     walletWarning,
     activeWalletsData,
+    allCryptocurrencies: ALLCRYPTOCURRENCIES,
   };
 };
