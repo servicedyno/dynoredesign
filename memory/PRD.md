@@ -102,3 +102,10 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - ~~**P0 — Dashboard 500s for empty/new merchants**~~ ✅ FIXED 2026-06-28 (missing `tbl_user_self_transaction` table now synced on startup).
 - **P1 — Merchant webhook 404**: outbound webhook to merchant URL returning 404; verify routing/payload targeting in `webhooks/index.ts`.
 - **P2 — Landing page "Network Error" (USER ACTION)**: needs a clean Railway frontend rebuild to bake the new `NEXT_PUBLIC_BASE_URL`.
+
+### 2026-02-XX — DO Environment Variables Audit (P2)
+- Cross-referenced all `process.env.*` usage in backend codebase against DO App Spec (`app.yaml`/`app-create.json`)
+- **Added 8 missing variables to DO spec:** `CORS_ALLOWED_ORIGINS`, `TELNYX_PHONE_NUMBER`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `SLACK_WEBHOOK_URL`, `DISCORD_WEBHOOK_URL`
+- 13 other code-referenced variables have graceful fallbacks or are script-only — documented in `/app/docs/DO_ENV_AUDIT.md`
+- Confirmed 160 env vars in DO spec now, YAML and JSON in sync, no duplicates
+- All dynamically accessed vars (FEE_TIER, SWEEP, THRESHOLD, TRIAL) confirmed present

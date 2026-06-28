@@ -15,8 +15,6 @@ Test payment link ref: 6563a5d1a3aed8328326584c8889d16304ec5eaa93859374 (created
 import pytest
 import requests
 import os
-import json
-import time
 
 # Get BASE_URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
@@ -278,7 +276,7 @@ class TestGetDataAvailableCurrencies:
             
             print(f"[Test] ✓ getData returns correct available_currencies: {available}")
         else:
-            print(f"[Test] ⚠ available_currencies not in response, checking if it's in fee_info or elsewhere")
+            print("[Test] ⚠ available_currencies not in response, checking if it's in fee_info or elsewhere")
             print(f"[Test] Full response keys: {result.keys()}")
             # This might be expected if available_currencies is only returned when non-empty
             # The fix should ensure it's returned
@@ -336,7 +334,7 @@ class TestGetDataAvailableCurrencies:
         # If available_currencies is empty, it means all configured currencies are allowed
         # This is the expected behavior for unrestricted links
         if len(available) == 0:
-            print(f"[Test] ✓ Unrestricted link has empty available_currencies (all configured allowed)")
+            print("[Test] ✓ Unrestricted link has empty available_currencies (all configured allowed)")
         else:
             # If returned, should contain all configured currencies
             print(f"[Test] ✓ Unrestricted link has available_currencies: {available}")
@@ -392,13 +390,13 @@ class TestConfiguredCurrenciesFiltering:
         customer_token = getData_data.get('token')
         
         if not customer_token:
-            print(f"[Test] ⚠ No customer token in getData response, skipping configured-currencies test")
+            print("[Test] ⚠ No customer token in getData response, skipping configured-currencies test")
             pytest.skip("No customer token available")
         
         print(f"[Test] Got customer token: {customer_token[:30]}...")
         
         # Now call configured-currencies with customer token
-        print(f"[Test] GET /api/pay/configured-currencies")
+        print("[Test] GET /api/pay/configured-currencies")
         
         config_response = requests.get(
             f"{BASE_URL}/api/pay/configured-currencies",
@@ -476,7 +474,7 @@ class TestConfiguredCurrenciesFiltering:
         customer_token = getData_data.get('token')
         
         if not customer_token:
-            print(f"[Test] ⚠ No customer token in getData response, skipping configured-currencies test")
+            print("[Test] ⚠ No customer token in getData response, skipping configured-currencies test")
             pytest.skip("No customer token available")
         
         # Now call configured-currencies with customer token
@@ -558,11 +556,11 @@ class TestCurrencyValidationAtPayment:
         customer_token = getData_data.get('token')
         
         if not customer_token:
-            print(f"[Test] ⚠ No customer token, skipping payment validation test")
+            print("[Test] ⚠ No customer token, skipping payment validation test")
             pytest.skip("No customer token available")
         
         # Try to create crypto payment with BTC (allowed)
-        print(f"[Test] POST /api/pay/createCryptoPayment with BTC (allowed)")
+        print("[Test] POST /api/pay/createCryptoPayment with BTC (allowed)")
         
         # First get currency rates
         rates_response = requests.post(
@@ -606,7 +604,7 @@ class TestCurrencyValidationAtPayment:
             # Should succeed (200) or return address
             # Note: May fail for other reasons (no wallet configured, etc.) but should NOT fail due to currency restriction
             if payment_response.status_code == 200:
-                print(f"[Test] ✓ Payment with allowed currency BTC succeeded")
+                print("[Test] ✓ Payment with allowed currency BTC succeeded")
             else:
                 # Check if error is NOT about currency restriction
                 error_msg = payment_response.text.lower()
@@ -660,11 +658,11 @@ class TestCurrencyValidationAtPayment:
         customer_token = getData_data.get('token')
         
         if not customer_token:
-            print(f"[Test] ⚠ No customer token, skipping payment validation test")
+            print("[Test] ⚠ No customer token, skipping payment validation test")
             pytest.skip("No customer token available")
         
         # Try to create crypto payment with LTC (NOT allowed)
-        print(f"[Test] POST /api/pay/createCryptoPayment with LTC (NOT allowed)")
+        print("[Test] POST /api/pay/createCryptoPayment with LTC (NOT allowed)")
         
         payment_response = requests.post(
             f"{BASE_URL}/api/pay/createCryptoPayment",
@@ -691,7 +689,7 @@ class TestCurrencyValidationAtPayment:
         assert 'not available' in error_msg or 'ltc' in error_msg or 'available currencies' in error_msg, \
             f"Error should mention currency not available: {payment_response.text}"
         
-        print(f"[Test] ✓ Payment with disallowed currency LTC correctly rejected")
+        print("[Test] ✓ Payment with disallowed currency LTC correctly rejected")
 
 
 # ==========================================
@@ -713,7 +711,7 @@ class TestExistingPaymentLink:
         print(f"[Test] Response body: {response.text[:800]}...")
         
         if response.status_code == 404 or response.status_code == 410:
-            print(f"[Test] ⚠ Existing test link not found or expired, skipping")
+            print("[Test] ⚠ Existing test link not found or expired, skipping")
             pytest.skip("Test payment link not found or expired")
         
         # Status code assertion
@@ -733,7 +731,7 @@ class TestExistingPaymentLink:
                 f"Expected BTC or ETH in available_currencies, got {available}"
             print(f"[Test] ✓ Existing link has correct available_currencies: {available}")
         else:
-            print(f"[Test] ⚠ available_currencies is empty for existing link")
+            print("[Test] ⚠ available_currencies is empty for existing link")
 
 
 # ==========================================

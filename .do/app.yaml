@@ -125,12 +125,16 @@ services:
       - { key: FLW_SECRET_HASH, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
       - { key: FLW_ENCRYPTION_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
 
+      # ---------- CORS ----------
+      - { key: CORS_ALLOWED_ORIGINS, value: "https://dynopay.com,https://checkout.dynopay.com", scope: RUN_TIME }
+
       # ---------- Email / SMS / Messaging ----------
       - { key: BREVO_API_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
       - { key: BREVO_SENDER_EMAIL, value: "REPLACE_ME", scope: RUN_TIME }
       - { key: TELEGRAM_BOT_TOKEN, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
       - { key: TELNYX_API_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
       - { key: TELNYX_VERIFY_PROFILE_ID, value: "REPLACE_ME", scope: RUN_TIME }
+      - { key: TELNYX_PHONE_NUMBER, value: "REPLACE_ME", scope: RUN_TIME }
       - { key: INFOBIP_API_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
 
       # ---------- KYC (Veriff) ----------
@@ -150,6 +154,15 @@ services:
       - { key: GOOGLE_CLIENT_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
       - { key: CUSTOMER_ID, value: "REPLACE_ME", scope: RUN_TIME }
       - { key: PROFILE_ID, value: "REPLACE_ME", scope: RUN_TIME }
+
+      # ---------- Web Push Notifications (VAPID) ----------
+      - { key: VAPID_PUBLIC_KEY, value: "REPLACE_ME", scope: RUN_TIME }
+      - { key: VAPID_PRIVATE_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }
+      - { key: VAPID_SUBJECT, value: "mailto:support@dynopay.com", scope: RUN_TIME }
+
+      # ---------- Alerting (optional — leave empty to skip) ----------
+      - { key: SLACK_WEBHOOK_URL, value: "", scope: RUN_TIME }
+      - { key: DISCORD_WEBHOOK_URL, value: "", scope: RUN_TIME }
 
       # ---------- (Optional) legacy crypto gateway keys ----------
       - { key: CRYPTO_PUBLIC_KEY, value: "REPLACE_ME", scope: RUN_TIME, type: SECRET }

@@ -184,7 +184,7 @@ class TestActiveApiKeyEnforcement:
         found_expected = any(exp.lower() in message.lower() for exp in expected_messages)
         assert found_expected, f"Unexpected error message: {message}"
         
-        print(f"✅ TEST 3 PASSED: Correct error blocking mechanism in place")
+        print("✅ TEST 3 PASSED: Correct error blocking mechanism in place")
     
     # =================================================
     # TEST 4: Existing validation - Missing amount
@@ -215,7 +215,7 @@ class TestActiveApiKeyEnforcement:
         assert "amount" in message or "required" in message or "proper values" in message, \
             f"Expected validation error: {message}"
         
-        print(f"✅ TEST 4 PASSED: Missing amount validation works")
+        print("✅ TEST 4 PASSED: Missing amount validation works")
     
     # =================================================
     # TEST 5: Existing validation - Invalid company_id
@@ -243,7 +243,7 @@ class TestActiveApiKeyEnforcement:
         data = response.json()
         print(f"Invalid company_id error: {data.get('message')}")
         
-        print(f"✅ TEST 5 PASSED: Invalid company_id validation works")
+        print("✅ TEST 5 PASSED: Invalid company_id validation works")
     
     # =================================================
     # TEST 6: Existing validation - Valid modes
@@ -269,7 +269,7 @@ class TestActiveApiKeyEnforcement:
         # Should succeed
         assert response.status_code in [200, 201], f"Expected success, got {response.status_code}: {response.text}"
         
-        print(f"✅ TEST 6 PASSED: Valid modes accepted")
+        print("✅ TEST 6 PASSED: Valid modes accepted")
     
     # =================================================
     # TEST 7: Verify SQL query structure
@@ -300,7 +300,7 @@ class TestActiveApiKeyEnforcement:
             if len(active_keys) > 0:
                 print(f"✅ TEST 7 PASSED: Verified company 38 has {len(active_keys)} active API key(s)")
             else:
-                print(f"⚠️ TEST 7: Company 38 may not have active API keys in current state")
+                print("⚠️ TEST 7: Company 38 may not have active API keys in current state")
         else:
             print(f"⚠️ Could not verify API keys via API: {response.status_code}")
         
@@ -332,7 +332,7 @@ class TestActiveApiKeyEnforcement:
             
             assert response.status_code in [200, 201], f"Request {i+1} failed: {response.text}"
         
-        print(f"✅ TEST 8 PASSED: Multiple requests succeed consistently")
+        print("✅ TEST 8 PASSED: Multiple requests succeed consistently")
     
     # =================================================
     # TEST 9: Verify company 41 state (diagnostic test)
@@ -358,7 +358,7 @@ class TestActiveApiKeyEnforcement:
         
         # The important thing is that payment link creation fails for company 41
         # regardless of the specific reason (no API key or no wallet)
-        print(f"✅ TEST 9 PASSED: Company 41 state checked")
+        print("✅ TEST 9 PASSED: Company 41 state checked")
 
 
 class TestEdgeCases:
@@ -383,7 +383,7 @@ class TestEdgeCases:
         # Should succeed with minimum required fields
         assert response.status_code in [200, 201], f"Minimum valid request failed: {response.text}"
         
-        print(f"✅ EDGE CASE: Minimum valid payment link created")
+        print("✅ EDGE CASE: Minimum valid payment link created")
 
 
 if __name__ == "__main__":

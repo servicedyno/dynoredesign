@@ -15,7 +15,6 @@ Endpoints tested:
 import pytest
 import requests
 import os
-import json
 
 # Get BASE_URL from environment
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
@@ -293,7 +292,7 @@ def test_create_payment_link_invalid_crypto_type():
 
 def test_create_payment_link_unconfigured_wallet():
     """Test creating payment link with unconfigured wallet returns error"""
-    print(f"\n[Test] POST /api/pay/createPaymentLink with unconfigured wallet 'BCH'")
+    print("\n[Test] POST /api/pay/createPaymentLink with unconfigured wallet 'BCH'")
     
     payload = {
         "base_amount": 30,
@@ -507,7 +506,7 @@ def test_update_payment_link_clear_accepted_currencies():
     # Should be null (all configured currencies)
     assert accepted is None, f"Expected null accepted_currencies, got {accepted}"
     
-    print(f"[Test] ✓ Cleared accepted_currencies to null (all configured)")
+    print("[Test] ✓ Cleared accepted_currencies to null (all configured)")
 
 
 def test_update_payment_link_invalid_crypto():
@@ -555,7 +554,7 @@ def test_update_payment_link_invalid_crypto():
     # Should return 400 for invalid crypto
     assert update_response.status_code == 400, f"Expected 400, got {update_response.status_code}: {update_response.text}"
     
-    print(f"[Test] ✓ Update with invalid crypto returns 400")
+    print("[Test] ✓ Update with invalid crypto returns 400")
 
 
 def test_update_payment_link_unconfigured_wallet():
@@ -603,7 +602,7 @@ def test_update_payment_link_unconfigured_wallet():
     # Should return 400 for unconfigured wallet
     assert update_response.status_code == 400, f"Expected 400, got {update_response.status_code}: {update_response.text}"
     
-    print(f"[Test] ✓ Update with unconfigured wallet returns 400")
+    print("[Test] ✓ Update with unconfigured wallet returns 400")
 
 
 # Cleanup after all tests

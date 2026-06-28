@@ -50,7 +50,7 @@ class TestP1GlobalErrorHandler:
         assert response.status_code == 400, f"Expected 400 for malformed JSON, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False, "success should be false"
+        assert not data.get("success"), "success should be false"
         assert "invalid" in data.get("message", "").lower() or "json" in data.get("message", "").lower(), \
             f"Message should mention invalid JSON: {data.get('message')}"
         print("✓ Malformed JSON returns 400 with proper error message")
@@ -84,7 +84,7 @@ class TestP3InputValidation:
         assert response.status_code == 400, f"Expected 400 for empty login body, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False
+        assert not data.get("success")
         assert "validation" in data.get("message", "").lower() or "required" in data.get("message", "").lower(), \
             f"Message should mention validation error: {data.get('message')}"
         print("✓ Login with empty body returns 400 validation error")
@@ -99,7 +99,7 @@ class TestP3InputValidation:
         assert response.status_code == 400, f"Expected 400 for invalid email, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False
+        assert not data.get("success")
         assert "email" in data.get("message", "").lower() or "validation" in data.get("message", "").lower(), \
             f"Message should mention email error: {data.get('message')}"
         print("✓ Login with invalid email returns 400 validation error")
@@ -114,7 +114,7 @@ class TestP3InputValidation:
         assert response.status_code == 400, f"Expected 400 for empty 2FA validate body, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False
+        assert not data.get("success")
         assert "validation" in data.get("message", "").lower() or "required" in data.get("message", "").lower(), \
             f"Message should mention validation error: {data.get('message')}"
         print("✓ 2FA validate with empty body returns 400 validation error")
@@ -139,7 +139,7 @@ class TestP3InputValidation:
         assert response.status_code == 400, f"Expected 400 for empty forgot-password body, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False
+        assert not data.get("success")
         print("✓ Forgot-password with empty body returns 400 validation error")
     
     def test_forgot_password_invalid_email_returns_400(self):
@@ -162,7 +162,7 @@ class TestP3InputValidation:
         assert response.status_code == 400, f"Expected 400 for empty reset-password body, got {response.status_code}: {response.text}"
         
         data = response.json()
-        assert data.get("success") == False
+        assert not data.get("success")
         print("✓ Reset-password with empty body returns 400 validation error")
     
     def test_reset_password_missing_token_returns_400(self):
@@ -187,7 +187,7 @@ class TestP2SwaggerDocs:
         # Check it's HTML with Swagger content
         content = response.text.lower()
         assert "swagger" in content or "openapi" in content or "<!doctype html" in content, \
-            f"Response should be Swagger UI HTML"
+            "Response should be Swagger UI HTML"
         print("✓ Swagger docs available at /api/docs")
     
     def test_swagger_json_available(self):
@@ -205,7 +205,7 @@ class TestP2SwaggerDocs:
                         found = True
                         print(f"✓ Swagger JSON available at {path}")
                         break
-                except:
+                except Exception:
                     continue
         
         # It's okay if JSON endpoint is not found - Swagger UI might embed it
@@ -278,7 +278,7 @@ class TestAdminLogin:
             assert "data" in data, f"Response should include data: {data}"
             assert "accessToken" in data.get("data", {}), f"Response should include accessToken: {data}"
             assert "message" in data, f"Response should include message: {data}"
-            print(f"✓ Admin login successful, token received")
+            print("✓ Admin login successful, token received")
             return data["data"]["accessToken"]
         else:
             # Admin may have different credentials in this env

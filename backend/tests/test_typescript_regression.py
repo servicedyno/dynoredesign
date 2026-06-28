@@ -12,8 +12,6 @@ Test credentials:
 
 import pytest
 import requests
-import os
-import json
 import time
 
 # Use localhost for internal testing (backend runs on port 8001)
@@ -119,7 +117,7 @@ class TestUserAuthentication:
             assert data["data"]["userData"]["email"] == TEST_EMAIL
             print(f"✅ Login successful for user: {TEST_EMAIL}")
         else:
-            print(f"✅ Login endpoint working (rate limited in test environment)")
+            print("✅ Login endpoint working (rate limited in test environment)")
     
     def test_login_invalid_credentials(self):
         """Test login with invalid credentials returns error"""
@@ -154,7 +152,7 @@ class TestUserAuthentication:
         )
         # Should return 200 with email status
         assert response.status_code == 200, f"Check email failed: {response.text}"
-        print(f"✅ Check email endpoint works")
+        print("✅ Check email endpoint works")
 
 
 class TestUserProfile:
@@ -174,7 +172,7 @@ class TestUserProfile:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get profile successful")
+        print("✅ Get profile successful")
 
 
 class TestCompanyAPIs:
@@ -226,7 +224,7 @@ class TestCompanyAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get company transactions successful")
+        print("✅ Get company transactions successful")
 
 
 class TestPaymentLinkAPIs:
@@ -262,7 +260,7 @@ class TestPaymentLinkAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get company currencies successful")
+        print("✅ Get company currencies successful")
     
     def test_get_fee_preview(self, auth_token):
         """Test getting fee preview"""
@@ -279,7 +277,7 @@ class TestPaymentLinkAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get fee preview successful")
+        print("✅ Get fee preview successful")
     
     def test_get_network_fees(self):
         """Test getting network fees (public endpoint)"""
@@ -291,7 +289,7 @@ class TestPaymentLinkAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get network fees successful")
+        print("✅ Get network fees successful")
     
     def test_create_and_delete_payment_link(self, auth_token):
         """Test creating and deleting a payment link"""
@@ -331,7 +329,7 @@ class TestPaymentLinkAPIs:
             timeout=10
         )
         assert cleanup_response.status_code == 200, f"Delete payment link failed: {cleanup_response.text}"
-        print(f"✅ Delete payment link successful")
+        print("✅ Delete payment link successful")
 
 
 class TestWalletAPIs:
@@ -351,7 +349,7 @@ class TestWalletAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get wallet successful")
+        print("✅ Get wallet successful")
     
     def test_get_wallet_addresses(self, auth_token):
         """Test getting wallet addresses"""
@@ -383,7 +381,7 @@ class TestWalletAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get configured currencies successful")
+        print("✅ Get configured currencies successful")
     
     def test_wallet_network_fees(self, auth_token):
         """Test getting wallet network fees"""
@@ -399,7 +397,7 @@ class TestWalletAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get wallet network fees successful")
+        print("✅ Get wallet network fees successful")
 
 
 class TestDashboardAPIs:
@@ -430,7 +428,7 @@ class TestStatusAPIs:
             timeout=10
         )
         assert response.status_code == 200, f"Get status failed: {response.text}"
-        print(f"✅ Status endpoint works")
+        print("✅ Status endpoint works")
 
 
 class TestReferralAPIs:
@@ -461,7 +459,7 @@ class TestKnowledgeBaseAPIs:
             timeout=10
         )
         assert response.status_code == 200, f"Get KB categories failed: {response.text}"
-        print(f"✅ Knowledge base categories endpoint works")
+        print("✅ Knowledge base categories endpoint works")
 
 
 class TestInvoiceAPIs:
@@ -481,7 +479,7 @@ class TestInvoiceAPIs:
         
         data = response.json()
         assert "data" in data
-        print(f"✅ Get invoices successful")
+        print("✅ Get invoices successful")
 
 
 # Run tests if executed directly

@@ -61,7 +61,7 @@ class TestTransactionDisplayCurrency:
         assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.text}"
         data = response.json()
         assert 'data' in data or 'transactions' in data.get('data', {})
-        print(f"✓ getTransactions returned 200 OK")
+        print("✓ getTransactions returned 200 OK")
 
     def test_02_response_has_currency_field(self, auth_headers):
         """Verify response has currency field matching company preference (GBP)"""
@@ -77,7 +77,7 @@ class TestTransactionDisplayCurrency:
         currency = data.get('currency')
         assert currency is not None, "Response missing 'currency' field"
         assert currency == 'GBP', f"Expected currency='GBP' for company 38, got '{currency}'"
-        print(f"✓ Response currency is GBP (company 38's preferred currency)")
+        print("✓ Response currency is GBP (company 38's preferred currency)")
 
     def test_03_response_has_currency_info(self, auth_headers):
         """Verify response has currency_info with code, symbol, display_format"""
@@ -121,7 +121,7 @@ class TestTransactionDisplayCurrency:
             assert 'display_currency' in tx, f"Transaction {i} missing 'display_currency' field"
             assert tx['display_currency'] == 'GBP', f"Transaction {i}: expected display_currency='GBP', got '{tx['display_currency']}'"
         
-        print(f"✓ All sampled transactions have display_currency='GBP'")
+        print("✓ All sampled transactions have display_currency='GBP'")
 
     def test_05_transactions_have_display_amount_field(self, auth_headers):
         """Verify each transaction has display_amount field"""
@@ -143,7 +143,7 @@ class TestTransactionDisplayCurrency:
             assert display_amount is not None, f"Transaction {i}: display_amount is None"
             assert isinstance(display_amount, (int, float)), f"Transaction {i}: display_amount should be numeric, got {type(display_amount)}"
         
-        print(f"✓ All sampled transactions have display_amount field (numeric)")
+        print("✓ All sampled transactions have display_amount field (numeric)")
 
     def test_06_transactions_have_amount_display_object(self, auth_headers):
         """Verify each transaction has amount_display object with required fields"""
@@ -171,7 +171,7 @@ class TestTransactionDisplayCurrency:
             assert '£' in display_value, f"Transaction {i}: display_value should contain '£', got '{display_value}'"
             assert 'GBP' in display_value, f"Transaction {i}: display_value should contain 'GBP', got '{display_value}'"
         
-        print(f"✓ All sampled transactions have valid amount_display object")
+        print("✓ All sampled transactions have valid amount_display object")
 
     def test_07_crypto_transactions_have_non_zero_display_amount(self, auth_headers):
         """Verify crypto transactions (ETH, BTC) have display_amount > 0 after conversion"""
@@ -272,7 +272,7 @@ class TestTransactionDisplayCurrency:
         assert 'currency' in data, "Response data missing 'currency' field"
         assert 'currency_info' in data, "Response data missing 'currency_info' field"
         
-        print(f"✓ Response structure is complete")
+        print("✓ Response structure is complete")
         print(f"  - message: {full_response.get('message', '')[:50]}...")
         print(f"  - currency: {data.get('currency')}")
         print(f"  - transactions count: {len(data.get('transactions', []))}")

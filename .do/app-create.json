@@ -326,6 +326,11 @@
             "type": "SECRET"
           },
           {
+            "key": "CORS_ALLOWED_ORIGINS",
+            "value": "https://dynopay.com,https://checkout.dynopay.com",
+            "scope": "RUN_TIME"
+          },
+          {
             "key": "BREVO_API_KEY",
             "value": "REPLACE_ME",
             "scope": "RUN_TIME",
@@ -350,6 +355,11 @@
           },
           {
             "key": "TELNYX_VERIFY_PROFILE_ID",
+            "value": "REPLACE_ME",
+            "scope": "RUN_TIME"
+          },
+          {
+            "key": "TELNYX_PHONE_NUMBER",
             "value": "REPLACE_ME",
             "scope": "RUN_TIME"
           },
@@ -421,6 +431,32 @@
           {
             "key": "PROFILE_ID",
             "value": "REPLACE_ME",
+            "scope": "RUN_TIME"
+          },
+          {
+            "key": "VAPID_PUBLIC_KEY",
+            "value": "REPLACE_ME",
+            "scope": "RUN_TIME"
+          },
+          {
+            "key": "VAPID_PRIVATE_KEY",
+            "value": "REPLACE_ME",
+            "scope": "RUN_TIME",
+            "type": "SECRET"
+          },
+          {
+            "key": "VAPID_SUBJECT",
+            "value": "mailto:support@dynopay.com",
+            "scope": "RUN_TIME"
+          },
+          {
+            "key": "SLACK_WEBHOOK_URL",
+            "value": "",
+            "scope": "RUN_TIME"
+          },
+          {
+            "key": "DISCORD_WEBHOOK_URL",
+            "value": "",
             "scope": "RUN_TIME"
           },
           {

@@ -73,7 +73,7 @@ def start_node_backend():
     if NODE_PROCESS.poll() is None:
         print(f"✅ Node.js Backend running (PID: {NODE_PROCESS.pid})", flush=True)
     else:
-        print(f"❌ ERROR: Node.js Backend failed to start", flush=True)
+        print("❌ ERROR: Node.js Backend failed to start", flush=True)
         sys.exit(1)
 
 def stop_all():

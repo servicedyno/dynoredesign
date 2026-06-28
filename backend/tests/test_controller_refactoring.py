@@ -86,7 +86,7 @@ class TestStatusEndpoints:
         response = api_get('/api/status/services')
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        data = response.json()
+        response.json()
         print(f"✅ Services status endpoint responded with status {response.status_code}")
 
     def test_uptime_endpoint(self):
@@ -94,16 +94,16 @@ class TestStatusEndpoints:
         response = api_get('/api/status/uptime')
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        data = response.json()
-        print(f"✅ Uptime endpoint responded successfully")
+        response.json()
+        print("✅ Uptime endpoint responded successfully")
 
     def test_incidents_endpoint(self):
         """GET /api/status/incidents should return incidents list"""
         response = api_get('/api/status/incidents')
         assert response.status_code == 200, f"Expected 200, got {response.status_code}"
         
-        data = response.json()
-        print(f"✅ Incidents endpoint responded successfully")
+        response.json()
+        print("✅ Incidents endpoint responded successfully")
 
 
 class TestControllerRoutes:
@@ -192,7 +192,7 @@ class TestErrorHandling:
         response = api_get('/api/nonexistent-endpoint-xyz123')
         # Should get 404 (not found) not 500 (server error)
         assert response.status_code == 404, f"Expected 404, got {response.status_code}"
-        print(f"✅ Invalid endpoint returns 404 as expected")
+        print("✅ Invalid endpoint returns 404 as expected")
 
     def test_malformed_request_handled_gracefully(self):
         """POST with invalid data should be handled, not crash"""

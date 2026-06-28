@@ -37,9 +37,9 @@ class TestBackendHealth:
         # Some warnings may be present, but no errors
         if result.returncode != 0:
             # Check if it's actual errors vs just warnings
-            error_lines = [l for l in result.stdout.split('\n') if 'error TS' in l]
+            error_lines = [line for line in result.stdout.split('\n') if 'error TS' in line]
             if error_lines:
-                print(f"TypeScript errors found:")
+                print("TypeScript errors found:")
                 for line in error_lines[:10]:
                     print(f"  {line}")
                 pytest.fail(f"TypeScript compilation has {len(error_lines)} errors")
@@ -398,7 +398,7 @@ class TestRegressionPrevention:
         commit_count = crypto_func.count('await transaction.commit()')
         rollback_count = crypto_func.count('await transaction.rollback()')
         
-        print(f"cryptoVerification analysis:")
+        print("cryptoVerification analysis:")
         print(f"  - transactionFinished = true in function: {in_func_count}")
         print(f"  - total in file: {finished_true_count}")
         print(f"  - commit calls in function: {commit_count}")

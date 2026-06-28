@@ -17,7 +17,6 @@ Test Cases:
 import pytest
 import requests
 import os
-import json
 import uuid
 
 # Use external URL for API calls (PUBLIC_URL)
@@ -46,7 +45,7 @@ class TestAuthentication:
         assert "accessToken" in data["data"]
         # Store token for later tests
         pytest.auth_token = data["data"]["accessToken"]
-        print(f"✓ Login successful, token obtained")
+        print("✓ Login successful, token obtained")
 
 
 class TestQueueHealthEndpoint:
@@ -218,7 +217,7 @@ class TestRootEndpoint:
         data = response.json()
         assert "status" in data
         assert data["status"] == "operational"
-        print(f"✓ API root endpoint returns operational status")
+        print("✓ API root endpoint returns operational status")
 
 
 class TestCodeReview:

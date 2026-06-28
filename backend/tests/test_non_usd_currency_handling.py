@@ -49,7 +49,7 @@ def get_auth_token():
             if response.status_code == 200:
                 data = response.json()
                 _auth_token = data.get('data', {}).get('accessToken')
-                print(f"✓ Authenticated successfully")
+                print("✓ Authenticated successfully")
                 break
             elif response.status_code == 520 or "Backend starting" in response.text:
                 print(f"Backend starting, waiting... (attempt {attempt + 1}/{max_retries})")
@@ -234,7 +234,7 @@ class TestNonUSDCurrencyHandling:
         # The fees should be in the same ballpark (both Tier 1)
         assert 0.7 < fee_ratio < 1.5, f"Fee ratio should be close to 1.0, got {fee_ratio:.2f}"
         
-        print(f"✓ Fee tier selection verified - both use similar tier")
+        print("✓ Fee tier selection verified - both use similar tier")
     
     # ==========================================
     # Test 4: Test EUR Currency
@@ -364,7 +364,7 @@ class TestNonUSDCurrencyHandling:
             assert results[i]['base_usd'] > results[i-1]['base_usd'], \
                 f"USD amount should increase: {results[i-1]['base_usd']} -> {results[i]['base_usd']}"
         
-        print(f"✓ Fee tier boundaries verified across different AUD amounts")
+        print("✓ Fee tier boundaries verified across different AUD amounts")
     
     # ==========================================
     # Test 7: Create Payment Link with AUD
@@ -474,7 +474,7 @@ class TestNonUSDCurrencyHandling:
         # The amount should be the base conversion (no fees added)
         assert 'amount' in eth_rate, "Should have amount field"
         
-        print(f"✓ Company pays fees mode verified")
+        print("✓ Company pays fees mode verified")
     
     # ==========================================
     # Test 10: Multiple Currency Conversions
@@ -513,7 +513,7 @@ class TestNonUSDCurrencyHandling:
             assert min_usd < base_usd < max_usd, \
                 f"${amount} {source} should be ${min_usd}-${max_usd} USD, got ${base_usd}"
         
-        print(f"✓ All currency conversions verified")
+        print("✓ All currency conversions verified")
     
     # ==========================================
     # Cleanup
