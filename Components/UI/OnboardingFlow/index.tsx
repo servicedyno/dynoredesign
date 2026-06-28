@@ -63,11 +63,16 @@ const OnboardingFlow: React.FC = () => {
   const coreReady = Boolean(companyState.fetched && walletState.fetched);
   const payLinkFetched = Boolean(payLinkState.fetched);
 
-  // Initial fetch of company + wallet
+  // Initial fetch — skip if data was already loaded by the Client layout
+  // (the saga debounce + cooldown guard will also prevent duplicate API calls)
   useEffect(() => {
-    dispatch(CompanyAction(COMPANY_FETCH));
-    dispatch(WalletAction(WALLET_FETCH));
-  }, [dispatch]);
+    if (!companyState.fetched && !companyState.loading) {
+      dispatch(CompanyAction(COMPANY_FETCH));
+    }
+    if (!walletState.fetched && !walletState.loading) {
+      dispatch(WalletAction(WALLET_FETCH));
+    }
+  }, [dispatch, companyState.fetched, companyState.loading, walletState.fetched, walletState.loading]);
 
   // Restore the per-session auto-open guard (survives reloads within a session
   // so the wizard doesn't re-pop on every dashboard visit).
@@ -106,7 +111,7 @@ const OnboardingFlow: React.FC = () => {
       step_key: "company",
       completed_count: 1 + (hasWallet ? 1 : 0) + (hasLink ? 1 : 0),
     });
-    dispatch(WalletAction(WALLET_FETCH));
+    dispatch(WalletAction(WALLET_FETCH, { force: true }));
     setActiveModal("wallet");
   }, [dispatch, hasWallet, hasLink]);
 
@@ -117,7 +122,7 @@ const OnboardingFlow: React.FC = () => {
       step_key: "wallet",
       completed_count: (hasCompany ? 1 : 0) + 1 + (hasLink ? 1 : 0),
     });
-    dispatch(WalletAction(WALLET_FETCH));
+    dispatch(WalletAction(WALLET_FETCH, { force: true }));
     setActiveModal(null);
     setCelebrate(true);
   }, [dispatch, hasCompany, hasLink]);

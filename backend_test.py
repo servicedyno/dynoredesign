@@ -1,7 +1,10 @@
 #!/usr/bin/env python3
 """
 Backend API Testing Script for DynoPay
-Tests read-only GET endpoints after Google Cloud KMS private key parsing fix
+Tests read-only GET endpoints after performance optimization changes:
+- Redis caching added to wallet, dashboard, onboarding-status endpoints
+- Query parallelization in onboarding-status
+- Extended cache TTLs
 """
 
 import requests
@@ -111,7 +114,7 @@ def main():
     """Run all backend tests"""
     print("\n" + "="*80)
     print("DYNOPAY BACKEND API TESTING")
-    print("Google Cloud KMS Private Key Parsing Fix Verification")
+    print("Performance Optimization Verification (Redis Caching + Query Parallelization)")
     print(f"Test Time: {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}")
     print(f"Backend URL: {BASE_URL}")
     print("="*80)
@@ -137,7 +140,7 @@ def main():
     print(f"\nTotal: {passed}/{total} tests passed ({passed/total*100:.1f}%)")
     
     if passed == total:
-        print("\n🎉 ALL TESTS PASSED - Backend API operational after KMS fix")
+        print("\n🎉 ALL TESTS PASSED - Backend API operational after performance optimization")
         return 0
     else:
         print(f"\n⚠️ {total - passed} test(s) failed - Review required")

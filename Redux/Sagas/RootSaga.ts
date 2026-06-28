@@ -1,4 +1,4 @@
-import { takeEvery, takeLatest } from "redux-saga/effects";
+import { takeEvery, takeLatest, debounce } from "redux-saga/effects";
 import { USER_INIT } from "../Actions/UserAction";
 import { UserSaga } from "./UserSaga";
 import { TOAST_INIT } from "../Actions/ToastAction";
@@ -19,11 +19,13 @@ import { PaymentLinkSaga } from "./PaymentLinkSaga";
 function* RootSaga() {
   yield takeEvery(USER_INIT, UserSaga);
   yield takeEvery(TOAST_INIT, ToastSaga);
-  yield takeEvery(COMPANY_INIT, CompanySaga);
+  yield takeLatest(COMPANY_INIT, CompanySaga);
   yield takeEvery(API_INIT, ApiSaga);
-  yield takeLatest(WALLET_INIT, WalletSaga);
+  // Debounce wallet fetches — multiple components dispatch WALLET_INIT on mount;
+  // 600ms window collapses them into a single API call
+  yield debounce(600, WALLET_INIT, WalletSaga);
   yield takeEvery(TRANSACTION_INIT, TransactionSaga);
-  yield takeEvery(DASHBOARD_INIT, DashboardSaga);
+  yield debounce(400, DASHBOARD_INIT, DashboardSaga);
   yield takeEvery(PAYLINK_INIT, PaymentLinkSaga);
 }
 

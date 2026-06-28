@@ -42,7 +42,7 @@ async function convertVolumesToFiat(
 }
 
 // Cache TTL for dashboard data (30 seconds)
-const DASHBOARD_CACHE_TTL = 30;
+const DASHBOARD_CACHE_TTL = 120;  // 2 minutes — stats don't change rapidly
 
 // Fee Tiers Configuration (thresholds in USD - will be converted for display)
 const FEE_TIERS = [
@@ -322,7 +322,7 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
 
-    // Check cache first (60 second TTL for chart data)
+    // Check cache first (120 second TTL for chart data)
     const cacheKey = `chart:${userId}:${company_id || 'all'}:${period}:${preferredCurrency}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
@@ -488,9 +488,9 @@ const getChartData = async (req: express.Request, res: express.Response) => {
       })),
     };
 
-    // Cache the result (60 second TTL)
+    // Cache the result (120 second TTL — chart data changes slowly)
     await setRedisItem(cacheKey, responseData);
-    await setRedisTTL(cacheKey, 60);
+    await setRedisTTL(cacheKey, 120);
 
     return successResponseHelper(res, 200, "Chart data retrieved successfully", responseData);
 
@@ -652,7 +652,7 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
     const { limit = 10, company_id } = req.query;
     const userId = userData.user_id;
 
-    // Check Redis cache first (30s TTL — recent tx changes frequently)
+    // Check Redis cache first (60s TTL — prevent duplicate calls on page load)
     const cacheKey = `recentTx:${userId}:${company_id || 'all'}:${limit}`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
@@ -689,9 +689,9 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
       count: recentTransactions.length,
     };
 
-    // Cache for 30 seconds
+    // Cache for 60 seconds
     await setRedisItem(cacheKey, recentTxResponse);
-    await setRedisTTL(cacheKey, 30);
+    await setRedisTTL(cacheKey, 60);
 
     return successResponseHelper(res, 200, "Recent transactions retrieved successfully", recentTxResponse);
 

@@ -8,6 +8,13 @@ interface IWalletAction {
   payload: any;
 }
 
+// ── Deduplication guard ──────────────────────────────────────────────
+// Prevents redundant wallet API calls when multiple components dispatch
+// WALLET_FETCH within seconds of each other (typical on dashboard mount).
+let _lastWalletFetchTime = 0;
+let _lastWalletFetchKey = "";           // tracks company_id to allow re-fetch on switch
+const WALLET_FETCH_COOLDOWN_MS = 8_000; // skip re-fetch within 8s unless company changed
+
 export function* WalletSaga(action: IWalletAction): unknown {
   switch (action.crudType) {
     case WALLET_FETCH:
@@ -34,6 +41,20 @@ export function* WalletSaga(action: IWalletAction): unknown {
 
 export function* getWallet(payload?: any): unknown {
   try {
+    // ── Dedup: skip if same fetch happened recently ──
+    const fetchKey = payload?.company_id ? String(payload.company_id) : "__all__";
+    const now = Date.now();
+    if (
+      fetchKey === _lastWalletFetchKey &&
+      now - _lastWalletFetchTime < WALLET_FETCH_COOLDOWN_MS &&
+      !payload?.force
+    ) {
+      // Silently skip — data is still fresh from the previous call
+      return;
+    }
+    _lastWalletFetchTime = now;
+    _lastWalletFetchKey = fetchKey;
+
     const params: Record<string, unknown> = {};
     if (payload?.company_id) params.company_id = payload.company_id;
     const response = yield call(axios.get, "wallet/getWallet", { params });

@@ -63,14 +63,14 @@ export default function CompanySelector() {
 
   const handleCompanyCreated = useCallback(() => {
     dispatch(CompanyAction(COMPANY_FETCH));
-    dispatch(WalletAction(WALLET_FETCH));
+    dispatch(WalletAction(WALLET_FETCH, { force: true }));
     // Auto-select the newest company (last in the list after fetch completes)
     // This is handled via a separate effect below
     setAddCompanyPhase("wallet");
   }, [dispatch]);
 
   const handleWalletAdded = useCallback(() => {
-    dispatch(WalletAction(WALLET_FETCH));
+    dispatch(WalletAction(WALLET_FETCH, { force: true }));
     setAddCompanyPhase("celebration");
   }, [dispatch]);
 
@@ -78,7 +78,7 @@ export default function CompanySelector() {
     setAddCompanyPhase("idle");
     // Refresh all data
     dispatch(CompanyAction(COMPANY_FETCH));
-    dispatch(WalletAction(WALLET_FETCH));
+    dispatch(WalletAction(WALLET_FETCH, { force: true }));
   }, [dispatch]);
 
   const wrapperRef = useRef<HTMLDivElement>(null);

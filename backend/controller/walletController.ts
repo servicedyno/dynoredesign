@@ -164,7 +164,7 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       preferredCurrency = await getCompanyBaseCurrency(company_id as string);
     }
     
-    // Check cache first (30 second TTL) - include currency in cache key
+    // Check cache first (120 second TTL) - include currency in cache key
     const cacheKey = `wallet:${userData.user_id}:${company_id || 'all'}:${preferredCurrency}:v3`;
     const cached = await getRedisItem(cacheKey);
     if (cached && Object.keys(cached).length > 0) {
@@ -294,9 +294,9 @@ const getWallet = async (req: express.Request, res: express.Response) => {
       ? "No wallets found. Add your first wallet address to start receiving payments."
       : `Successfully retrieved ${totalWallets} wallet${totalWallets === 1 ? '' : 's'} from ${returnData.length} compan${returnData.length === 1 ? 'y' : 'ies'}`;
     
-    // Cache the result
+    // Cache the result (120s TTL — rates update in background cache every 60s)
     await setRedisItem(cacheKey, returnData);
-    await setRedisTTL(cacheKey, 30);
+    await setRedisTTL(cacheKey, 120);
     
     successResponseHelper(res, 200, message, returnData);
   } catch (e) {

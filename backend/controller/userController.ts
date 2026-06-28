@@ -2178,6 +2178,13 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
   
   try {
     const userId = userData.user_id;
+
+    // ── Redis cache (60s TTL) — onboarding changes rarely ──
+    const cacheKey = `onboarding:${userId}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached && Object.keys(cached).length > 0) {
+      return successResponseHelper(res, 200, "Onboarding status retrieved successfully", cached);
+    }
     
     // 1. Check wallet setup
     // Known crypto wallet_type values — wallets whose wallet_type matches any of
@@ -2188,70 +2195,45 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       'POLYGON', 'RLUSD', 'RLUSD-ERC20',
     ];
 
-    // Fetch ALL wallets for the user (not just currency_type='CRYPTO')
-    // because legacy data may have crypto wallets stored as currency_type='FIAT'.
-    const allWallets = await userWalletModel.findAll({
-      where: { user_id: userId },
-    });
+    // ── Run ALL independent queries in parallel ──
+    const [allWallets, additionalAddresses, kycRecord, volumeResult, apiKeys, companies, userRecord] = await Promise.all([
+      userWalletModel.findAll({ where: { user_id: userId } }),
+      userWalletAddressModel.findAll({ where: { user_id: userId } }).catch(() => []),
+      kycModel.findOne({ where: { user_id: userId } }),
+      sequelize.query(
+        `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
+         FROM tbl_customer_transaction 
+         WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId)
+         AND status = 'successful'`,
+        { replacements: { userId }, type: QueryTypes.SELECT }
+      ) as Promise<{ total_volume: string }[]>,
+      apiModel.findAll({ where: { user_id: userId } }),
+      companyModel.findAll({ where: { user_id: userId } }),
+      userModel.findOne({ where: { user_id: userId }, attributes: ['email_verified'] }),
+    ]);
 
-    // Identify crypto wallets by wallet_type OR currency_type
+    // ── Process results (from parallel queries) ──
     const cryptoWallets = allWallets.filter((w: any) => {
       const wType = (w.get("wallet_type") || '').toUpperCase();
       const cType = (w.get("currency_type") || '').toUpperCase();
       return cType === 'CRYPTO' || CRYPTO_WALLET_TYPES.includes(wType);
     });
     
-    // Count crypto wallets that have an actual wallet_address configured
     const walletsWithAddress = cryptoWallets.filter((w: any) => {
       const address = w.get("wallet_address");
       return address && address.trim() !== '';
     });
     
-    // Also check the separate addresses table (userWalletAddressModel) if it exists
-    let additionalAddresses: any[] = [];
-    try {
-      additionalAddresses = await userWalletAddressModel.findAll({
-        where: { user_id: userId },
-      });
-    } catch (e) {
-      // Table may not exist in some environments — gracefully ignore
-      userLogger.debug(`[Onboarding] userWalletAddressModel query failed (table may not exist): ${(e as any)?.message}`);
-    }
-    
-    // A merchant has crypto wallets if they have CRYPTO type wallets
     const hasCryptoWallet = cryptoWallets.length > 0;
-    // A merchant can receive payments if they have at least one wallet address configured
-    const hasWalletAddress = walletsWithAddress.length > 0 || additionalAddresses.length > 0;
-    const totalConfiguredAddresses = walletsWithAddress.length + additionalAddresses.length;
-    
-    // 2. Check KYC status
-    const kycRecord = await kycModel.findOne({
-      where: { user_id: userId },
-    });
-    
-    // Calculate total volume for KYC threshold check
-    const volumeResult = await sequelize.query(
-      `SELECT COALESCE(SUM(CAST(base_amount AS DECIMAL)), 0) as total_volume 
-       FROM tbl_customer_transaction 
-       WHERE company_id IN (SELECT company_id FROM tbl_company WHERE user_id = :userId)
-       AND status = 'successful'`,
-      {
-        replacements: { userId },
-        type: QueryTypes.SELECT,
-      }
-    ) as { total_volume: string }[];
+    const hasWalletAddress = walletsWithAddress.length > 0 || (additionalAddresses as any[]).length > 0;
+    const totalConfiguredAddresses = walletsWithAddress.length + (additionalAddresses as any[]).length;
     
     const totalVolume = parseFloat(String(volumeResult[0]?.total_volume || "0"));
-    const kycThreshold = 10000; // $10,000 USD threshold
+    const kycThreshold = 10000;
     const kycGracePeriodDays = 90;
     const requiresKyc = totalVolume >= kycThreshold;
     const kycStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
     const kycApproved = kycStatus === "approved";
-    
-    // 3. Check API key status
-    const apiKeys = await apiModel.findAll({
-      where: { user_id: userId },
-    });
     
     const hasProductionKey = apiKeys.some((key: any) => 
       key.get("environment") === "production" && key.get("status") === "active"
@@ -2259,11 +2241,6 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     const hasDevelopmentKey = apiKeys.some((key: any) => 
       key.get("environment") === "development" && key.get("status") === "active"
     );
-    
-    // 4. Check company setup
-    const companies = await companyModel.findAll({
-      where: { user_id: userId },
-    });
     
     const hasCompany = companies.length > 0;
     
@@ -2279,17 +2256,11 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       has_active_session: boolean;
     } | null = null;
     
-    const frontendUrl = process.env.FRONTEND_URL || 'https://dynopay.io';
-    
-    // Get existing Veriff session URL if available
     const veriffSessionUrl = kycRecord ? kycRecord.get("veriff_session_url") as string | null : null;
     const kycSubmittedStatus = kycRecord ? kycRecord.get("status") as string : "not_started";
-    
-    // Determine if merchant has an active Veriff session they can continue
     const hasActiveSession = veriffSessionUrl && ["submitted", "pending"].includes(kycSubmittedStatus);
     
     if (requiresKyc && !kycApproved) {
-      // Calculate grace period
       try {
         const thresholdQuery = `
           SELECT MIN("createdAt") as threshold_date
@@ -2357,8 +2328,7 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     // 6. Determine next steps
     const nextSteps: string[] = [];
     
-    // Check email verification status
-    const userRecord = await userModel.findOne({ where: { user_id: userId }, attributes: ['email_verified'] });
+    // Email verification (from parallel query result)
     const isEmailVerified = userRecord?.dataValues?.email_verified === true;
     
     if (!isEmailVerified) {
@@ -2430,6 +2400,10 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     };
     
     userLogger.info(`[Onboarding] Status retrieved for user ${userId}: complete=${onboardingComplete}, next_steps=${nextSteps.length}`);
+    
+    // Cache the result (60s TTL — onboarding state changes infrequently)
+    await setRedisItem(cacheKey, onboardingStatus);
+    await setRedisTTL(cacheKey, 60);
     
     return successResponseHelper(res, 200, "Onboarding status retrieved successfully", onboardingStatus);
     
