@@ -2791,3 +2791,111 @@ The fix is architecturally sound:
 ### NEXT STEPS FOR MAIN AGENT
 - ✅ Both bugs verified fixed - no further action needed
 - ✅ Ready to summarize and finish
+
+## Phone Registration Button Disabled Fix (2026-06-28)
+- bug_report: "Send Verification Code" button stays disabled even when all fields (Full Name, Phone Number, Password) are filled out
+- root_cause: Password regex `!passwordRegex.test(phonePassword)` was in the button's disabled condition, requiring uppercase + lowercase + digit + special char + 8-20 length. Users entering passwords without special chars (e.g. "Password123") saw a permanently disabled button with ZERO feedback about password requirements (unlike the email form which has PasswordValidation component).
+- fix:
+  1. Removed `!passwordRegex.test(phonePassword)` from button disabled condition — button enables once all fields have any content
+  2. Password regex validation still runs on submit (handlePhoneRegisterStep1) showing error if invalid
+  3. Added PasswordValidation component to phone form (same as email form) — shows real-time checklist (capital, lowercase, digit, special char, length) with ✅/❌ as user types
+- files_changed:
+  - pages/auth/register.tsx: Added showPhonePasswordValidation state + phonePasswordFieldRef, added PasswordValidation component, removed regex from disabled condition
+
+### Test Request
+- test_type: frontend
+- test_url: https://payment-config-stage.preview.emergentagent.com
+- test_scope: Phone registration button on /auth/register
+- test_steps:
+  1. Navigate to /auth/register
+  2. Click "Mobile Number" tab
+  3. Type a name in "Full Name" (e.g. "John Doe")
+  4. Type a phone number (e.g. "2025551234")
+  5. Type a simple password WITHOUT special char (e.g. "Password123")
+  6. Verify: "Send Verification Code" button is ENABLED (blue, not gray) — this was the bug
+  7. Verify: Password validation popup shows checklist with ❌ for "special character" requirement
+  8. DO NOT click the button — LIVE production DB
+
+## Phone Registration Button Fix Testing Results (2026-06-28 16:21:00 UTC)
+- agent: testing
+- test_date: 2026-06-28 16:21:00 UTC
+- test_url: https://payment-config-stage.preview.emergentagent.com/auth/register
+- bug_fix_context: Fixed "Send Verification Code" button staying disabled even when all fields (Full Name, Phone Number, Password) are filled. Root cause: password regex requiring special characters was in the button's disabled condition with no visual feedback. Fix: (1) Removed password regex from disabled condition, (2) Added PasswordValidation component showing real-time checklist.
+
+### TEST RESULTS: ✅✅✅ ALL TESTS PASSED - BUG FIX VERIFIED ✅✅✅
+
+#### PRIMARY BUG FIX: ✅ VERIFIED
+**"Send Verification Code" button is now ENABLED when all fields are filled**
+- ✅ Button state: ENABLED (disabled=false)
+- ✅ Button background color: rgb(0, 4, 255) - bright blue (enabled state)
+- ✅ Button text: "Send Verification Code" - visible and readable
+- ✅ Button becomes enabled immediately when all 3 fields have content
+- ✅ Button enables even when password doesn't meet special character requirement
+- **Result**: Bug is FIXED - button no longer stuck disabled
+
+#### PASSWORD VALIDATION POPUP: ✅ WORKING
+**PasswordValidation component provides real-time visual feedback**
+- ✅ Validation popup appears when password field is focused
+- ✅ Shows 5 password requirements with visual indicators:
+  1. ✅ At least one capital letter (green check for "Password123")
+  2. ✅ At least one lowercase letter (green check for "Password123")
+  3. ❌ At least 1 special character (red X for "Password123" - requirement not met)
+  4. ✅ At least 1 digit (green check for "Password123")
+  5. ✅ 8-20 characters (green check for "Password123")
+- ✅ Validation updates in real-time as user types
+- ✅ Popup positioned correctly (left side on desktop, below field on mobile)
+- ✅ Visual feedback clearly shows which requirements are met/not met
+- **Result**: Users now have clear feedback about password requirements
+
+#### TEST STEPS EXECUTED:
+1. ✅ Navigated to /auth/register
+2. ✅ Clicked "Mobile Number" tab - tab switched successfully
+3. ✅ Typed "John Doe" in Full Name field using keyboard.type
+4. ✅ Typed "2025551234" in Phone Number field using keyboard.type
+5. ✅ Typed "Password123" in Password field using keyboard.type (NO special character)
+6. ✅ **KEY VERIFICATION**: Button is ENABLED (blue, clickable) - BUG FIXED
+7. ✅ Password validation popup visible showing 4 passed + 1 failed requirement
+8. ✅ Did NOT click button (LIVE production DB - as instructed)
+
+#### REGRESSION TESTING: ✅ NO REGRESSIONS
+- ✅ Email tab still works correctly - Sign up button visible
+- ✅ Login page works correctly - Continue button visible
+- ✅ All navigation and UI elements functional
+- ✅ No console errors detected
+- ✅ No network errors detected
+
+#### SCREENSHOTS CAPTURED:
+- register_page_initial.png - Initial registration page
+- phone_tab_active.png - Mobile Number tab active
+- form_filled.png - All fields filled with test data
+- button_state.png - Button enabled state (blue background)
+- validation_detailed.png - Password validation popup with checklist
+- email_tab.png - Email tab regression test
+- login_page.png - Login page regression test
+
+#### VERIFICATION STATUS: ✅ COMPLETE
+- ✅ Primary bug fix verified: Button enables when fields are filled
+- ✅ Password validation popup working correctly
+- ✅ Visual feedback provides clear guidance to users
+- ✅ No regressions in Email tab or Login page
+- ✅ All test requirements met
+- ✅ Ready for production deployment
+
+#### TECHNICAL DETAILS:
+**Before Fix:**
+- Button disabled condition included: `!passwordRegex.test(phonePassword)`
+- Users entering "Password123" saw permanently disabled button
+- No visual feedback about password requirements
+- Poor user experience - users didn't know why button was disabled
+
+**After Fix:**
+- Button disabled condition: `phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword`
+- Button enables once all fields have ANY content
+- PasswordValidation component shows real-time checklist
+- Password regex validation still runs on submit (server-side validation)
+- Excellent user experience - clear visual feedback
+
+#### NEXT STEPS FOR MAIN AGENT:
+- ✅ Bug fix verified successfully - no further action needed
+- ✅ Ready to summarize and finish
+

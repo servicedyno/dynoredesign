@@ -107,6 +107,8 @@ const Register = () => {
   const [phonePassword, setPhonePassword] = useState("");
   const [phonePasswordError, setPhonePasswordError] = useState("");
   const [showPhonePassword, setShowPhonePassword] = useState(false);
+  const [showPhonePasswordValidation, setShowPhonePasswordValidation] = useState(false);
+  const phonePasswordFieldRef = useRef<HTMLDivElement | null>(null);
   const [phoneLoading, setPhoneLoading] = useState(false);
 
   // Referral code state
@@ -692,24 +694,71 @@ const Register = () => {
                 </Typography>
               )}
             </Box>
-            <InputField
-              type={showPhonePassword ? "text" : "password"}
-              value={phonePassword}
-              autoComplete="off"
-              label={t("password")}
-              onChange={(e) => { setPhonePassword(e.target.value.replace(/\s/g, "")); setPhonePasswordError(""); }}
-              onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
-              placeholder={t("createPassword")}
-              error={!!phonePasswordError}
-              helperText={phonePasswordError}
-              sideButton={true}
-              sideButtonType="primary"
-              sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
-              sideButtonIconWidth={isMobile ? "14px" : "18px"}
-              sideButtonIconHeight={isMobile ? "14px" : "18px"}
-              onSideButtonClick={() => setShowPhonePassword(!showPhonePassword)}
-              showPasswordToggle={true}
-            />
+            <Box
+              ref={phonePasswordFieldRef}
+              sx={{ position: "relative", width: "100%" }}
+            >
+              <InputField
+                type={showPhonePassword ? "text" : "password"}
+                value={phonePassword}
+                autoComplete="off"
+                label={t("password")}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\s/g, "");
+                  setPhonePassword(val);
+                  setPhonePasswordError("");
+                  if (!val) {
+                    setShowPhonePasswordValidation(false);
+                  } else if (passwordRegex.test(val)) {
+                    setShowPhonePasswordValidation(false);
+                  } else {
+                    setShowPhonePasswordValidation(true);
+                  }
+                }}
+                onFocus={() => {
+                  if (phonePassword && !passwordRegex.test(phonePassword)) {
+                    setShowPhonePasswordValidation(true);
+                  }
+                }}
+                onBlur={() => {
+                  setTimeout(() => setShowPhonePasswordValidation(false), 200);
+                }}
+                onKeyDown={(e) => { if (e.key === "Enter") handlePhoneRegisterStep1(); }}
+                placeholder={t("createPassword")}
+                error={!!phonePasswordError || showPhonePasswordValidation}
+                helperText={phonePasswordError}
+                sideButton={true}
+                sideButtonType="primary"
+                sideButtonIcon={showPhonePassword ? <VisibilityOffIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} /> : <VisibilityIcon sx={{ color: "text.secondary", height: "18px", width: "16px" }} />}
+                sideButtonIconWidth={isMobile ? "14px" : "18px"}
+                sideButtonIconHeight={isMobile ? "14px" : "18px"}
+                onSideButtonClick={() => setShowPhonePassword(!showPhonePassword)}
+                showPasswordToggle={true}
+              />
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  position: "absolute",
+                  ...(isMobile &&
+                    theme.breakpoints.down("lg") && {
+                      left: "50%",
+                      transform: "translateX(-50%)",
+                      width: "100%",
+                    }),
+                  zIndex: 5,
+                }}
+              >
+                <PasswordValidation
+                  password={phonePassword}
+                  anchorEl={phonePasswordFieldRef.current}
+                  open={showPhonePasswordValidation}
+                  onClose={() => setShowPhonePasswordValidation(false)}
+                  showOnMobile={showPhonePasswordValidation}
+                />
+              </Box>
+            </Box>
 
             {/* Referral Code for Phone Tab */}
             <Box>
@@ -745,7 +794,7 @@ const Register = () => {
                 variant="primary"
                 size="medium"
                 fullWidth
-                disabled={phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword || !passwordRegex.test(phonePassword)}
+                disabled={phoneLoading || !phoneName.trim() || !phone.trim().replace(/[^\d]/g, '') || phone.trim().replace(/[^\d]/g, '').length < 10 || !phonePassword}
                 onClick={handlePhoneRegisterStep1}
                 hideLabelWhenLoading={true}
                 endIcon={phoneLoading ? <LoadingIcon size={20} /> : undefined}
