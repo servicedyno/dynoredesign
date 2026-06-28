@@ -1,6 +1,7 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import Image from "next/image";
+import Link from "next/link";
 import WhiteLogo from "@/assets/Images/auth/dynopay-white-logo.png";
 
 /* ── Floating crypto coin – pure CSS ─────────────────── */
@@ -142,13 +143,15 @@ const AuthBrandPanel = () => (
 
     {/* Top: Logo */}
     <Box sx={{ position: "relative", zIndex: 1 }}>
-      <Image
-        src={WhiteLogo}
-        alt="DynoPay"
-        width={130}
-        height={44}
-        draggable={false}
-      />
+      <Link href="/" style={{ display: "inline-block", cursor: "pointer" }}>
+        <Image
+          src={WhiteLogo}
+          alt="DynoPay"
+          width={130}
+          height={44}
+          draggable={false}
+        />
+      </Link>
     </Box>
 
     {/* Middle: Headline */}

@@ -2899,3 +2899,29 @@ The fix is architecturally sound:
 - ✅ Bug fix verified successfully - no further action needed
 - ✅ Ready to summarize and finish
 
+
+## Login Page: Logo Link + Forgot Password Fix (2026-06-28)
+- bug_report: 1) DynoPay logo on login/register pages doesn't link to landing page. 2) "Forgot password" link is missing from login page.
+- root_causes:
+  1. Brand panel logo was a plain <Image> with no link wrapper
+  2. "Forgot your password?" link only appeared in step 2 when "Password" login method was selected — completely hidden by default
+- fixes:
+  1. Wrapped brand panel logo with <Link href="/"> in AuthBrandPanel.tsx — clicks now navigate to landing page
+  2. Added "Forgot your password?" link to the initial login step (step 1) next to "Don't have an account? Create new account"
+  3. Moved the step 2 "Forgot password" link outside the `loginMethod === "password"` conditional — now always visible
+- files_changed:
+  - Components/UI/AuthLayout/AuthBrandPanel.tsx: Wrapped logo with Link
+  - pages/auth/login.tsx: Added forgot password to step 1, moved step 2 forgot password outside conditional
+
+### Test Request
+- test_type: frontend
+- test_url: https://payment-config-stage.preview.emergentagent.com
+- test_scope: Login page logo + forgot password visibility
+- test_steps:
+  1. Navigate to /auth/login
+  2. Verify: "Forgot your password?" link is visible on the initial email login view (step 1)
+  3. Verify: DynoPay logo in the left brand panel is clickable (wrapped in <a href="/">)
+  4. Click the logo → verify navigation to landing page (/)
+  5. Navigate back to /auth/login, verify no regression on the login form
+  6. DO NOT submit any forms — LIVE production DB
+

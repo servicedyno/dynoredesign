@@ -1257,38 +1257,59 @@ export default function Login() {
             <Box
               sx={{
                 display: "flex",
-                gap: "7px",
+                justifyContent: "space-between",
+                alignItems: "center",
                 marginTop: isMobile ? "16px" : "16px",
               }}
             >
+              <Box sx={{ display: "flex", gap: "7px" }}>
+                <Typography
+                  sx={{
+                    fontSize: "13px",
+                    color: theme.palette.text.secondary,
+                    fontFamily: "UrbanistMedium",
+                    lineHeight: "1.2",
+                    letterSpacing: 0,
+                  }}
+                  fontWeight={500}
+                >
+                  {t("dontHaveAccount")}
+                </Typography>
+                <Typography
+                  sx={{
+                    fontSize: "13px",
+                    color: theme.palette.primary.main,
+                    fontWeight: 500,
+                    lineHeight: "1.2",
+                    letterSpacing: 0,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    fontFamily: "UrbanistMedium",
+                  }}
+                  onClick={() => {
+                    router.push("/auth/register");
+                  }}
+                >
+                  {t("createNewAccount")}
+                </Typography>
+              </Box>
               <Typography
-                sx={{
-                  fontSize: "13px",
-                  color: theme.palette.text.secondary,
-                  fontFamily: "UrbanistMedium",
-                  lineHeight: "1.2",
-                  letterSpacing: 0,
-                }}
-                fontWeight={500}
-              >
-                {t("dontHaveAccount")}
-              </Typography>
-              <Typography
+                component="span"
                 sx={{
                   fontSize: "13px",
                   color: theme.palette.primary.main,
                   fontWeight: 500,
-                  lineHeight: "1.2",
-                  letterSpacing: 0,
                   cursor: "pointer",
                   textDecoration: "underline",
+                  textUnderlineOffset: "2px",
                   fontFamily: "UrbanistMedium",
+                  lineHeight: "1.2",
                 }}
                 onClick={() => {
-                  router.push("/auth/register");
+                  setForgotPasswordDialogOpen(true);
                 }}
               >
-                {t("createNewAccount")}
+                {t("forgotYourPassword")}
               </Typography>
             </Box>
 
@@ -1618,26 +1639,6 @@ export default function Login() {
                         }, 0);
                       }}
                     />
-                    {loginMethod === "password" && (
-                      <Typography
-                        component="span"
-                        sx={{
-                          fontSize: "13px",
-                          color: theme.palette.primary.main,
-                          fontWeight: 500,
-                          textAlign: "start",
-                          cursor: "pointer",
-                          textDecoration: "underline",
-                          textUnderlineOffset: "2px",
-                          fontFamily: "UrbanistMedium",
-                        }}
-                        onClick={() => {
-                          setForgotPasswordDialogOpen(true);
-                        }}
-                      >
-                        {t("forgotYourPassword")}
-                      </Typography>
-                    )}
                   </Box>
                   {/* Password Input Field */}
                   {loginMethod === "password" && (
@@ -1705,6 +1706,27 @@ export default function Login() {
                     </Box>
                   )}
                 </RadioGroup>
+              </Box>
+
+              {/* Forgot Password — always visible */}
+              <Box sx={{ mt: 1, textAlign: "start" }}>
+                <Typography
+                  component="span"
+                  sx={{
+                    fontSize: "13px",
+                    color: theme.palette.primary.main,
+                    fontWeight: 500,
+                    cursor: "pointer",
+                    textDecoration: "underline",
+                    textUnderlineOffset: "2px",
+                    fontFamily: "UrbanistMedium",
+                  }}
+                  onClick={() => {
+                    setForgotPasswordDialogOpen(true);
+                  }}
+                >
+                  {t("forgotYourPassword")}
+                </Typography>
               </Box>
             </Box>
 
