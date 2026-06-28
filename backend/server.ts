@@ -1216,7 +1216,7 @@ const startServer = async () => {
     ];
     sequelize.query(
       `UPDATE tbl_user_wallet SET currency_type = 'CRYPTO' WHERE wallet_type IN (:cryptoTypes) AND currency_type = 'FIAT'`,
-      { replacements: { cryptoTypes: CRYPTO_WALLET_TYPES }, type: sequelize.QueryTypes.UPDATE as any }
+      { replacements: { cryptoTypes: CRYPTO_WALLET_TYPES } }
     ).then((result: any) => {
       const count = Array.isArray(result) ? result[1] : result;
       if (count > 0) log(`Fixed ${count} wallet(s) with incorrect currency_type (FIAT→CRYPTO)`, 'info');
