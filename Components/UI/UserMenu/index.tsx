@@ -45,7 +45,8 @@ export default function UserMenu() {
   const firstName = tokenData?.name?.split(" ")[0] || "";
   const lastName = tokenData?.name?.split(" ")[1] || "";
   const userName = tokenData?.name || "";
-  const userPhoto = tokenData?.photo || "";
+  const rawPhoto = tokenData?.photo || "";
+  const userPhoto = rawPhoto && !rawPhoto.startsWith("/") && !rawPhoto.startsWith("http") && !rawPhoto.startsWith("blob:") ? `/${rawPhoto}` : rawPhoto;
 
   // Reset error state when photo changes
   useEffect(() => {

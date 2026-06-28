@@ -47,6 +47,9 @@ const AdminHeader = ({ pageName, pageDescription, component }: AdminHeaderProps)
   const menuRef2 = useRef<HTMLElement | null>(null);
   const tokenData = useTokenData();
 
+  const rawPhoto = tokenData?.photo || "";
+  const userPhotoSrc = rawPhoto && !rawPhoto.startsWith("/") && !rawPhoto.startsWith("http") && !rawPhoto.startsWith("blob:") ? `/${rawPhoto}` : rawPhoto;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -165,7 +168,7 @@ const AdminHeader = ({ pageName, pageDescription, component }: AdminHeaderProps)
               >
                 {/* eslint-disable-next-line */}
                 <img
-                  src={tokenData?.photo ?? User.src}
+                  src={userPhotoSrc || User.src}
                   alt="no user"
                   crossOrigin="anonymous"
                 />
@@ -226,7 +229,7 @@ const AdminHeader = ({ pageName, pageDescription, component }: AdminHeaderProps)
               >
                 {/* eslint-disable-next-line */}
                 <img
-                  src={tokenData?.photo ?? User.src}
+                  src={userPhotoSrc || User.src}
                   alt="no user"
                   crossOrigin="anonymous"
                 />

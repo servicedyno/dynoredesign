@@ -49,6 +49,9 @@ const Header = ({ pageName, component }: HeaderProps) => {
   const tokenData = useTokenData();
   const { t } = useTranslation("common");
 
+  const rawPhoto = tokenData?.photo || "";
+  const userPhotoSrc = rawPhoto && !rawPhoto.startsWith("/") && !rawPhoto.startsWith("http") && !rawPhoto.startsWith("blob:") ? `/${rawPhoto}` : rawPhoto;
+
   const [mobileOpen, setMobileOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
 
@@ -149,7 +152,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
               >
                 {/* eslint-disable-next-line */}
                 <img
-                  src={tokenData?.photo ?? User.src}
+                  src={userPhotoSrc || User.src}
                   alt="no user"
                   crossOrigin="anonymous"
                 />
@@ -210,7 +213,7 @@ const Header = ({ pageName, component }: HeaderProps) => {
               >
                 {/* eslint-disable-next-line */}
                 <img
-                  src={tokenData?.photo ?? User.src}
+                  src={userPhotoSrc || User.src}
                   alt="no user"
                   crossOrigin="anonymous"
                 />

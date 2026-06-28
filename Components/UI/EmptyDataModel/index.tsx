@@ -118,7 +118,7 @@ const EmptyDataModel = ({ pageName, onAddWallet }: EmptyDataModelProps) => {
                             fontSize: isMobile ? "16px" : "20px",
                             lineHeight: "100%",
                             letterSpacing: 0,
-                            color: "#242428",
+                            color: theme.palette.text.primary,
                         }}
                     >
                         {data.title}
@@ -132,7 +132,7 @@ const EmptyDataModel = ({ pageName, onAddWallet }: EmptyDataModelProps) => {
                             fontSize: isMobile ? "12px" : "15px",
                             lineHeight: "100%",
                             letterSpacing: 0,
-                            color: "#676768",
+                            color: theme.palette.text.secondary,
                         }}
                     >
                         {data.description}

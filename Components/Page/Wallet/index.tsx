@@ -358,7 +358,7 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
               fontSize: "15px",
               lineHeight: "140%",
               mt: "12px",
-              color: "#676768"
+              color: theme.palette.text.secondary
             }}
           >
             You have to have at least one wallet address added in order to proceed.
@@ -379,8 +379,8 @@ const Wallet = ({ onAddWallet }: { onAddWallet?: () => void }) => {
               fontFamily: "UrbanistMedium",
               fontWeight: 500,
               fontSize: "15px",
-              color: "#676768",
-              border: "1px solid #E9ECF2",
+              color: theme.palette.text.secondary,
+              border: `1px solid ${theme.palette.divider}`,
               py: "11px",
               borderRadius: "6px"
             }}

@@ -22,7 +22,7 @@ export const TableBodyCell = styled(TableCell)(({ theme }) => ({
   fontSize: "15px",
   fontWeight: 500,
   fontFamily: "UrbanistMedium",
-  color: "#242428",
+  color: theme.palette.text.primary,
   lineHeight: 1,
   letterSpacing: 0,
   whiteSpace: "nowrap",

@@ -60,8 +60,10 @@ const AccountSetting = ({ tokenData }: { tokenData: TokenData }) => {
   const [phoneOtpLoading, setPhoneOtpLoading] = useState(false);
 
   useEffect(() => {
-    setUserPhoto(tokenData.photo);
-    setInitialPhoto(tokenData.photo);
+    const raw = tokenData.photo || "";
+    const normalized = raw && !raw.startsWith("/") && !raw.startsWith("http") && !raw.startsWith("blob:") ? `/${raw}` : raw;
+    setUserPhoto(normalized);
+    setInitialPhoto(normalized);
     setImageError(false);
   }, [tokenData]);
 

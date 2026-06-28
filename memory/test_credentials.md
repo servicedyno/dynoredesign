@@ -1,5 +1,10 @@
 # Test Credentials
 
+## Primary QA Account (active user with company)
+- Email: hostbay@moxx.co
+- Password: Katiekendra123@
+- Notes: Main account for QA testing
+
 ## IMPORTANT — Preview backend DB note
 - The preview backend's Railway PostgreSQL appears to have test users only.
 - The previously documented admin `moxxcompany@gmail.com` does NOT exist in this DB.

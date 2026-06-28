@@ -33,7 +33,7 @@ const NoData = ({
       {subText && (
         <Typography
           fontWeight={400}
-          color={"text.disabled"}
+          color={"text.secondary"}
           fontSize={15}
           marginTop={1}
         >
