@@ -5,6 +5,20 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-06-28 — paymentController refactor: blockchain payment-flow chain extracted (Phase 1 + 2)
+- **Resumed the in-progress `paymentController.ts` refactor (zero behavior change).** Extracted the tightly-coupled blockchain payment-flow chain the prior handoff named, into two new modules under `backend/controller/payment/`:
+  - **`cryptoSettlement.ts`** (Phase 1, ~2,818 lines moved): `settleCryptoTransaction`, `verifyCryptoPayment`, `cryptoVerification`. These three only call each other (verified via a full call-graph analysis) → clean, no circular dependency.
+  - **`cryptoCheckout.ts`** (Phase 2, ~1,830 lines moved): `getData`, `Crypto`, `createCryptoPayment`, `confirmPayment`. These call only each other; `addPayment` (stays) imports `Crypto`/`createCryptoPayment` from it → one-directional, no circular dep.
+- **`paymentController.ts`: 6,855 → 2,199 lines this session (75% smaller than the 8,932-line original).** Functions are re-imported into `paymentController.ts` and re-exported via its default object, so **all routes are unchanged**.
+- **Extraction method**: byte-exact verbatim move (script-driven), no logic edits. Inline `require()/import()` relative paths inside moved bodies were path-corrected for the new `controller/payment/` directory (`../services/…` → `../../services/…`, `../utils/feeConfigUtils` → `../../utils/feeConfigUtils`).
+- **Verified**:
+  - `tsc --noEmit`: 0 errors after each phase.
+  - Jest unit harness: **14 suites / 469 tests PASS** (incl. `webhookProcessor`, `webhookHandlers` which load the full `paymentController` import graph) — zero refactor regressions.
+  - Node backend boots clean (`ts-node --transpile-only`): PostgreSQL connected, proxy ready, no module-resolution errors → proves all re-exported handlers are bound and every import path resolves at runtime.
+  - Route smoke test via proxy: `/api/pay/{createCryptoPayment,confirmPayment,verifyCryptoPayment}` return handled 403 (auth/bot middleware), `getData` returns handled 400 — no 500s.
+- **Note (env)**: jest full-suite runs are slow under this preview's transport; used a throwaway `jest.fast.config.ts` (isolatedModules) for fast runs and removed it afterward. Standard `yarn test` config is untouched.
+
+
 ### 2026-06-27 — MUI Emotion SSR Hydration Fix (app-wide) + paymentController refactor (started)
 - **Systemic MUI hydration mismatch FIXED** (cookie-based theme + emotion SSR cache):
   - Root cause: MUI `theme.palette.mode` was always `'dark'` on the server but reflected the user's real theme on the client's first render → emotion generated different CSS class hashes → `className`/`srcSet` mismatch app-wide.
@@ -76,4 +90,9 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - Low gas balance alerting (Slack/email)
 - Improved webhook retry logic and dead letter queue
 - Admin dashboard for stuck payment visibility
-- Refactoring of `paymentController.ts` (8,500+ lines) into smaller services
+- **Refactoring of `paymentController.ts`**: blockchain payment-flow chain extracted (now 2,199 lines, was 8,932). Remaining optional extractions: alt-payment handlers (`cardPayment`, `bankTransfer`, `bankAccount`, `googleApplePay`, `USSD`, `MobileMoney`, `QRCode`, `userWallet`), `addPayment` dispatcher, and cron/maintenance jobs (`checkingUSDT`, `sweepNativeAdminFees`, `checkFeeBalance`, `processIncompletePayments`).
+
+### Open bugs (from prior handoff, not started)
+- **P0 — Dashboard 500s for empty/new merchants**: `/api/wallet/getUserAnalytics` & `/api/dashboard` throw 500 when a merchant has no company/wallet/payments. Add safe empty-state fallbacks.
+- **P1 — Merchant webhook 404**: outbound webhook to merchant URL returning 404; verify routing/payload targeting in `webhooks/index.ts`.
+- **P2 — Landing page "Network Error" (USER ACTION)**: needs a clean Railway frontend rebuild to bake the new `NEXT_PUBLIC_BASE_URL`.
