@@ -552,6 +552,13 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
     const { company_id } = req.query;
     const userId = userData.user_id;
 
+    // Check Redis cache first (5 min TTL — tiers change infrequently)
+    const cacheKey = `feeTiers:${userId}:${company_id || 'all'}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached && Object.keys(cached).length > 0) {
+      return successResponseHelper(res, 200, "Fee tiers retrieved successfully", cached);
+    }
+
     // Get company's preferred currency
     let preferredCurrency = 'USD';
     let conversionRate = 1;
@@ -608,7 +615,7 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
       is_current: tier.name === userTierInfo.current_tier,
     }));
 
-    return successResponseHelper(res, 200, "Fee tiers retrieved successfully", {
+    const feeTiersResponse = {
       tiers: tiersWithStatus,
       currency: preferredCurrency,
       user_tier: {
@@ -621,7 +628,13 @@ const getFeeTiers = async (req: express.Request, res: express.Response) => {
         amount_to_next_tier_formatted: userTierInfo.amount_to_next_tier_formatted,
         next_tier: userTierInfo.next_tier,
       },
-    });
+    };
+
+    // Cache for 5 minutes
+    await setRedisItem(cacheKey, feeTiersResponse);
+    await setRedisTTL(cacheKey, 300);
+
+    return successResponseHelper(res, 200, "Fee tiers retrieved successfully", feeTiersResponse);
   } catch (e) {
 
       return handleControllerErrorReturn(res, e, apiLogger);
@@ -638,6 +651,13 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
   try {
     const { limit = 10, company_id } = req.query;
     const userId = userData.user_id;
+
+    // Check Redis cache first (30s TTL — recent tx changes frequently)
+    const cacheKey = `recentTx:${userId}:${company_id || 'all'}:${limit}`;
+    const cached = await getRedisItem(cacheKey);
+    if (cached && Object.keys(cached).length > 0) {
+      return successResponseHelper(res, 200, "Recent transactions retrieved successfully", cached);
+    }
 
     const recentTransactions = await sequelize.query(
       `SELECT 
@@ -664,10 +684,16 @@ const getRecentTransactions = async (req: express.Request, res: express.Response
       }
     );
 
-    return successResponseHelper(res, 200, "Recent transactions retrieved successfully", {
+    const recentTxResponse = {
       transactions: recentTransactions,
       count: recentTransactions.length,
-    });
+    };
+
+    // Cache for 30 seconds
+    await setRedisItem(cacheKey, recentTxResponse);
+    await setRedisTTL(cacheKey, 30);
+
+    return successResponseHelper(res, 200, "Recent transactions retrieved successfully", recentTxResponse);
 
   } catch (e) {
 

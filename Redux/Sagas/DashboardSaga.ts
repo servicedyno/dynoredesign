@@ -1,4 +1,4 @@
-import { call, put, all } from "redux-saga/effects";
+import { call, put } from "redux-saga/effects";
 import axiosBaseApi from "@/axiosConfig";
 import {
   DASHBOARD_FETCH,
@@ -24,49 +24,14 @@ export function* DashboardSaga(action: DashboardSagaAction): Generator<any, void
         const params: any = {};
         if (payload?.company_id) params.company_id = payload.company_id;
 
-        // Fetch dashboard summary and analytics IN PARALLEL (not sequential)
-        let response: any = null;
-        let analyticsResponse: any = null;
-        
-        const results: any[] = yield all([
-          call(function* () {
-            try {
-              return yield call(axiosBaseApi.get, "/dashboard", { params });
-            } catch (e) { return null; }
-          }),
-          call(function* () {
-            try {
-              return yield call(axiosBaseApi.post, "/wallet/getUserAnalytics", { company_id: payload?.company_id });
-            } catch (e) { return null; }
-          }),
-        ]);
-
-        response = results[0];
-        analyticsResponse = results[1];
-
+        // Single API call — /dashboard already returns all stats
+        const response: any = yield call(axiosBaseApi.get, "/dashboard", { params });
         const apiData = response?.data?.data;
-        const analytics = analyticsResponse?.data?.data;
 
         if (apiData) {
-          // Use analytics data for totals if dashboard returns 0
-          let totalTx = apiData.total_transactions?.count ?? 0;
-          let totalVol = apiData.total_volume?.amount ?? 0;
-          let totalVolFormatted = apiData.total_volume?.amount_formatted ?? "$0.00 USD";
-
-          if (analytics) {
-            if (totalTx === 0 && analytics.totalTransactionsIncoming > 0) {
-              totalTx = analytics.totalTransactionsIncoming + (analytics.totalTransactionOutgoing || 0);
-            }
-            if (totalVol === 0 && analytics.revenue_performance) {
-              totalVol = analytics.revenue_performance.reduce(
-                (sum: number, rp: any) => sum + (rp.amount_in_usd || 0), 0
-              );
-              if (totalVol > 0) {
-                const currency = apiData.total_volume?.currency_info || { symbol: "$", code: "USD" };
-                totalVolFormatted = `${currency.symbol}${totalVol.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency.code}`;
-              }
-            }
-          }
+          const totalTx = apiData.total_transactions?.count ?? 0;
+          const totalVol = apiData.total_volume?.amount ?? 0;
+          const totalVolFormatted = apiData.total_volume?.amount_formatted ?? "$0.00 USD";
 
           yield put({
             type: DASHBOARD_FETCH,
