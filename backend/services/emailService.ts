@@ -2,7 +2,7 @@ import mailTransporter from "../utils/mailTransporter";
 import { apiLogger } from "../utils/loggers";
 import { captureError } from "./errorMonitoringService";
 import { generatePaymentReceipt, getReceiptFilename } from "./pdfReceiptService";
-import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock } from "../utils/emailTemplate";
+import { baseEmailTemplate, getCurrencySymbol, infoBox, dataRow, statusBadge, p, otpBlock, warnText, alertBox, errorBox, successBox, neutralBox, statCard, twoColumnStats, feeRow, feeTotalRow, feeTable, mono } from "../utils/emailTemplate";
 
 /** Dynamic base URL for all email CTA links — uses FRONTEND_URL env var */
 const FRONTEND_BASE_URL = (process.env.FRONTEND_URL || 'https://dynopay.com').replace(/\/$/, '');
@@ -68,7 +68,7 @@ export const sendEmail = async (
   showImage = false
 ) => {
   try {
-    const htmlBody = dynoPayGreetingTemplate(name, message, subject, showImage);
+    const htmlBody = dynoPayEmailTemplate(subject, `${p(`Hey ${name},`)}\n${message}`);
     const info = await mailTransporter({
       to: recipientEmail,
       name,
@@ -202,7 +202,7 @@ export const sendPasswordChangedEmail = async (
         ${dataRow('Date', `${date} at ${time}`, true)}
       </table>
     `, '#22c55e')}
-    ${p(`<strong>Security Notice:</strong> If you didn't make this change, please contact our support team immediately to secure your account.`, `color: #991b1b;`)}`;
+    ${warnText(`<strong>Security Notice:</strong> If you didn't make this change, please contact our support team immediately to secure your account.`)}`;
 
     const html = dynoPayEmailTemplate("Password Updated", content, true, "View Account Settings", `${FRONTEND_BASE_URL}/dashboard/settings`);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -239,7 +239,7 @@ export const sendUserProfileUpdatedEmail = async (
         ${dataRow('Date', `${date} at ${time}`, true)}
       </table>
     `, '#22c55e')}
-    ${p(`<strong>Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.`, `color: #991b1b;`)}`;
+    ${warnText(`<strong>Security Notice:</strong> If you didn't make these changes, please reset your password immediately and contact our support team.`)}`;
 
     const html = dynoPayEmailTemplate("Profile Updated", content, true, "View Profile", `${FRONTEND_BASE_URL}/dashboard/profile`);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -629,7 +629,7 @@ export const sendWalletUpdateOTPEmail = async (
         ${dataRow('Network', network, true)}
       </table>
     `)}
-    ${p(`This code expires in 10 minutes. If you didn't request this change, please secure your account immediately.`, `color: #991b1b;`)}`;
+    ${warnText(`This code expires in 10 minutes. If you didn't request this change, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Confirm Wallet Update", content);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -724,7 +724,7 @@ export const sendWalletAddedEmail = async (
       </table>
     `, '#22c55e')}
     ${p(`All payments in ${network} will be forwarded to this wallet. You can manage your wallets in the dashboard.`)}
-    ${p(`<strong>Didn't do this?</strong><br />If you didn't add this wallet, please secure your account immediately.`, `color: #991b1b;`)}`;
+    ${warnText(`<strong>Didn't do this?</strong><br />If you didn't add this wallet, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Wallet Added", content, true, "View Wallets", `${FRONTEND_BASE_URL}/dashboard/wallets`);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -763,7 +763,7 @@ export const sendWalletUpdatedEmail = async (
       </table>
     `, '#f59e0b')}
     ${p(`Future payments in ${network} will be forwarded to the new address.`)}
-    ${p(`<strong>Didn't do this?</strong><br />If you didn't update this wallet, please secure your account immediately and contact support.`, `color: #991b1b;`)}`;
+    ${warnText(`<strong>Didn't do this?</strong><br />If you didn't update this wallet, please secure your account immediately and contact support.`)}`;
 
     const html = dynoPayEmailTemplate("Wallet Updated", content, true, "View Wallets", `${FRONTEND_BASE_URL}/dashboard/wallets`);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -796,7 +796,7 @@ export const sendWithdrawalOTPEmail = async (
         ${dataRow('To Address', `<span style="font-family: monospace; font-size: 13px;">${destinationAddress}</span>`, true)}
       </table>
     `, '#f59e0b')}
-    ${p(`This code expires in <strong>5 minutes</strong>. If you didn't request this withdrawal, please ignore this email and secure your account.`, `color: #991b1b;`)}`;
+    ${warnText(`This code expires in <strong>5 minutes</strong>. If you didn't request this withdrawal, please ignore this email and secure your account.`)}`;
 
     const html = dynoPayEmailTemplate("Confirm Withdrawal", content);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -937,7 +937,7 @@ export const sendWalletDeleteOTPEmail = async (
         ${dataRow('Action', statusBadge('Permanent Deletion', 'error'), true)}
       </table>
     `, '#ef4444')}
-    ${p(`This code expires in <strong>10 minutes</strong>. If you didn't request this, please ignore this email or contact support immediately.`, `color: #991b1b;`)}`;
+    ${warnText(`This code expires in <strong>10 minutes</strong>. If you didn't request this, please ignore this email or contact support immediately.`)}`;
 
     const html = dynoPayEmailTemplate("Confirm Wallet Deletion", content);
     await mailTransporter({ to: email, name, subject, body: html });
@@ -1056,14 +1056,14 @@ export const sendPaymentConfirmingEmail = async (
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #3b82f6; margin: 24px 0;">
         <tr><td style="padding: 20px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amount} ${currency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Confirmations</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${currentConfirmations} of ${requiredConfirmations}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Amount</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 16px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${amount} ${currency}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Confirmations</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${currentConfirmations} of ${requiredConfirmations}</td></tr>
             <tr><td colspan="2" style="padding: 12px 0 4px 0;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #e5e7eb; border-radius: 4px; height: 8px;">
                 <tr><td style="width: ${progressPct}%; background: ${isComplete ? '#22c55e' : '#3b82f6'}; border-radius: 4px; height: 8px;">&nbsp;</td><td style="height: 8px;">&nbsp;</td></tr>
               </table>
             </td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">${transactionId}</td></tr>
+            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Transaction ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'SF Mono', 'Fira Code', monospace, Arial, sans-serif; text-align: right; word-break: break-all;">${transactionId}</td></tr>
           </table>
         </td></tr>
       </table>
@@ -1147,7 +1147,7 @@ export const sendPaymentPartialEmail = async (
     `, '#dc2626')}
     ${p(`<strong>Send to:</strong>`)}
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 6px; margin: 0 0 24px 0;">
-      <tr><td style="padding: 12px 16px; font-size: 13px; color: #1a1a2e; font-family: 'Inter', Arial, monospace; word-break: break-all;">${walletAddress}</td></tr>
+      <tr><td style="padding: 12px 16px; font-size: 13px; color: #1a1a2e; font-family: 'SF Mono', 'Fira Code', monospace, Arial, sans-serif; word-break: break-all;">${walletAddress}</td></tr>
     </table>
     ${p(`If the remaining amount is received within ${gracePeriodMinutes} minutes, the full payment will be processed. If the grace period expires, the partial amount will be processed with adjusted fees.`, `font-size: 14px; color: #6b7280;`)}`;
 
@@ -1467,7 +1467,7 @@ export const sendAdminFeeReceivedEmail = async (
       ${noticeBlock}
       ${p(`The fee has been credited to the admin ${currency} wallet.`)}`;
 
-    const htmlBody = dynoPayGreetingTemplate(name, htmlContent, "Platform Fee Received");
+    const htmlBody = dynoPayEmailTemplate("Platform Fee Received", `${p(`Hey ${name},`)}\n${htmlContent}`);
     const info = await mailTransporter({ to: recipientEmail, name, subject, body: htmlBody });
     return info;
   } catch (e) {
@@ -1512,7 +1512,7 @@ export const sendAdminFeeSweepEmail = async (
       `, '#3b82f6')}
       ${p(`The admin fees have been transferred to the admin ${currency} wallet. You can verify the transaction on the blockchain explorer.`)}`;
 
-    const htmlBody = dynoPayGreetingTemplate("Dynopay Admin", htmlContent, "Admin Fee Sweep Completed");
+    const htmlBody = dynoPayEmailTemplate("Admin Fee Sweep Completed", `${p(`Hey Dynopay Admin,`)}\n${htmlContent}`);
     const info = await mailTransporter({
       to: recipientEmail,
       name: "Dynopay Admin",
@@ -1586,172 +1586,69 @@ export const sendAutoConversionPayoutEmail = async (
     const dateStr = now.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
 
-    const volatilityVisual = isVolatile ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0 24px 0;">
+    const volatilityVisual = isVolatile ? errorBox(`
+      <p class="warn-text" style="margin: 0 0 10px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Market Volatility at Time of Conversion</p>
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-radius: 4px; height: 10px; margin-bottom: 8px;">
         <tr>
-          <td style="padding: 16px 20px; background: #fef2f2; border-radius: 8px; border-left: 4px solid #ef4444;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size: 13px; font-weight: 600; color: #991b1b; font-family: 'Inter', Arial, sans-serif; padding-bottom: 10px;">
-                  MARKET VOLATILITY AT TIME OF CONVERSION
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fecaca; border-radius: 4px; height: 10px;">
-                    <tr>
-                      <td style="width: ${Math.min(100, Math.abs(priceMovementPct) * 20)}%; background: linear-gradient(90deg, #ef4444, #dc2626); border-radius: 4px; height: 10px;">&nbsp;</td>
-                      <td style="height: 10px;">&nbsp;</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-              <tr>
-                <td style="font-size: 12px; color: #7f1d1d; font-family: 'Inter', Arial, sans-serif; padding-top: 6px;">
-                  ${sourceCurrency} moved <strong>${Math.abs(priceMovementPct).toFixed(2)}%</strong> during conversion window &mdash; ${feeTierUsed === 'fast' || feeTierUsed === 'fastest' ? 'fast-tracked with priority fees' : 'processed with standard fees'}
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>` : '';
-
-    const savingsBlock = priceDroppedSinceConversion ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
-        <tr>
-          <td style="padding: 20px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; border-left: 4px solid #22c55e; text-align: center;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size: 13px; font-weight: 600; color: #166534; font-family: 'Inter', Arial, sans-serif; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                  Auto-Conversion Protected You
-                </td>
-              </tr>
-              <tr>
-                <td style="font-size: 28px; font-weight: 700; color: #15803d; font-family: 'Inter', Arial, sans-serif; padding: 8px 0;">
-                  ~$${savedAmount.toFixed(2)} saved
-                </td>
-              </tr>
-              <tr>
-                <td style="font-size: 13px; color: #166534; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
-                  ${sourceCurrency} has dropped <strong>${Math.abs(priceDiffSinceConversion).toFixed(2)}%</strong> since your conversion<br/>
-                  <span style="color: #6b7280;">Converted at $${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} &mdash; Now $${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>` : '';
-
-    const priceUpBlock = !priceDroppedSinceConversion && Math.abs(priceDiffSinceConversion) > 0.1 ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
-        <tr>
-          <td style="padding: 16px 20px; background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6;">
-            <p style="margin: 0; font-size: 13px; color: #4a4a4a; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
-              ${sourceCurrency} is currently at <strong>$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-              (${priceDiffSinceConversion > 0 ? '+' : ''}${priceDiffSinceConversion.toFixed(2)}% since conversion).
-              Your payout was locked in at <strong>$${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> for price certainty.
-            </p>
-          </td>
-        </tr>
-      </table>` : '';
-
-    const htmlContent = `
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">
-        Your crypto payment has been auto-converted and the payout has been sent to your wallet.
-      </p>
-
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
-        <tr>
-          <td style="padding: 0 4px 12px 0; width: 50%;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
-              <tr><td style="padding: 16px; text-align: center;">
-                <p style="font-size: 11px; font-weight: 600; color: #6b7280; margin: 0 0 4px 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Received</p>
-                <p style="font-size: 22px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${sourceAmount} ${sourceCurrency}</p>
-                <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">~$${parseFloat(sourceAmountUsd).toFixed(2)} USD</p>
-              </td></tr>
-            </table>
-          </td>
-          <td style="padding: 0 0 12px 4px; width: 50%;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px;">
-              <tr><td style="padding: 16px; text-align: center;">
-                <p style="font-size: 11px; font-weight: 600; color: #6b7280; margin: 0 0 4px 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Payout</p>
-                <p style="font-size: 22px; font-weight: 700; color: #15803d; margin: 0; font-family: 'Inter', Arial, sans-serif;">${payoutAmount} ${targetCurrency}</p>
-                <p style="font-size: 12px; color: #166534; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif;">Sent to your wallet</p>
-              </td></tr>
-            </table>
-          </td>
+          <td class="neutral-box" style="width: ${Math.min(100, Math.abs(priceMovementPct) * 20)}%; background: #ef4444; border-radius: 4px; height: 10px;">&nbsp;</td>
+          <td style="height: 10px;">&nbsp;</td>
         </tr>
       </table>
+      <p style="margin: 0; font-size: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        ${sourceCurrency} moved <strong>${Math.abs(priceMovementPct).toFixed(2)}%</strong> during conversion window &mdash; ${feeTierUsed === 'fast' || feeTierUsed === 'fastest' ? 'fast-tracked with priority fees' : 'processed with standard fees'}
+      </p>
+    `) : '';
 
+    const savingsBlock = priceDroppedSinceConversion ? successBox(`
+      <p style="margin: 0 0 4px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">Auto-Conversion Protected You</p>
+      <p class="stat-value-green" style="font-size: 28px; font-weight: 700; margin: 8px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: center;">~$${savedAmount.toFixed(2)} saved</p>
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        ${sourceCurrency} has dropped <strong>${Math.abs(priceDiffSinceConversion).toFixed(2)}%</strong> since your conversion<br/>
+        Converted at $${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} &mdash; Now $${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+      </p>
+    `) : '';
+
+    const priceUpBlock = !priceDroppedSinceConversion && Math.abs(priceDiffSinceConversion) > 0.1 ? infoBox(`
+      <p style="margin: 0; font-size: 13px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">
+        ${sourceCurrency} is currently at <strong>$${currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+        (${priceDiffSinceConversion > 0 ? '+' : ''}${priceDiffSinceConversion.toFixed(2)}% since conversion).
+        Your payout was locked in at <strong>$${priceAtConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong> for price certainty.
+      </p>
+    `) : '';
+
+    const feeRows = [
+      feeRow('Gross Conversion', `$${grossSaleUsd.toFixed(2)} ${targetCurrency}`),
+      platformFeeUsd > 0 ? feeRow('Platform Fee (1.5%)', `-$${platformFeeUsd.toFixed(4)}`, true) : '',
+      sweepGasFeeUsd > 0 ? feeRow('Network Gas Fee (sweep)', `-$${sweepGasFeeUsd.toFixed(4)}`, true) : '',
+      tradeFeeUsd > 0 ? feeRow('Exchange Fee (0.1%)', `-$${tradeFeeUsd.toFixed(4)}`, true) : '',
+      binanceWithdrawalFeeUsd > 0
+        ? feeRow('Withdrawal Fee (on-chain)', `-$${binanceWithdrawalFeeUsd.toFixed(4)}`, true)
+        : feeRow('Withdrawal Fee', '$0.00 (off-chain)'),
+      feeTotalRow('Net Payout', `${payoutAmount} ${targetCurrency}`),
+    ].filter(Boolean).join('');
+
+    const htmlContent = `
+      ${p(`Your crypto payment has been auto-converted and the payout has been sent to your wallet.`)}
+      ${twoColumnStats(
+        statCard('Received', `${sourceAmount} ${sourceCurrency}`, `~$${parseFloat(sourceAmountUsd).toFixed(2)} USD`),
+        statCard('Payout', `${payoutAmount} ${targetCurrency}`, 'Sent to your wallet', 'green')
+      )}
       ${volatilityVisual}
       ${savingsBlock}
       ${priceUpBlock}
+      ${hasDetailedFees ? feeTable(feeRows) : ''}
+      ${infoBox(`
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${dataRow('Conversion Rate', `<strong>1 ${sourceCurrency} = ${parseFloat(conversionRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCurrency}</strong>`)}
+          ${dataRow('Market State', statusBadge(marketState, isVolatile ? 'pending' : 'success'))}
+          ${dataRow('Date', `${dateStr} at ${timeStr}`)}
+          ${withdrawalTxHash ? dataRow('Withdrawal TX', mono(withdrawalTxHash)) : ''}
+          ${dataRow('Conversion ID', mono(`#${conversionId}`), true)}
+        </table>
+      `)}
+      ${p(`Auto-conversion ensures you receive stablecoins, protecting your revenue from crypto price swings. View your full transaction history in your Dynopay dashboard.`)}`;
 
-      ${hasDetailedFees ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
-        <tr>
-          <td style="padding: 20px; background: #faf9f7; border-radius: 8px; border-left: 4px solid #e5a100;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size: 13px; font-weight: 600; color: #78716c; font-family: 'Inter', Arial, sans-serif; padding-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;">
-                  Fee Breakdown
-                </td>
-              </tr>
-              <tr>
-                <td>
-                  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-family: 'Inter', Arial, sans-serif; font-size: 13px;">
-                    <tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Gross Conversion</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #1a1a2e; font-weight: 500;">$${grossSaleUsd.toFixed(2)} ${targetCurrency}</td>
-                    </tr>
-                    ${platformFeeUsd > 0 ? `<tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Platform Fee (1.5%)</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${platformFeeUsd.toFixed(4)}</td>
-                    </tr>` : ''}
-                    ${sweepGasFeeUsd > 0 ? `<tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Network Gas Fee (sweep)</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${sweepGasFeeUsd.toFixed(4)}</td>
-                    </tr>` : ''}
-                    ${tradeFeeUsd > 0 ? `<tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Exchange Fee (0.1%)</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${tradeFeeUsd.toFixed(4)}</td>
-                    </tr>` : ''}
-                    ${binanceWithdrawalFeeUsd > 0 ? `<tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Withdrawal Fee (on-chain)</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #dc2626;">-$${binanceWithdrawalFeeUsd.toFixed(4)}</td>
-                    </tr>` : `<tr style="color: #6b7280;">
-                      <td style="padding: 6px 0; border-bottom: 1px solid #f3f0eb;">Withdrawal Fee</td>
-                      <td style="padding: 6px 0; text-align: right; border-bottom: 1px solid #f3f0eb; color: #166534;">$0.00 (off-chain)</td>
-                    </tr>`}
-                    <tr>
-                      <td style="padding: 10px 0 0; font-weight: 700; color: #1a1a2e; font-size: 14px;">Net Payout</td>
-                      <td style="padding: 10px 0 0; text-align: right; font-weight: 700; color: #15803d; font-size: 14px;">${payoutAmount} ${targetCurrency}</td>
-                    </tr>
-                  </table>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>` : ''}
-
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
-        <tr><td style="padding: 20px;">
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Conversion Rate</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">1 ${sourceCurrency} = ${parseFloat(conversionRate).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${targetCurrency}</td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Market State</td><td style="padding: 8px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;"><span style="background: ${isVolatile ? '#fef3c7' : '#dcfce7'}; color: ${isVolatile ? '#92400e' : '#166534'}; padding: 4px 12px; border-radius: 12px; font-size: 13px; font-weight: 500;">${marketState}</span></td></tr>
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Date</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">${dateStr} at ${timeStr}</td></tr>
-            ${withdrawalTxHash ? `<tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">Withdrawal TX</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 12px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all; border-bottom: 1px solid #f3f4f6;">${withdrawalTxHash}</td></tr>` : ''}
-            <tr><td style="padding: 8px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif;">Conversion ID</td><td style="padding: 8px 0; color: #1a1a2e; font-size: 13px; font-family: 'Inter', Arial, monospace; text-align: right; word-break: break-all;">#${conversionId}</td></tr>
-          </table>
-        </td></tr>
-      </table>
-
-      <p style="font-size: 14px; color: #6b7280; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">
-        Auto-conversion ensures you receive stablecoins, protecting your revenue from crypto price swings. View your full transaction history in your Dynopay dashboard.
-      </p>`;
-
-    const htmlBody = dynoPayGreetingTemplate(name, htmlContent, "Payout Complete");
+    const htmlBody = dynoPayEmailTemplate("Payout Complete", `${p(`Hey ${name},`)}\n${htmlContent}`);
     const info = await mailTransporter({
       to: recipientEmail,
       name,
@@ -1813,17 +1710,17 @@ export const sendWeeklyConversionSummaryEmail = async (
       const barWidth = Math.max(2, Math.round((d.payoutUsd / maxDailyVolume) * 100));
       const hasActivity = d.payoutUsd > 0;
       return `
-        <tr>
-          <td style="padding: 4px 8px 4px 0; font-size: 12px; color: #6b7280; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; width: 40px;">${d.label}</td>
+        <tr class="fee-row">
+          <td style="padding: 4px 8px 4px 0; font-size: 12px; color: #6b7280; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; white-space: nowrap; width: 40px;">${d.label}</td>
           <td style="padding: 4px 0; width: 100%;">
             <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f3f4f6; border-radius: 3px; height: 18px;">
               <tr>
-                <td style="width: ${barWidth}%; background: ${hasActivity ? 'linear-gradient(90deg, #1034a6, #3b82f6)' : 'transparent'}; border-radius: 3px; height: 18px;">&nbsp;</td>
+                <td style="width: ${barWidth}%; background: ${hasActivity ? '#3b82f6' : 'transparent'}; border-radius: 3px; height: 18px;">&nbsp;</td>
                 <td style="height: 18px;">&nbsp;</td>
               </tr>
             </table>
           </td>
-          <td style="padding: 4px 0 4px 8px; font-size: 12px; color: ${hasActivity ? '#1a1a2e' : '#9ca3af'}; font-family: 'Inter', Arial, sans-serif; white-space: nowrap; text-align: right; width: 60px; font-weight: ${hasActivity ? '600' : '400'};">${hasActivity ? '$' + d.payoutUsd.toFixed(0) : '-'}</td>
+          <td style="padding: 4px 0 4px 8px; font-size: 12px; color: #374151; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; white-space: nowrap; text-align: right; width: 60px; font-weight: ${hasActivity ? '600' : '400'};">${hasActivity ? '$' + d.payoutUsd.toFixed(0) : '-'}</td>
         </tr>`;
     }).join('');
 
@@ -1831,107 +1728,67 @@ export const sendWeeklyConversionSummaryEmail = async (
       const movementColor = c.avgMovementPct < -1 ? '#dc2626' : c.avgMovementPct < 0 ? '#f59e0b' : '#22c55e';
       const movementSign = c.avgMovementPct >= 0 ? '+' : '';
       return `
-        <tr>
-          <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-weight: 600; font-family: 'Inter', Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">${c.currency}</td>
-          <td style="padding: 10px 0; color: #6b7280; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: center; border-bottom: 1px solid #f3f4f6;">${c.count}</td>
-          <td style="padding: 10px 0; color: #1a1a2e; font-size: 14px; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">$${c.totalPayoutUsd.toFixed(2)}</td>
-          <td style="padding: 10px 0; font-family: 'Inter', Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">
+        <tr class="fee-row">
+          <td style="padding: 10px 0; font-size: 14px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; border-bottom: 1px solid #f3f4f6;">${c.currency}</td>
+          <td style="padding: 10px 0; color: #6b7280; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: center; border-bottom: 1px solid #f3f4f6;">${c.count}</td>
+          <td style="padding: 10px 0; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">$${c.totalPayoutUsd.toFixed(2)}</td>
+          <td style="padding: 10px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; border-bottom: 1px solid #f3f4f6;">
             <span style="color: ${movementColor}; font-size: 13px; font-weight: 500;">${movementSign}${c.avgMovementPct.toFixed(2)}%</span>
           </td>
         </tr>`;
     }).join('');
 
-    const savingsBlock = totalSavedUsd > 0.01 ? `
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 24px 0;">
-        <tr>
-          <td style="padding: 24px; background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px; text-align: center;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-              <tr>
-                <td style="font-size: 13px; font-weight: 600; color: #166534; font-family: 'Inter', Arial, sans-serif; padding-bottom: 4px; text-transform: uppercase; letter-spacing: 0.5px;">
-                  Total Protected This Week
-                </td>
-              </tr>
-              <tr>
-                <td style="font-size: 32px; font-weight: 700; color: #15803d; font-family: 'Inter', Arial, sans-serif; padding: 8px 0;">
-                  ~$${totalSavedUsd.toFixed(2)}
-                </td>
-              </tr>
-              <tr>
-                <td style="font-size: 13px; color: #166534; font-family: 'Inter', Arial, sans-serif; line-height: 1.5;">
-                  saved by converting before further price drops<br/>
-                  <span style="color: #6b7280;">${totalVolatileConversions} of ${totalConversions} conversions occurred during volatile markets</span>
-                </td>
-              </tr>
-            </table>
-          </td>
-        </tr>
-      </table>` : '';
+    const savingsBlock = totalSavedUsd > 0.01 ? successBox(`
+      <p style="font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0 0 4px;">Total Protected This Week</p>
+      <p class="stat-value-green" style="font-size: 32px; font-weight: 700; margin: 8px 0; text-align: center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">~$${totalSavedUsd.toFixed(2)}</p>
+      <p style="font-size: 13px; line-height: 1.5; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: center;">
+        saved by converting before further price drops<br/>
+        ${totalVolatileConversions} of ${totalConversions} conversions occurred during volatile markets
+      </p>
+    `) : '';
 
     const htmlContent = `
-      <p style="font-size: 15px; color: #4a4a4a; line-height: 1.6; margin: 0 0 16px 0; font-family: 'Inter', Arial, sans-serif;">
-        Here's your weekly auto-conversion report for <strong style="color: #1a1a2e;">${companyName}</strong>.
-      </p>
+      ${p(`Here's your weekly auto-conversion report for <strong>${companyName}</strong>.`)}
 
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
         <tr>
           <td style="padding: 0 4px 8px 0; width: 33%;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px;">
-              <tr><td style="padding: 16px 8px; text-align: center;">
-                <p style="font-size: 24px; font-weight: 700; color: #1034a6; margin: 0; font-family: 'Inter', Arial, sans-serif;">${totalConversions}</p>
-                <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Conversions</p>
-              </td></tr>
-            </table>
+            ${statCard('Conversions', `${totalConversions}`, '', 'blue')}
           </td>
           <td style="padding: 0 4px 8px 4px; width: 34%;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%); border-radius: 8px;">
-              <tr><td style="padding: 16px 8px; text-align: center;">
-                <p style="font-size: 24px; font-weight: 700; color: #15803d; margin: 0; font-family: 'Inter', Arial, sans-serif;">$${totalPayoutUsd.toFixed(0)}</p>
-                <p style="font-size: 11px; color: #166534; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Total Payout</p>
-              </td></tr>
-            </table>
+            ${statCard('Total Payout', `$${totalPayoutUsd.toFixed(0)}`, '', 'green')}
           </td>
           <td style="padding: 0 0 8px 4px; width: 33%;">
-            <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: ${avgPriceMovementPct < -0.5 ? '#fef2f2' : '#f8f9ff'}; border-radius: 8px;">
-              <tr><td style="padding: 16px 8px; text-align: center;">
-                <p style="font-size: 24px; font-weight: 700; color: ${avgPriceMovementPct < -0.5 ? '#dc2626' : '#1034a6'}; margin: 0; font-family: 'Inter', Arial, sans-serif;">${avgPriceMovementPct >= 0 ? '+' : ''}${avgPriceMovementPct.toFixed(1)}%</p>
-                <p style="font-size: 11px; color: #6b7280; margin: 4px 0 0 0; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase;">Avg Movement</p>
-              </td></tr>
-            </table>
+            ${statCard('Avg Movement', `${avgPriceMovementPct >= 0 ? '+' : ''}${avgPriceMovementPct.toFixed(1)}%`, '', avgPriceMovementPct < -0.5 ? 'green' : 'blue')}
           </td>
         </tr>
       </table>
 
       ${savingsBlock}
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; margin: 0 0 24px 0;">
-        <tr><td style="padding: 20px;">
-          <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Daily Conversion Volume</p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            ${chartRows}
-          </table>
-        </td></tr>
-      </table>
+      ${neutralBox(`
+        <p style="font-size: 13px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Daily Conversion Volume</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${chartRows}
+        </table>
+      `)}
 
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f8f9ff; border-radius: 8px; border-left: 4px solid #1034a6; margin: 0 0 24px 0;">
-        <tr><td style="padding: 20px;">
-          <p style="font-size: 13px; font-weight: 600; color: #1a1a2e; font-family: 'Inter', Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Breakdown by Crypto</p>
-          <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-            <tr>
-              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Asset</td>
-              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: center; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Count</td>
-              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Payout</td>
-              <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: 'Inter', Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Avg Move</td>
-            </tr>
-            ${breakdownRows}
-          </table>
-        </td></tr>
-      </table>
+      ${infoBox(`
+        <p style="font-size: 13px; font-weight: 600; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; margin: 0 0 12px 0; text-transform: uppercase; letter-spacing: 0.5px;">Breakdown by Crypto</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr class="fee-row">
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Asset</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: center; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Count</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Payout</td>
+            <td style="padding: 6px 0; color: #9ca3af; font-size: 11px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-align: right; text-transform: uppercase; border-bottom: 2px solid #e5e7eb;">Avg Move</td>
+          </tr>
+          ${breakdownRows}
+        </table>
+      `)}
 
-      <p style="font-size: 13px; color: #9ca3af; line-height: 1.6; margin: 0; font-family: 'Inter', Arial, sans-serif;">
-        Report period: ${periodStart} to ${periodEnd}. Auto-conversion protects your revenue from crypto price volatility by instantly converting to stablecoins.
-      </p>`;
+      ${p(`<span style="font-size: 13px; color: #9ca3af;">Report period: ${periodStart} to ${periodEnd}. Auto-conversion protects your revenue from crypto price volatility by instantly converting to stablecoins.</span>`)}`;
 
-    const htmlBody = dynoPayGreetingTemplate(name, htmlContent, "Weekly Conversion Report");
+    const htmlBody = dynoPayEmailTemplate("Weekly Conversion Report", `${p(`Hey ${name},`)}\n${htmlContent}`);
     const info = await mailTransporter({
       to: recipientEmail,
       name,
@@ -2110,7 +1967,7 @@ export const sendRefereeCodeReminderEmail = async (
     `.trim();
 
     const recipientName = recipientEmail.split('@')[0] || "there";
-    const htmlBody = dynoPayGreetingTemplate(recipientName, message, "Your Discount is Waiting!", false);
+    const htmlBody = dynoPayEmailTemplate("Your Discount is Waiting!", `${p(`Hey ${recipientName},`)}\n${message}`);
 
     const info = await mailTransporter({
       to: recipientEmail,
@@ -2220,7 +2077,7 @@ export const sendPaymentLinkReminderEmail = async (
     `.trim();
 
     const recipientName = recipientEmail.split('@')[0] || "there";
-    const htmlBody = dynoPayGreetingTemplate(recipientName, message, headerText, false);
+    const htmlBody = dynoPayEmailTemplate(headerText, `${p(`Hey ${recipientName},`)}\n${message}`);
 
     const info = await mailTransporter({
       to: recipientEmail,
@@ -2482,7 +2339,7 @@ export const sendApiKeyCreatedEmail = async (
         ${dataRow('Date', `${date} at ${time}`, true)}
       </table>
     `)}
-    ${keyType === 'production' ? p(`<strong>Important:</strong> This is a production key. Keep it secure and never share it publicly.`, `color: #991b1b;`) : ''}
+    ${keyType === 'production' ? warnText(`<strong>Important:</strong> This is a production key. Keep it secure and never share it publicly.`) : ''}
     ${p(`<strong>Didn't do this?</strong><br />If you didn't ${action === 'created' ? 'create' : 'regenerate'} this API key, please secure your account immediately.`)}`;
 
     const html = dynoPayEmailTemplate("API Key Update", content, true, "View API Keys", `${FRONTEND_BASE_URL}/dashboard/api-keys`);
@@ -2596,7 +2453,7 @@ export const sendSubscriptionPaymentFailedEmail = async (
       </table>
     `, '#ef4444')}
     ${p(`To keep your subscription active, please:<br />1. Update your payment method<br />2. Ensure sufficient funds are available<br />3. Contact your bank if the issue persists`)}
-    ${p(`Your subscription may be cancelled if payment is not received.`, `color: #991b1b;`)}`;
+    ${warnText(`Your subscription may be cancelled if payment is not received.`)}`;
 
     const customerHtml = dynoPayEmailTemplate("Payment Failed", customerContent, true, "Update Payment", `${FRONTEND_BASE_URL}/dashboard/subscriptions`);
     await mailTransporter({ to: customerEmail, name: displayName, subject: customerSubject, body: customerHtml });

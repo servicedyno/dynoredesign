@@ -85,28 +85,66 @@ export const baseEmailTemplate = (
       .card { background-color: #1f2937 !important; }
       .hdr-bar { background-color: #0c1a3d !important; }
       h1.hdg { color: #93c5fd !important; }
-      .msg, .msg p, .msg li, .msg td { color: #d1d5db !important; }
-      .msg strong { color: #f3f4f6 !important; }
+      /* Content area: override ALL child elements */
+      .msg, .msg p, .msg li, .msg td, .msg div, .msg span { color: #d1d5db !important; }
+      .msg strong, .msg b { color: #f3f4f6 !important; }
       .msg a:not(.btn) { color: #93c5fd !important; }
+      /* Tables inside content */
+      .msg table td { color: #d1d5db !important; }
+      .msg table td strong { color: #f3f4f6 !important; }
+      .msg table td span { color: #d1d5db !important; }
+      /* Info box (blue accent) */
       .info-box { background-color: #1e293b !important; border-left-color: #3b82f6 !important; }
-      .info-box td, .info-box p, .info-box strong { color: #d1d5db !important; }
+      .info-box td, .info-box p, .info-box span { color: #d1d5db !important; }
       .info-box strong { color: #f3f4f6 !important; }
+      /* Status badges */
       .status-success { background-color: #064e3b !important; color: #6ee7b7 !important; }
       .status-pending { background-color: #78350f !important; color: #fcd34d !important; }
       .status-error { background-color: #7f1d1d !important; color: #fca5a5 !important; }
+      /* Data rows */
       .data-row { border-bottom-color: #374151 !important; }
+      /* Sign-off */
       .sign { color: #9ca3af !important; }
       .sign strong { color: #d1d5db !important; }
       .sep { border-top-color: #374151 !important; }
+      /* Footer */
       .ftr-bg { background-color: #0f172a !important; }
       .ftr-text { color: #6b7280 !important; }
       .ftr-link { color: #6b7280 !important; }
+      /* Colored accent boxes */
       .alert-box { background-color: #451a03 !important; border-left-color: #f59e0b !important; }
-      .alert-box td, .alert-box p { color: #fcd34d !important; }
+      .alert-box td, .alert-box p, .alert-box span { color: #fcd34d !important; }
+      .alert-box strong { color: #fef3c7 !important; }
       .error-box { background-color: #450a0a !important; border-left-color: #ef4444 !important; }
-      .error-box td, .error-box p { color: #fca5a5 !important; }
+      .error-box td, .error-box p, .error-box span { color: #fca5a5 !important; }
+      .error-box strong { color: #fee2e2 !important; }
       .success-box { background-color: #052e16 !important; border-left-color: #22c55e !important; }
-      .success-box td, .success-box p { color: #86efac !important; }
+      .success-box td, .success-box p, .success-box span { color: #86efac !important; }
+      .success-box strong { color: #dcfce7 !important; }
+      .neutral-box { background-color: #1e293b !important; border-color: #374151 !important; }
+      .neutral-box td, .neutral-box p, .neutral-box span { color: #d1d5db !important; }
+      .neutral-box strong { color: #f3f4f6 !important; }
+      /* Stat cards (two-column highlight blocks) */
+      .stat-card { background-color: #1e293b !important; }
+      .stat-card td, .stat-card p, .stat-card span { color: #d1d5db !important; }
+      .stat-card .stat-value { color: #93c5fd !important; }
+      .stat-card .stat-value-green { color: #86efac !important; }
+      /* OTP code block */
+      .otp-code { background-color: #1e293b !important; border-color: #3b82f6 !important; color: #93c5fd !important; }
+      /* Warning/security text */
+      .warn-text, .warn-text p { color: #fca5a5 !important; }
+      .warn-text strong { color: #fee2e2 !important; }
+      /* Monospace text (addresses, tx IDs) */
+      .mono { color: #d1d5db !important; }
+      /* Wallet address box */
+      .addr-box { background-color: #1e293b !important; }
+      .addr-box td { color: #d1d5db !important; }
+      /* Fee table rows */
+      .fee-row td { color: #d1d5db !important; border-bottom-color: #374151 !important; }
+      .fee-total td { color: #f3f4f6 !important; }
+      /* Section dividers */
+      .section-border { border-bottom-color: #374151 !important; }
+      /* Gmail workaround */
       u + .body .bg { background-color: #111827 !important; }
     }
   </style>
@@ -246,7 +284,116 @@ export const p = (text: string, extra: string = ''): string => {
 export const otpBlock = (code: string): string => {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
     <tr><td align="center">
-      <div style="display: inline-block; background-color: #f0f4ff; border: 2px dashed #0d1f5c; border-radius: 8px; padding: 16px 40px; font-size: 32px; font-weight: 700; color: #0d1f5c; letter-spacing: 10px; font-family: 'SF Mono', 'Fira Code', monospace, Arial, sans-serif;">${code}</div>
+      <div class="otp-code" style="display: inline-block; background-color: #f0f4ff; border: 2px dashed #0d1f5c; border-radius: 8px; padding: 16px 40px; font-size: 32px; font-weight: 700; color: #0d1f5c; letter-spacing: 10px; font-family: 'SF Mono', 'Fira Code', monospace, Arial, sans-serif;">${code}</div>
     </td></tr>
   </table>`;
+};
+
+
+/**
+ * Warning/security text paragraph (red text with dark mode support)
+ */
+export const warnText = (text: string): string => {
+  return `<p class="warn-text" style="font-size: 14px; color: #991b1b; line-height: 1.65; margin: 0 0 14px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${text}</p>`;
+};
+
+/**
+ * Alert box (amber/warning variant of infoBox)
+ */
+export const alertBox = (content: string): string => {
+  return `<table role="presentation" class="alert-box" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fffbeb; border-radius: 8px; border-left: 3px solid #f59e0b; margin: 20px 0;">
+    <tr><td style="padding: 16px 20px;">${content}</td></tr>
+  </table>`;
+};
+
+/**
+ * Error box (red variant of infoBox)
+ */
+export const errorBox = (content: string): string => {
+  return `<table role="presentation" class="error-box" width="100%" cellpadding="0" cellspacing="0" style="background-color: #fef2f2; border-radius: 8px; border-left: 3px solid #ef4444; margin: 20px 0;">
+    <tr><td style="padding: 16px 20px;">${content}</td></tr>
+  </table>`;
+};
+
+/**
+ * Success box (green variant of infoBox)
+ */
+export const successBox = (content: string): string => {
+  return `<table role="presentation" class="success-box" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f0fdf4; border-radius: 8px; border-left: 3px solid #22c55e; margin: 20px 0;">
+    <tr><td style="padding: 16px 20px;">${content}</td></tr>
+  </table>`;
+};
+
+/**
+ * Neutral box (gray, for address blocks, wallet info, etc.)
+ */
+export const neutralBox = (content: string): string => {
+  return `<table role="presentation" class="neutral-box" width="100%" cellpadding="0" cellspacing="0" style="background-color: #f3f4f6; border-radius: 6px; margin: 16px 0;">
+    <tr><td style="padding: 12px 16px;">${content}</td></tr>
+  </table>`;
+};
+
+/**
+ * Stat card — for two-column highlight blocks (Received / Payout)
+ */
+export const statCard = (label: string, value: string, subtitle: string, variant: 'blue' | 'green' = 'blue'): string => {
+  const valueClass = variant === 'green' ? 'stat-value-green' : 'stat-value';
+  const valueFallbackColor = variant === 'green' ? '#15803d' : '#0d1f5c';
+  return `<table role="presentation" class="stat-card" width="100%" cellpadding="0" cellspacing="0" style="background-color: ${variant === 'green' ? '#f0fdf4' : '#f0f4ff'}; border-radius: 8px;">
+    <tr><td style="padding: 16px; text-align: center;">
+      <p style="font-size: 11px; font-weight: 600; color: #6b7280; margin: 0 0 4px 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">${label}</p>
+      <p class="${valueClass}" style="font-size: 22px; font-weight: 700; color: ${valueFallbackColor}; margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${value}</p>
+      <p style="font-size: 12px; color: #6b7280; margin: 4px 0 0 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${subtitle}</p>
+    </td></tr>
+  </table>`;
+};
+
+/**
+ * Two-column stat cards side by side
+ */
+export const twoColumnStats = (leftHtml: string, rightHtml: string): string => {
+  return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
+    <tr>
+      <td style="padding: 0 4px 0 0; width: 50%;">${leftHtml}</td>
+      <td style="padding: 0 0 0 4px; width: 50%;">${rightHtml}</td>
+    </tr>
+  </table>`;
+};
+
+/**
+ * Fee breakdown table row
+ */
+export const feeRow = (label: string, value: string, isNegative: boolean = false): string => {
+  const valueColor = isNegative ? '#dc2626' : '#1f2937';
+  return `<tr class="fee-row">
+    <td style="padding: 6px 0; color: #6b7280; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; border-bottom: 1px solid #f1f5f9;">${label}</td>
+    <td style="padding: 6px 0; text-align: right; color: ${valueColor}; font-size: 13px; font-weight: 500; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; border-bottom: 1px solid #f1f5f9;">${value}</td>
+  </tr>`;
+};
+
+/**
+ * Fee breakdown total row (bold, no border)
+ */
+export const feeTotalRow = (label: string, value: string): string => {
+  return `<tr class="fee-total">
+    <td style="padding: 10px 0 0; font-weight: 700; color: #1f2937; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${label}</td>
+    <td style="padding: 10px 0 0; text-align: right; font-weight: 700; color: #15803d; font-size: 14px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;">${value}</td>
+  </tr>`;
+};
+
+/**
+ * Fee breakdown table wrapper
+ */
+export const feeTable = (rows: string): string => {
+  return alertBox(`
+    <p style="font-size: 13px; font-weight: 600; color: #78716c; margin: 0 0 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif; text-transform: uppercase; letter-spacing: 0.5px;">Fee Breakdown</p>
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${rows}</table>
+  `);
+};
+
+/**
+ * Monospace text for addresses, IDs, hashes (with dark mode class)
+ */
+export const mono = (text: string): string => {
+  return `<span class="mono" style="font-family: 'SF Mono', 'Fira Code', monospace, Arial, sans-serif; font-size: 13px; word-break: break-all; color: #374151;">${text}</span>`;
 };
