@@ -33,18 +33,18 @@ export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
   flexDirection: "row",
   alignItems: "stretch",
   width: "100%",
-  maxWidth: "1060px",
+  maxWidth: "1100px",
   height: "auto",
-  minHeight: "580px",
+  minHeight: "600px",
   margin: "0 auto",
-  background: theme.palette.mode === "dark" ? "#0B0D17" : "#f4f6fa",
-  borderRadius: "16px",
+  background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
+  borderRadius: "20px",
   overflow: "hidden",
   boxShadow:
     theme.palette.mode === "dark"
-      ? "0 4px 40px rgba(0,0,0,0.4)"
-      : "0 4px 40px rgba(47,47,101,0.12)",
-  border: `1px solid ${theme.palette.mode === "dark" ? "#1f2237" : "#e2e5ed"}`,
+      ? "0 8px 60px rgba(0,0,0,0.5)"
+      : "0 8px 60px rgba(47,47,101,0.10)",
+  border: `1px solid ${theme.palette.mode === "dark" ? "#1f2237" : "#e8eaf0"}`,
 
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
@@ -55,8 +55,11 @@ export const SplitLayoutWrapper = styled(Box)(({ theme }) => ({
   },
 
   [theme.breakpoints.down("sm")]: {
-    margin: "16px auto",
-    borderRadius: "12px",
+    margin: "0 auto",
+    borderRadius: "0",
+    border: "none",
+    boxShadow: "none",
+    minHeight: "100dvh",
   },
 }));
 
@@ -97,18 +100,20 @@ export const FormPanel = styled(Box)(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   alignItems: "center",
-  padding: "32px 40px",
+  padding: "40px 48px",
   overflow: "auto",
   background: theme.palette.mode === "dark" ? "#0B0D17" : "#fff",
   scrollbarWidth: "none",
   "&::-webkit-scrollbar": { display: "none" },
 
   [theme.breakpoints.down("md")]: {
-    padding: "24px 20px",
+    padding: "32px 28px",
   },
 
   [theme.breakpoints.down("sm")]: {
-    padding: "20px 16px",
+    padding: "32px 20px 40px",
+    alignItems: "flex-start",
+    justifyContent: "flex-start",
   },
 }));
 

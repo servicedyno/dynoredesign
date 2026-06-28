@@ -14,8 +14,12 @@ import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import ThemeToggle from "@/Components/UI/ThemeToggle";
 import OtpDialog from "@/Components/UI/OtpDialog";
 import CustomRadio from "@/Components/UI/RadioGroup";
+import AuthBrandPanel from "@/Components/UI/AuthLayout/AuthBrandPanel";
 import {
   AuthContainer,
+  AuthPageBackground,
+  SplitLayoutWrapper,
+  FormPanel,
   CardWrapper,
   ImageCenter,
 } from "@/Containers/Login/styled";
@@ -917,51 +921,51 @@ export default function Login() {
   };
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: { xs: "flex-start", sm: "center" },
-        alignItems: "center",
-        background: (t: any) => t.palette.mode === "dark" ? "#0B0D17" : "#f0f2f7",
-        padding: { xs: "16px", sm: "32px 24px" },
-        boxSizing: "border-box",
-      }}
-    >
-    <AuthContainer>
-      <CardWrapper
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: isMobile ? "10px 18px" : "8px 27px",
-          height: isMobile ? "49px" : "56px",
-          overflow: "visible",
-        }}
-      >
-        {/* Logo */}
-        <Image
-          src={mounted && theme.palette.mode === "dark" ? WhiteLogo : Logo}
-          alt="logo"
-          width={isMobile ? 86 : 114}
-          height={isMobile ? 29 : 39}
-          draggable={false}
-          onClick={() => {
-            router.push("/");
-          }}
-          style={{ cursor: "pointer" }}
-        />
+    <AuthPageBackground>
+    <SplitLayoutWrapper>
+      {/* Left: Brand Panel */}
+      <AuthBrandPanel />
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      {/* Right: Form Panel */}
+      <FormPanel>
+      <Box sx={{ width: "100%", maxWidth: 420 }}>
+        {/* Mobile-only: Logo + controls (hidden on desktop since brand panel shows logo) */}
+        <Box
+          sx={{
+            display: { xs: "flex", lg: "none" },
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Image
+            src={mounted && theme.palette.mode === "dark" ? WhiteLogo : Logo}
+            alt="logo"
+            width={isMobile ? 86 : 114}
+            height={isMobile ? 29 : 39}
+            draggable={false}
+            onClick={() => router.push("/")}
+            style={{ cursor: "pointer" }}
+          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <LanguageSwitcher />
+            <ThemeToggle size="small" />
+          </Box>
+        </Box>
+
+        {/* Desktop-only: settings row */}
+        <Box
+          sx={{
+            display: { xs: "none", lg: "flex" },
+            justifyContent: "flex-end",
+            alignItems: "center",
+            mb: 2,
+            gap: 0.5,
+          }}
+        >
           <LanguageSwitcher />
           <ThemeToggle size="small" />
         </Box>
-      </CardWrapper>
-
-      {/* Login Card */}
-      <CardWrapper sx={{ padding: "30px" }}>
         <TitleDescription
           title={t("login")}
           description={t("loginDescription")}
@@ -1869,7 +1873,10 @@ export default function Login() {
             </ImageCenter>
           </Box>
         </Box>
-      </CardWrapper>
+
+      </Box>
+      </FormPanel>
+    </SplitLayoutWrapper>
 
       {/* Email OTP Dialog */}
       {loginMethod === "email" && (
@@ -1993,7 +2000,6 @@ export default function Login() {
             : undefined
         }
       />
-    </AuthContainer>
-    </Box>
+    </AuthPageBackground>
   );
 }

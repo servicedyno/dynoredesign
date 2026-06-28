@@ -8,7 +8,8 @@ import CustomButton from "@/Components/UI/Buttons";
 import LanguageSwitcher from "@/Components/UI/LanguageSwitcher";
 import ThemeToggle from "@/Components/UI/ThemeToggle";
 import OtpDialog from "@/Components/UI/OtpDialog";
-import { AuthContainer, CardWrapper, ImageCenter } from "@/Containers/Login/styled";
+import AuthBrandPanel from "@/Components/UI/AuthLayout/AuthBrandPanel";
+import { AuthContainer, AuthPageBackground, SplitLayoutWrapper, FormPanel, CardWrapper, ImageCenter } from "@/Containers/Login/styled";
 import useIsMobile from "@/hooks/useIsMobile";
 import {
   USER_API_ERROR,
@@ -514,51 +515,51 @@ const Register = () => {
   };
 
   return (
-    <Box
-      sx={{
-        width: "100%",
-        minHeight: "100dvh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: { xs: "flex-start", sm: "center" },
-        alignItems: "center",
-        background: (t: any) => t.palette.mode === "dark" ? "#0B0D17" : "#f0f2f7",
-        padding: { xs: "16px", sm: "32px 24px" },
-        boxSizing: "border-box",
-      }}
-    >
-    <AuthContainer>
-      <CardWrapper
-        sx={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: isMobile ? "10px 18px" : "8px 27px",
-          height: isMobile ? "49px" : "56px",
-          overflow: "visible",
-        }}
-      >
-        {/* Logo */}
-        <Image
-          src={mounted && muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
-          alt="logo"
-          width={isMobile ? 86 : 114}
-          height={isMobile ? 29 : 39}
-          draggable={false}
-          onClick={() => {
-            router.push("/");
-          }}
-          style={{ cursor: "pointer" }}
-        />
+    <AuthPageBackground>
+    <SplitLayoutWrapper>
+      {/* Left: Brand Panel */}
+      <AuthBrandPanel />
 
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+      {/* Right: Form Panel */}
+      <FormPanel>
+      <Box sx={{ width: "100%", maxWidth: 420 }}>
+        {/* Mobile-only: Logo + controls */}
+        <Box
+          sx={{
+            display: { xs: "flex", lg: "none" },
+            justifyContent: "space-between",
+            alignItems: "center",
+            mb: 3,
+          }}
+        >
+          <Image
+            src={mounted && muiTheme.palette.mode === "dark" ? WhiteLogo : Logo}
+            alt="logo"
+            width={isMobile ? 86 : 114}
+            height={isMobile ? 29 : 39}
+            draggable={false}
+            onClick={() => router.push("/")}
+            style={{ cursor: "pointer" }}
+          />
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
+            <LanguageSwitcher />
+            <ThemeToggle size="small" />
+          </Box>
+        </Box>
+
+        {/* Desktop-only: settings row */}
+        <Box
+          sx={{
+            display: { xs: "none", lg: "flex" },
+            justifyContent: "flex-end",
+            alignItems: "center",
+            mb: 2,
+            gap: 0.5,
+          }}
+        >
           <LanguageSwitcher />
           <ThemeToggle size="small" />
         </Box>
-      </CardWrapper>
-
-      {/* Register Card */}
-      <CardWrapper sx={{ padding: "30px" }}>
         <TitleDescription
           title={t("register")}
           description={t("registerDescription")}
@@ -1101,7 +1102,10 @@ const Register = () => {
         </Box>
 
         {/* Google sign-in is now presented at the top of the form (primary path). */}
-      </CardWrapper>
+
+      </Box>
+      </FormPanel>
+    </SplitLayoutWrapper>
 
       {/* Email Verification OTP Dialog */}
       <OtpDialog
@@ -1173,8 +1177,7 @@ const Register = () => {
           </Box>
         </Box>
       )}
-    </AuthContainer>
-    </Box>
+    </AuthPageBackground>
   );
 };
 
