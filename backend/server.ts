@@ -1029,6 +1029,11 @@ const startServer = async () => {
     const { onboardingEventModel } = await import("./models");
     await onboardingEventModel.sync(syncOptions);
     log('Onboarding analytics table synced successfully.', 'info');
+
+    // Sync self-transaction table (dashboard / analytics endpoints query it)
+    const { selfTransactionModel } = await import("./models/userModels");
+    await selfTransactionModel.sync(syncOptions);
+    log('Self-transaction table synced successfully.', 'info');
     
     // One-time migration: shorten old long referral codes (DYNO2026XXXYYY → DYNO-XXXXXX)
     try {

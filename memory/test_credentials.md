@@ -11,6 +11,13 @@
 - Password: QaOnboard#2026
 - user_id: 3 (email_verified=true). Has 1 company: "QA Test Co" (company_id=2). No wallet, no payment link.
 
+## Empty/new QA Merchant (created 2026-06-28, verified email) — for dashboard empty-state testing
+- Email: qa.empty.1782626169@dynopaytest.com
+- Password: QaEmpty#2026
+- user_id: 8 (email_verified=true). NO company, NO wallet, NO payment link, NO transactions.
+- Used to reproduce & verify the P0 dashboard-500 fix: GET /api/dashboard, POST /api/wallet/getUserAnalytics,
+  and all /api/dashboard/* sub-routes now return 200 with zeroed empty-state data for this user.
+
 ## How to test logged-in flows (login is OTP-gated)
 Login is a 2-step flow: `POST /api/user/login` returns `requires_login_otp` + emails an OTP (stored in
 Redis `login_otp:<session>`). Automated UI login is therefore not possible without inbox access.

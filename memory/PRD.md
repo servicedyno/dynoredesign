@@ -5,6 +5,12 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 
 ## What's Been Implemented
 
+### 2026-06-28 — P0 FIX: Dashboard 500s for empty/new merchants
+- **Root cause**: `tbl_user_self_transaction` table was never created in this DB — its model (`models/userModels/selfTransactionModel.ts`) existed and was exported, but `selfTransactionModel.sync(...)` was missing from the server.ts startup sync list (its inline sync was commented out). `getDashboard` (selfCountQuery) and `getUserAnalytics` (`selfTransactionModel.findAndCountAll`) both query it → `relation "tbl_user_self_transaction" does not exist` → 500.
+- **Fix** (`server.ts`, after the onboarding-table sync): `const { selfTransactionModel } = await import("./models/userModels"); await selfTransactionModel.sync(syncOptions);`. Non-destructive — `syncOptions = isProduction ? {} : {alter:true}`, so production only creates the table if missing (never alters/drops data).
+- **Verified** (fresh verified merchant user_id=8, no company/wallet/txn): GET `/api/dashboard` → **200** zeroed; POST `/api/wallet/getUserAnalytics` → **200** empty; `/api/dashboard/{chart,fee-tiers,recent-transactions,conversions}` → **200**. Startup log: "Self-transaction table synced successfully." `tsc --noEmit` 0 errors; backend boots clean.
+
+
 ### 2026-06-28 — paymentController refactor: blockchain payment-flow chain extracted (Phase 1 + 2)
 - **Resumed the in-progress `paymentController.ts` refactor (zero behavior change).** Extracted the tightly-coupled blockchain payment-flow chain the prior handoff named, into two new modules under `backend/controller/payment/`:
   - **`cryptoSettlement.ts`** (Phase 1, ~2,818 lines moved): `settleCryptoTransaction`, `verifyCryptoPayment`, `cryptoVerification`. These three only call each other (verified via a full call-graph analysis) → clean, no circular dependency.
@@ -92,7 +98,7 @@ USDT-TRC20 payment was received but never forwarded to the merchant. The root ca
 - Admin dashboard for stuck payment visibility
 - **Refactoring of `paymentController.ts`**: blockchain payment-flow chain extracted (now 2,199 lines, was 8,932). Remaining optional extractions: alt-payment handlers (`cardPayment`, `bankTransfer`, `bankAccount`, `googleApplePay`, `USSD`, `MobileMoney`, `QRCode`, `userWallet`), `addPayment` dispatcher, and cron/maintenance jobs (`checkingUSDT`, `sweepNativeAdminFees`, `checkFeeBalance`, `processIncompletePayments`).
 
-### Open bugs (from prior handoff, not started)
-- **P0 — Dashboard 500s for empty/new merchants**: `/api/wallet/getUserAnalytics` & `/api/dashboard` throw 500 when a merchant has no company/wallet/payments. Add safe empty-state fallbacks.
+### Open bugs (from prior handoff)
+- ~~**P0 — Dashboard 500s for empty/new merchants**~~ ✅ FIXED 2026-06-28 (missing `tbl_user_self_transaction` table now synced on startup).
 - **P1 — Merchant webhook 404**: outbound webhook to merchant URL returning 404; verify routing/payload targeting in `webhooks/index.ts`.
 - **P2 — Landing page "Network Error" (USER ACTION)**: needs a clean Railway frontend rebuild to bake the new `NEXT_PUBLIC_BASE_URL`.
