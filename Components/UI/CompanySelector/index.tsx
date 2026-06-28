@@ -27,10 +27,8 @@ import { selectCompany } from "@/Redux/Actions/CompanyAction";
 import { CompanyAction, DashboardAction, TransactionAction, WalletAction, PaymentLinkAction, ApiAction } from "@/Redux/Actions";
 import { COMPANY_FETCH } from "@/Redux/Actions/CompanyAction";
 import {
-  DASHBOARD_FETCH,
+  DASHBOARD_FETCH_ALL,
   DASHBOARD_CHART_FETCH,
-  DASHBOARD_FEE_TIERS_FETCH,
-  DASHBOARD_RECENT_TX_FETCH,
 } from "@/Redux/Actions/DashboardAction";
 import { TRANSACTION_FETCH } from "@/Redux/Actions/TransactionAction";
 import { WALLET_FETCH } from "@/Redux/Actions/WalletAction";
@@ -149,10 +147,8 @@ export default function CompanySelector() {
     axiosBaseApi.put("api/user/last-company", { company_id: companyId }).catch(() => {});
     // Re-fetch all company-scoped data for the new company
     const companyPayload = { company_id: companyId };
-    dispatch(DashboardAction(DASHBOARD_FETCH, companyPayload));
+    dispatch(DashboardAction(DASHBOARD_FETCH_ALL, companyPayload));
     dispatch(DashboardAction(DASHBOARD_CHART_FETCH, { ...companyPayload, period: "7d" }));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, companyPayload));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, companyPayload));
     dispatch(TransactionAction(TRANSACTION_FETCH, companyPayload));
     dispatch(WalletAction(WALLET_FETCH, companyPayload));
     dispatch(PaymentLinkAction(PAYLINK_FETCH, companyPayload));

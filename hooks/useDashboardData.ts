@@ -4,8 +4,7 @@ import { DashboardAction } from "@/Redux/Actions";
 import {
   DASHBOARD_FETCH,
   DASHBOARD_CHART_FETCH,
-  DASHBOARD_FEE_TIERS_FETCH,
-  DASHBOARD_RECENT_TX_FETCH,
+  DASHBOARD_FETCH_ALL,
 } from "@/Redux/Actions/DashboardAction";
 import { rootReducer } from "@/utils/types";
 
@@ -37,9 +36,9 @@ export const useDashboardData = () => {
   useEffect(() => {
     if (!shouldFetch) return;
     const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
-    dispatch(DashboardAction(DASHBOARD_FETCH, payload));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
+    // Single dispatch fetches stats + fee-tiers + recent-tx in parallel
+    // (avoids debounce dropping individual fetches)
+    dispatch(DashboardAction(DASHBOARD_FETCH_ALL, payload));
   }, [dispatch, selectedCompanyId, shouldFetch]);
 
   const fetchChartData = useCallback(
@@ -55,9 +54,7 @@ export const useDashboardData = () => {
   const refreshDashboard = useCallback(() => {
     if (!shouldFetch) return;
     const payload = selectedCompanyId ? { company_id: selectedCompanyId } : undefined;
-    dispatch(DashboardAction(DASHBOARD_FETCH, payload));
-    dispatch(DashboardAction(DASHBOARD_FEE_TIERS_FETCH, payload));
-    dispatch(DashboardAction(DASHBOARD_RECENT_TX_FETCH, payload));
+    dispatch(DashboardAction(DASHBOARD_FETCH_ALL, payload));
   }, [dispatch, selectedCompanyId, shouldFetch]);
 
   return {
