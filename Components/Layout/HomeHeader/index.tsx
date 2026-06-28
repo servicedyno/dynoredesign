@@ -236,8 +236,9 @@ const HomeHeader = memo(function HomeHeader() {
                 navigateTo="/auth/register"
                 sx={{
                   borderRadius: "8px",
-                  padding: "8px 12px",
-                  minWidth: "98px",
+                  padding: "10px 18px",
+                  minWidth: "108px",
+                  fontSize: "15px",
                 }}
               />
             </StyledGetStartedButton>

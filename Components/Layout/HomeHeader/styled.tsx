@@ -22,8 +22,8 @@ export const FixedHeader = styled("header")(({ theme }) => ({
 }));
 
 export const HeaderContainer = styled(Box)(({ theme }) => ({
-  height: 64,
-  padding: "0 12px",
+  height: 68,
+  padding: "0 16px",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
@@ -74,7 +74,7 @@ export const RightGroup = styled(Box)({
 
 export const NavLinks = styled("nav")(({ theme }) => ({
   display: "flex",
-  gap: 30,
+  gap: 32,
   letterSpacing: "0px",
   fontFamily: "OutfitRegular",
   alignItems: "center",
@@ -86,13 +86,13 @@ export const NavLinks = styled("nav")(({ theme }) => ({
 
   button: {
     textTransform: "none",
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: 400,
-    lineHeight: "20px",
+    lineHeight: "22px",
     letterSpacing: "0px",
-    fontFamily: "OutfitRegular",
+    fontFamily: "OutfitMedium",
     color: theme.palette.text.secondary,
-    padding: 0,
+    padding: "6px 4px",
 
     "&:hover": {
       background: "transparent",
@@ -104,14 +104,14 @@ export const NavLinks = styled("nav")(({ theme }) => ({
 export const Actions = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "12px",
+  gap: "14px",
 
   ".signin": {
     textTransform: "none",
-    fontSize: "14px",
+    fontSize: "15px",
     fontWeight: 500,
     color: theme.palette.text.primary,
-    lineHeight: "20px",
+    lineHeight: "22px",
     fontFamily: "OutfitMedium",
     whiteSpace: "nowrap",
 
@@ -222,13 +222,13 @@ export const MobileNavItem = styled(Typography)(({ theme }) => ({
 
 export const StyledSignInButton = styled(Button)(({ theme }) => ({
   textTransform: "none",
-  fontSize: "14px",
+  fontSize: "15px",
   fontWeight: 500,
-  lineHeight: "20px",
+  lineHeight: "22px",
   fontFamily: "OutfitMedium",
   color: theme.palette.text.primary,
   whiteSpace: "nowrap",
-  padding: 0,
+  padding: "6px 4px",
 
   "&:hover": {
     background: "transparent",
