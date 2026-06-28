@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Target URL from test_result.md
-BASE_URL = "https://dotenv-deploy-1.preview.emergentagent.com"
+BASE_URL = "https://blockchain-checkout-5.preview.emergentagent.com"
 
 def test_health_check():
     """Test GET /api/ - Health check endpoint"""
