@@ -37,7 +37,9 @@ COPY Redux/ ./Redux/
 COPY helpers/ ./helpers/
 
 # NEXT_PUBLIC_* must be set at BUILD time (inlined into JS bundle)
-ARG NEXT_PUBLIC_BASE_URL=https://api.dynopay.com/
+# Default: empty = relative URLs (works when frontend+backend share the same domain)
+# Override with --build-arg or DO env vars for custom domains
+ARG NEXT_PUBLIC_BASE_URL=
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 
 ARG NEXT_PUBLIC_SERVER_URL

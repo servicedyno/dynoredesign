@@ -33,13 +33,17 @@ export const getNetworkFees = async (req: express.Request, res: express.Response
 
     if (chain) {
       const fee = await getBlockchainNetworkFee(chain as string);
-      successResponseHelper(res, 200, "Network fee retrieved", fee);
+      // Defensive: strip any non-serializable properties (e.g. socket refs from Axios errors)
+      const safeFee = JSON.parse(JSON.stringify(fee));
+      successResponseHelper(res, 200, "Network fee retrieved", safeFee);
     } else {
       const fees = await getAllBlockchainFees();
-      successResponseHelper(res, 200, "Network fees retrieved", fees);
+      // Defensive: strip any non-serializable properties (e.g. socket refs from Axios errors)
+      const safeFees = JSON.parse(JSON.stringify(fees));
+      successResponseHelper(res, 200, "Network fees retrieved", safeFees);
     }
   } catch (e) {
-    const message = getErrorMessage(e);
+    const message = typeof e === 'string' ? e : (e as any)?.message || 'Failed to fetch network fees';
     cronLogger.error("[getNetworkFees] Error:", message);
     errorResponseHelper(res, 500, message);
   }

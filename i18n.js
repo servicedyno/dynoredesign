@@ -51,8 +51,8 @@ async function detectAndApplyGeoLocale() {
     const userChoseManually = localStorage.getItem("lang_manual") === "true";
     if (userChoseManually) return;
 
-    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || '';
-    const resp = await fetch(`${baseUrl}api/geo-detect`, {
+    const baseUrl = (process.env.NEXT_PUBLIC_BASE_URL || '').replace(/\/+$/, '');
+    const resp = await fetch(`${baseUrl}/api/geo-detect`, {
       signal: AbortSignal.timeout(4000),
     });
     if (!resp.ok) return;

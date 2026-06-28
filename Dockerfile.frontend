@@ -38,7 +38,8 @@ COPY helpers/ ./helpers/
 
 # NEXT_PUBLIC_* vars must be set at BUILD time
 # These are inlined into the JavaScript bundle by Next.js
-ARG NEXT_PUBLIC_BASE_URL=https://api.dynopay.com/
+# Default: empty = relative URLs (works when frontend+backend share the same domain)
+ARG NEXT_PUBLIC_BASE_URL=
 ENV NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL}
 
 ARG NEXT_PUBLIC_SERVER_URL

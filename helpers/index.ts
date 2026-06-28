@@ -49,9 +49,10 @@ const getTime = (dateStamp: any) => {
 };
 
 const generateRedirectUrl = (data: any) => {
+  const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/+$/, '');
   let url;
   url =
-    process.env.NEXT_PUBLIC_SERVER_URL +
+    serverUrl +
     "/payment/verify?response=" +
     JSON.stringify(data);
 
@@ -61,15 +62,16 @@ const generateRedirectUrl = (data: any) => {
 const generateStatusUrl = (data: any) => {
   let url;
   const status = data?.status;
+  const serverUrl = (process.env.NEXT_PUBLIC_SERVER_URL || '').replace(/\/+$/, '');
   if (status === "successful") {
     url =
-      process.env.NEXT_PUBLIC_SERVER_URL +
-      "payment/success?response=" +
+      serverUrl +
+      "/payment/success?response=" +
       JSON.stringify(data);
   } else {
     url =
-      process.env.NEXT_PUBLIC_SERVER_URL +
-      "payment/failed?response=" +
+      serverUrl +
+      "/payment/failed?response=" +
       JSON.stringify(data);
   }
   return url;
