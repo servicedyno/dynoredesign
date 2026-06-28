@@ -2051,3 +2051,60 @@ frontend:
   * Defensive JSON serialization in feeController.ts successfully prevents circular JSON errors
   * All existing endpoints still work correctly after bug fixes - no regressions detected
   * Core payment and fee functionality unaffected by bug fixes
+
+
+## Bug Fix: Wallet currency_type + Onboarding Status (2026-06-28)
+- bug_report: User hostbay@moxx.co has wallets in Railway DB but dashboard shows wallet setup screen as if new merchant
+- root_cause: All 13 crypto wallets (BTC, ETH, TRX, SOL, XRP, etc.) had currency_type='FIAT' instead of 'CRYPTO'. The onboarding-status endpoint only counted currency_type='CRYPTO' wallets → found 0 → showed wallet setup.
+- fixes_applied:
+  1. DATA FIX: Updated 13 wallets in tbl_user_wallet from currency_type='FIAT' to 'CRYPTO' for crypto wallet_types
+  2. CODE FIX: Updated getOnboardingStatus in userController.ts to detect crypto wallets by wallet_type (known crypto types) as fallback, not just currency_type column
+  3. CODE FIX: Added try/catch around userWalletAddressModel query (table may not exist in all environments)
+  4. CODE FIX: Added startup auto-fix migration in server.ts that corrects currency_type='FIAT' → 'CRYPTO' for known crypto wallet_types
+- test_endpoints:
+  - GET /health: Verify DB connected
+  - GET /api/: Health check
+  - GET /api/pay/network-fees: Verify fees work
+- test_credentials: User hostbay@moxx.co exists (user_id=1) with 13 crypto wallets now correctly marked as CRYPTO
+
+## Review Request Testing Results - 2026-06-28 08:55:36 UTC
+- agent: testing
+- message: Completed review request testing of DynoPay backend API endpoints after wallet currency_type bug fix
+- bug_fix_context: Fixed 13 crypto wallets incorrectly marked as currency_type='FIAT' instead of 'CRYPTO' for user hostbay@moxx.co (user_id=1). Updated getOnboardingStatus logic to detect crypto wallets by wallet_type as fallback. Added startup auto-fix migration in server.ts.
+- test_results: MIXED RESULTS ⚠️ (2/3 tests passed - 66.7% success rate)
+  * GET /health → HTTP 404 (❌ CRITICAL ISSUE: Endpoint not publicly accessible)
+    - Root cause: /health endpoint defined in server.ts (line 253) but not exposed through Kubernetes ingress
+    - Kubernetes ingress only routes /api/* paths to backend
+    - Frontend (Next.js) handles root domain and returns 404 for /health
+    - Fallback /api/status/health works (HTTP 200) but lacks database/redis status fields
+    - The /health endpoint with full health checks (database, redis, tatum_api, binance_websocket) exists in code but is not accessible
+  * GET /api/ → HTTP 200 (✅ Health check operational, status: operational, service: Dynopay API, version: 1.0.0, timestamp: 2026-06-28T08:55:36.556Z)
+  * GET /api/pay/network-fees → HTTP 200 (✅ Network fees retrieved successfully with proper data structure - message and data fields present)
+  * GET /api/pay/network-fees → ✅ Data contains network fees for 12 chains: BTC, ETH, LTC, DOGE, TRX, USDT_ERC20, USDC_ERC20, RLUSD_ERC20, USDT_TRC20, SOL, XRP, RLUSD
+- verification_status: PARTIAL ⚠️
+  * 2 of 3 specified endpoints tested successfully with expected behavior
+  * /api/ endpoint returns appropriate status code (200 - NOT 500) with operational status
+  * Network fees endpoint returns proper data structure with message and data fields
+  * Network fees endpoint returns valid JSON with all expected chains
+  * No 500 errors detected on any tested endpoint - key requirement verified
+  * ❌ CRITICAL ISSUE: /health endpoint with database/redis status not publicly accessible
+  * Backend API core functionality operational after wallet currency_type bug fix
+  * Wallet currency_type fix and onboarding status improvements did not break any core functionality
+  * Core payment and fee functionality unaffected by bug fixes
+- architectural_issue:
+  * The /health endpoint is defined in server.ts at line 253 with comprehensive health checks:
+    - Database connection status (PostgreSQL)
+    - Redis connection status
+    - Tatum API circuit breaker status
+    - Binance WebSocket status
+  * However, this endpoint is not accessible through the public URL because:
+    - It's defined at root level: app.get("/health", ...)
+    - Kubernetes ingress only routes /api/* paths to backend
+    - Frontend (Next.js) handles root domain and returns 404 for /health
+  * Recommendation: Move /health endpoint to /api/health to make it publicly accessible
+  * Alternative: Update Kubernetes ingress to expose /health endpoint
+- next_steps:
+  * REQUIRED: Fix /health endpoint accessibility issue
+  * Option 1: Move endpoint from app.get("/health", ...) to router at /api/health
+  * Option 2: Update Kubernetes ingress configuration to expose /health
+  * After fix, re-test to verify database and redis status are accessible

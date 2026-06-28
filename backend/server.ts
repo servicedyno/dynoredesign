@@ -1205,6 +1205,25 @@ const startServer = async () => {
     } else {
       log('⚠️  Skipping startup reconciliation (background jobs disabled)', 'warn');
     }
+
+    // ── Fix legacy wallet currency_type (one-time data correction) ────────────
+    // Some wallets were created with currency_type='FIAT' despite being crypto wallets.
+    // This corrects them by checking wallet_type against known crypto types.
+    const CRYPTO_WALLET_TYPES = [
+      'BTC', 'ETH', 'LTC', 'DOGE', 'BCH', 'SOL', 'XRP', 'TRX',
+      'USDT-ERC20', 'USDT-TRC20', 'USDC-ERC20', 'USDT-POLYGON',
+      'POLYGON', 'RLUSD', 'RLUSD-ERC20',
+    ];
+    sequelize.query(
+      `UPDATE tbl_user_wallet SET currency_type = 'CRYPTO' WHERE wallet_type IN (:cryptoTypes) AND currency_type = 'FIAT'`,
+      { replacements: { cryptoTypes: CRYPTO_WALLET_TYPES }, type: sequelize.QueryTypes.UPDATE as any }
+    ).then((result: any) => {
+      const count = Array.isArray(result) ? result[1] : result;
+      if (count > 0) log(`Fixed ${count} wallet(s) with incorrect currency_type (FIAT→CRYPTO)`, 'info');
+    }).catch((err: Error) => {
+      log(`Wallet currency_type fix failed: ${err.message}`, 'warn');
+    });
+
   });
 
   // ─── Global Error Handler (must be AFTER all routes) ─────────────────────────

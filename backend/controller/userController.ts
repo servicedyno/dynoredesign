@@ -2180,12 +2180,25 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
     const userId = userData.user_id;
     
     // 1. Check wallet setup
-    // Only count CRYPTO wallets - FIAT wallets are auto-created and don't count for onboarding
-    const cryptoWallets = await userWalletModel.findAll({
-      where: { 
-        user_id: userId,
-        currency_type: 'CRYPTO',  // Only count crypto wallets
-      },
+    // Known crypto wallet_type values — wallets whose wallet_type matches any of
+    // these are crypto wallets regardless of the legacy currency_type column.
+    const CRYPTO_WALLET_TYPES = [
+      'BTC', 'ETH', 'LTC', 'DOGE', 'BCH', 'SOL', 'XRP', 'TRX',
+      'USDT-ERC20', 'USDT-TRC20', 'USDC-ERC20', 'USDT-POLYGON',
+      'POLYGON', 'RLUSD', 'RLUSD-ERC20',
+    ];
+
+    // Fetch ALL wallets for the user (not just currency_type='CRYPTO')
+    // because legacy data may have crypto wallets stored as currency_type='FIAT'.
+    const allWallets = await userWalletModel.findAll({
+      where: { user_id: userId },
+    });
+
+    // Identify crypto wallets by wallet_type OR currency_type
+    const cryptoWallets = allWallets.filter((w: any) => {
+      const wType = (w.get("wallet_type") || '').toUpperCase();
+      const cType = (w.get("currency_type") || '').toUpperCase();
+      return cType === 'CRYPTO' || CRYPTO_WALLET_TYPES.includes(wType);
     });
     
     // Count crypto wallets that have an actual wallet_address configured
@@ -2194,10 +2207,16 @@ const getOnboardingStatus = async (req: express.Request, res: express.Response) 
       return address && address.trim() !== '';
     });
     
-    // Also check the separate addresses table (userWalletAddressModel)
-    const additionalAddresses = await userWalletAddressModel.findAll({
-      where: { user_id: userId },
-    });
+    // Also check the separate addresses table (userWalletAddressModel) if it exists
+    let additionalAddresses: any[] = [];
+    try {
+      additionalAddresses = await userWalletAddressModel.findAll({
+        where: { user_id: userId },
+      });
+    } catch (e) {
+      // Table may not exist in some environments — gracefully ignore
+      userLogger.debug(`[Onboarding] userWalletAddressModel query failed (table may not exist): ${(e as any)?.message}`);
+    }
     
     // A merchant has crypto wallets if they have CRYPTO type wallets
     const hasCryptoWallet = cryptoWallets.length > 0;
