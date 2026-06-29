@@ -9,7 +9,7 @@ import json
 from datetime import datetime
 
 # Target URL
-BASE_URL = "https://payment-config-stage.preview.emergentagent.com"
+BASE_URL = "https://blockchain-checkout-6.preview.emergentagent.com"
 
 def print_separator():
     print("\n" + "="*80 + "\n")
