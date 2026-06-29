@@ -5,6 +5,12 @@ USDT-TRC20 payment gateway platform. Users can create companies, wallets, paymen
 
 ## What's Been Implemented
 
+### 2026-06-29 — Environment Setup (Emergent preview)
+- Created `/app/backend/.env` from user-provided production credentials (Railway PostgreSQL, Redis, Tatum, Telnyx, Brevo, crypto wallets/keys, etc.). Added the preview origin to `CORS_ALLOWED_ORIGINS`.
+- Created `/app/.env.local` (frontend) with `NEXT_PUBLIC_BASE_URL` pointed at the preview URL (`https://d80dbf30-dcc7-4bc4-bd8b-f0937d6af218.preview.emergentagent.com`) so the preview UI calls the preview backend (same origin), not prod `dynopay.com`. `NEXTAUTH_SECRET` placeholder replaced with a generated value; `NEXT_PUBLIC_GOOGLE_CLIENT_ID` empty (Google sign-in disabled).
+- Installed deps (`yarn install` in `/app/backend` and `/app`), restarted services. Verified: health 200, network-fees 200, geo-detect 200, landing page renders.
+- SAFETY: `WORKER_ROLE=secondary` → cron/sweeps/reconciliation DISABLED (won't touch real funds in shared prod DB). Binance is geo-blocked here (uses CoinGecko/Tatum fallback); `sshpass` tunnel unavailable — affects background jobs only, which are off.
+
 ### 2026-06-28 — Company Page Redesign & Settings Fix
 - **Company Page**: Replaced old DataTable with modern card-based layout (matching wallet page pattern). Cards show company logo/initials, email, phone, website, location, and "Manage" button that opens `CompanySettingsDialog`. Empty state with business icon and "Add Company" CTA. Loading spinner with proper fallback via saga error handling fix.
 - **Settings Page**: Redesigned from accordion to 8-card grid (3 columns desktop, 2 tablet, 1 mobile). Each card has colored icon, title, description, and navigates correctly: Company Profile→/company, Wallet Addresses→/wallet, Payment Settings→/company?section=payment, Webhook Configuration→/company?section=webhook, API Keys→/developer-keys, Profile & Security→/profile, Notifications→/notifications, My Account→/referrals.
