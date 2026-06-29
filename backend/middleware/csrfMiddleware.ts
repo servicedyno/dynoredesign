@@ -42,6 +42,8 @@ const EXEMPT_PATHS = [
   "/api/user/login",
   "/api/user/registerUser",
   "/api/user/registerPhone",
+  "/api/user/registerEmail",
+  "/api/user/phone-type-check",
   "/api/user/google-signin",
   "/api/user/facebook-signin",
   "/api/user/refresh-token",

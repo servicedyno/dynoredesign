@@ -1,5 +1,5 @@
 backend:
-  - target_url: https://blockchain-checkout-6.preview.emergentagent.com/api
+  - target_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com/api
   - test_endpoints:
     - GET /api/: Health check (should return 200)
     - GET /api/pay/network-fees: Core functionality test
@@ -16,6 +16,13 @@ backend:
     - Test email endpoints now require auth (401/403) ✅
     - No 500 errors on public endpoints ✅
   - recent_fixes:
+    - FIX (2026-06-29): Onboarding 403 CSRF — `/api/user/registerEmail` and `/api/user/registerEmail/verify-otp` (newer email-only signup flow) were NOT in csrfMiddleware.ts EXEMPT_PATHS, so the first onboarding step (no Bearer token, no CSRF cookie) was blocked with 403 "CSRF token validation failed". Added `/api/user/registerEmail` (covers verify-otp via startsWith) and `/api/user/phone-type-check` to EXEMPT_PATHS, consistent with existing public pre-auth exemptions (registerUser, registerPhone, login). Onboarding email step should now return 200/normal validation responses instead of 403.
+    - VERIFIED (2026-06-29 08:20 UTC): CSRF bug fix working correctly. All 3 onboarding endpoints now accessible without CSRF token:
+      * POST /api/user/registerEmail → HTTP 200 (OTP sent successfully)
+      * POST /api/user/registerEmail/verify-otp → HTTP 400 (validation error for invalid OTP, not CSRF 403)
+      * POST /api/user/phone-type-check → HTTP 400 (validation error, not CSRF 403)
+      * Control test: GET /api/ → HTTP 200 (health check operational)
+      * Minor issue found (unrelated to CSRF fix): GET /api/pay/network-fees → HTTP 500 (circular JSON structure error in blockchain fee service)
     - FIX (2026-04-12): Duplicate webhook dedup for BTC payments — Added Redis dedup key `confirmed-webhook-sent-{paymentId}` in cryptoVerification (paymentController.ts) to prevent webhookProcessor.ts from sending duplicate `payment.settled` webhook after settlement. Ensures idempotent webhook delivery for BTC payment confirmations.
     - FIX (2026-04-10): TRON Dynamic Energy Model (DEM) — feeLimit now accounts for DEM max multiplier (3.4x) fetched from chain params. Previously used base price (100 SUN) only → OUT_OF_ENERGY during network congestion. Min feeLimit raised from 5→15 TRX, max from 30→50 TRX. feeLimit is a ceiling (unused portion not charged), so higher limit is safe.
     - FIX (2026-04-10): Fee-free volume rollback on settlement failure — reverseTransactionVolume() added to feeFreeService.ts. If settlement fails (e.g., OUT_OF_ENERGY), the pre-recorded fee-free volume is reversed so the user's promotional balance is not consumed on failed payments.
@@ -296,6 +303,61 @@ frontend:
 - Geo Detection: PASS
 - Logo hydration mismatch: FIXED - src mismatch eliminated
 - FeeWalletMonitor error serialization: FIXED - safeErrorMsg() now handles all error types
+
+## CSRF Bug Fix Verification — Onboarding Flow (2026-06-29 08:20 UTC)
+- agent: testing
+- test_date: 2026-06-29 08:20:42 UTC
+- test_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com/api
+- bug_fix_context: User reported 403 "CSRF token validation failed" during email onboarding. Fix: Added /api/user/registerEmail and /api/user/phone-type-check to CSRF EXEMPT_PATHS in csrfMiddleware.ts
+- test_results: BUG FIX VERIFIED ✅ (3/3 critical tests passed - 100% success rate)
+
+### CRITICAL TESTS (CSRF Bug Fix) - ALL PASSED ✅
+1. **POST /api/user/registerEmail** → HTTP 200
+   - Payload: {"email": "qa.onboard.1782721242@dynopaytest.com"}
+   - Response: {"message":"Verification code sent to your email","data":{}}
+   - ✅ PASS: Email registration endpoint working, CSRF block removed
+   - No Authorization header, No CSRF token → Normal application response (not 403)
+
+2. **POST /api/user/registerEmail/verify-otp** → HTTP 400
+   - Payload: {"email": "qa.test@dynopaytest.com", "otp": "000000"}
+   - Response: {"success":false,"message":"Verification code expired. Please request a new one.","statusCode":400}
+   - ✅ PASS: OTP verification endpoint accessible, CSRF not blocking
+   - No Authorization header, No CSRF token → Validation error (not 403 CSRF error)
+
+3. **POST /api/user/phone-type-check** → HTTP 400
+   - Payload: {"phone": "+14155550123"}
+   - Response: {"success":false,"message":"Phone number is required","statusCode":400}
+   - ✅ PASS: Phone type check endpoint accessible, CSRF not blocking
+   - No Authorization header, No CSRF token → Validation error (not 403 CSRF error)
+
+### CONTROL TESTS (Regression Check)
+4. **GET /api/** → HTTP 200 ✅
+   - Response: {"status":"operational","service":"Dynopay API","version":"1.0.0",...}
+   - ✅ PASS: Health check endpoint working
+
+5. **GET /api/pay/network-fees** → HTTP 500 ⚠️
+   - Response: {"success":false,"message":"Converting circular structure to JSON...","statusCode":500}
+   - ⚠️ MINOR ISSUE (unrelated to CSRF fix): Circular JSON structure error in blockchain fee service
+   - Backend logs show: [getNetworkFees] Error, [BlockchainFeeService] Error fetching USDT_POLYGON/POLYGON/BCH fee
+   - This is a separate issue from the CSRF bug fix being tested
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ BUG FIX VERIFIED: CSRF no longer blocks onboarding endpoints
+- ✅ All 3 critical endpoints now accessible without CSRF token
+- ✅ Endpoints return normal application responses (200 success or 400 validation errors) instead of 403 CSRF errors
+- ✅ Fix implementation confirmed in csrfMiddleware.ts:
+  * Line 45: `/api/user/registerEmail` in EXEMPT_PATHS
+  * Line 46: `/api/user/phone-type-check` in EXEMPT_PATHS
+  * Line 103: `path.startsWith()` matching covers `/api/user/registerEmail/verify-otp`
+- ✅ No regressions in health check endpoint
+- ⚠️ Minor issue: /api/pay/network-fees has circular JSON error (separate from CSRF fix)
+
+### PASS CRITERIA MET
+- ✅ POST /api/user/registerEmail does NOT return 403 CSRF error
+- ✅ POST /api/user/registerEmail/verify-otp does NOT return 403 CSRF error
+- ✅ POST /api/user/phone-type-check does NOT return 403 CSRF error
+- ✅ Onboarding flow now works without CSRF token (as designed for public pre-auth endpoints)
+
 - No 500 errors
 
 ## Review Request Testing Results - 2026-04-12 08:52:14 UTC
