@@ -3459,7 +3459,7 @@ The bug fix is working perfectly. The circular JSON structure error has been com
 - agent: testing
 - test_date: 2026-06-29 09:48:00 UTC
 - test_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com/api
-- bug_fix_context: User reported 503 "Failed to send verification code. Please try again." during phone number onboarding. ROOT CAUSE: (1) Invalid TELNYX_API_KEY causing Telnyx 401, (2) Wrong TELNYX_VERIFY_PROFILE_ID, (3) Old profile "Bozzmail" with 5-digit codes (frontend expects 6). FIX: Updated backend/.env with valid TELNYX_API_KEY=KEY019E2C4363D220CBD666F6B360BE7F7B_FJlqkTyMb4YAr8daYhFZVh and new "DynoPay" profile TELNYX_VERIFY_PROFILE_ID=4900019f-12c3-657a-8b57-54b129bb2a6b (6-digit codes).
+- bug_fix_context: User reported 503 "Failed to send verification code. Please try again." during phone number onboarding. ROOT CAUSE: (1) Invalid TELNYX_API_KEY causing Telnyx 401, (2) Wrong TELNYX_VERIFY_PROFILE_ID, (3) Old profile "Bozzmail" with 5-digit codes (frontend expects 6). FIX: Updated backend/.env with a valid TELNYX_API_KEY=[REDACTED_SECRET] and new "DynoPay" verify profile (6-digit codes). Actual key/profile values live only in backend/.env (gitignored) — do NOT record secrets in this file.
 - test_results: ALL TESTS PASSED ✅ (5/5 tests successful - 100% success rate)
 
 ### CRITICAL TESTS (Bug Fix Verification) - ALL PASSED ✅
