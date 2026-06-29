@@ -16,6 +16,7 @@ backend:
     - Test email endpoints now require auth (401/403) ✅
     - No 500 errors on public endpoints ✅
   - recent_fixes:
+    - FIX (2026-06-29): GET /api/pay/network-fees 500 "Converting circular structure to JSON" — ROOT CAUSE: with NODE_ENV=production the Winston logger uses railwayFormat which did raw JSON.stringify(meta). The per-chain catch in getAllBlockchainFees logged the full Axios error (cronLogger.error(..., error)) for chains whose Tatum fee fetch returns 400 (MATIC/POLYGON/USDT_POLYGON, BCH). The Axios error holds a circular TLSSocket->HTTPParser->socket reference, so JSON.stringify THREW inside the logger, the throw escaped the catch, rejected Promise.all, and bubbled up as a 500 for the whole endpoint. FIXES: (1) utils/loggers.ts railwayFormat now uses a circular-safe stringifier (safeStringify with WeakSet + Error handling) — prevents this entire class of production logging crashes. (2) services/blockchainFeeService.ts getAllBlockchainFees catch now logs error.message string only. (3) controller/payment/feeController.ts getNetworkFees now sanitizes each fee into a known scalar shape (toSafeFeePayload) and skips invalid/error entries; single-chain upstream failures return 502 instead of 500. RESULT: all-fees returns 200 with the 12 supported chains (POLYGON/USDT_POLYGON/BCH gracefully omitted since Tatum's MATIC/BCH fee endpoint returns 400); single-chain BTC→200, POLYGON→502 graceful.
     - FIX (2026-06-29): Onboarding 403 CSRF — `/api/user/registerEmail` and `/api/user/registerEmail/verify-otp` (newer email-only signup flow) were NOT in csrfMiddleware.ts EXEMPT_PATHS, so the first onboarding step (no Bearer token, no CSRF cookie) was blocked with 403 "CSRF token validation failed". Added `/api/user/registerEmail` (covers verify-otp via startsWith) and `/api/user/phone-type-check` to EXEMPT_PATHS, consistent with existing public pre-auth exemptions (registerUser, registerPhone, login). Onboarding email step should now return 200/normal validation responses instead of 403.
     - VERIFIED (2026-06-29 08:20 UTC): CSRF bug fix working correctly. All 3 onboarding endpoints now accessible without CSRF token:
       * POST /api/user/registerEmail → HTTP 200 (OTP sent successfully)
@@ -3238,4 +3239,77 @@ The fix is architecturally sound:
 ✅ Environment verification complete - frontend renders correctly
 ✅ No issues found - all pages load and display content as expected
 ✅ Ready for deeper functional testing if needed
+
+
+## Network Fees Bug Fix Verification — Testing Results (2026-06-29 08:52 UTC)
+- agent: testing
+- test_date: 2026-06-29 08:52:49 UTC
+- test_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com/api
+- bug_fix_context: User reported GET /api/pay/network-fees returning HTTP 500 with "Converting circular structure to JSON ... TLSSocket ... HTTPParser ... socket closes the circle". ROOT CAUSE: Winston logger's railwayFormat used raw JSON.stringify on log meta; blockchain fee service logged full Axios error objects (containing circular TLSSocket references) for chains where Tatum returns 400 (POLYGON/USDT_POLYGON/BCH). JSON.stringify threw inside logger, escaped catch block, crashed endpoint with 500.
+- fixes_applied:
+  * (1) utils/loggers.ts: Added circular-safe stringifier (safeStringify with WeakSet) in railwayFormat — prevents all production logging crashes from circular refs
+  * (2) services/blockchainFeeService.ts: getAllBlockchainFees catch now logs error.message string only (not full error object)
+  * (3) controller/payment/feeController.ts: getNetworkFees sanitizes each fee with toSafeFeePayload (extracts only known scalar fields), skips invalid entries; single-chain upstream failures return 502 instead of 500
+- test_results: ALL TESTS PASSED ✅ (6/6 tests successful - 100% success rate)
+
+### CRITICAL TESTS (Bug Fix Verification) - ALL PASSED ✅
+1. **GET /api/pay/network-fees (no params) - Attempt 1** → HTTP 200
+   - ✅ PASS: No "Converting circular structure to JSON" error
+   - ✅ PASS: Returns 12 supported chains: BTC, ETH, LTC, DOGE, TRX, USDT_ERC20, USDC_ERC20, RLUSD_ERC20, USDT_TRC20, SOL, XRP, RLUSD
+   - ✅ PASS: All chains have valid numeric feeInNative and feeInUSD values
+   - Sample: BTC fee = 0.00000572 BTC ($0.34)
+
+2. **GET /api/pay/network-fees (no params) - Attempt 2** → HTTP 200
+   - ✅ PASS: Consistent response (same 12 chains)
+   - ✅ PASS: No circular structure errors
+
+3. **GET /api/pay/network-fees (no params) - Attempt 3** → HTTP 200
+   - ✅ PASS: Consistent response (same 12 chains)
+   - ✅ PASS: No circular structure errors
+   - ✅ PASS: Endpoint is stable and not flaky
+
+4. **GET /api/pay/network-fees?chain=POLYGON** → HTTP 502
+   - ✅ PASS: Returns 502 (graceful failure), NOT 500
+   - ✅ PASS: No "Converting circular structure to JSON" error
+   - Note: Cloudflare intercepted 502 with HTML error page (expected behavior)
+   - Backend correctly returned 502 as intended by fix
+
+### ADDITIONAL TESTS - ALL PASSED ✅
+5. **GET /health** → HTTP 200 ✅
+   - Health check operational (regression check passed)
+
+6. **GET /api/pay/network-fees?chain=BTC** → HTTP 200 ✅
+   - Single-chain query working correctly
+   - Response: {"chain":"BTC","feeInNative":0.00000572,"feeInUSD":0.34187868,"speed":"fast","timestamp":1782722947962}
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ BUG FIX VERIFIED: "Converting circular structure to JSON" error completely eliminated
+- ✅ GET /api/pay/network-fees (no params) returns 200 consistently (tested 3 times)
+- ✅ Returns 12 supported chains with valid fee data (POLYGON/USDT_POLYGON/BCH gracefully omitted as expected)
+- ✅ Single-chain BTC query returns 200 with valid fee object
+- ✅ Single-chain POLYGON query returns 502 gracefully (NOT 500)
+- ✅ No 500 errors detected on any network-fees endpoint
+- ✅ Health check regression test passed
+- ✅ Endpoint is stable and not flaky (3 consecutive successful calls)
+
+### PASS CRITERIA MET ✅
+- ✅ GET /api/pay/network-fees (no params) returns 200 consistently
+- ✅ NO "Converting circular structure to JSON" error anywhere
+- ✅ Returns valid fee data for multiple supported chains (~12 chains)
+- ✅ Single-chain BTC = 200 with valid fee object
+- ✅ Single-chain POLYGON = 502 (graceful), NOT 500
+- ✅ Health check returns healthy
+- ✅ No 500s on network-fees calls
+
+### FILES VERIFIED
+- ✅ /app/backend/utils/loggers.ts: safeStringify function implemented (lines 39-56)
+- ✅ /app/backend/services/blockchainFeeService.ts: Error logging changed to message-only (line 470)
+- ✅ /app/backend/controller/payment/feeController.ts: toSafeFeePayload sanitization added (lines 41-68)
+
+### SUMMARY
+The bug fix is working perfectly. The circular JSON structure error has been completely eliminated. The endpoint now:
+1. Returns 200 with valid fee data for all working chains
+2. Gracefully handles upstream failures (502 instead of 500)
+3. Never crashes with circular structure errors
+4. Is stable and consistent across multiple requests
 

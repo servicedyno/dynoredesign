@@ -27,19 +27,78 @@ import {
 } from "../../services/feeService";
 import { getCryptoPriceForPayment } from "./paymentHelpers";
 
+/**
+ * Convert a raw blockchain fee result into a plain, JSON-safe object containing
+ * ONLY known scalar fields. This is intentionally robust: when an upstream fee
+ * fetch fails (e.g. Tatum returns 400 for a chain), an Axios error object — which
+ * holds circular references (TLSSocket -> HTTPParser -> socket) — can leak into the
+ * results. Using JSON.parse(JSON.stringify(...)) on such an object THROWS
+ * ("Converting circular structure to JSON") and previously crashed the whole
+ * endpoint with a 500. Extracting known fields by hand avoids touching any
+ * circular/non-serializable properties and returns null for anything that is not
+ * a valid fee result so it can be skipped.
+ */
+const toSafeFeePayload = (raw: unknown): Record<string, unknown> | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const f = raw as Record<string, unknown>;
+  // A valid fee result must expose numeric feeInNative + feeInUSD.
+  // Anything else (e.g. an Axios error object) is rejected.
+  if (typeof f.feeInNative !== "number" || typeof f.feeInUSD !== "number") return null;
+  if (!Number.isFinite(f.feeInNative as number) || !Number.isFinite(f.feeInUSD as number)) return null;
+
+  const ts = f.timestamp;
+  const safeTimestamp =
+    ts instanceof Date
+      ? ts.toISOString()
+      : typeof ts === "number" || typeof ts === "string"
+        ? ts
+        : Date.now();
+
+  const payload: Record<string, unknown> = {
+    chain: typeof f.chain === "string" ? f.chain : undefined,
+    feeInNative: Number(f.feeInNative),
+    feeInUSD: Number(f.feeInUSD),
+    speed: typeof f.speed === "string" ? f.speed : "fast",
+    timestamp: safeTimestamp,
+  };
+  if (typeof f.gasPrice === "number") payload.gasPrice = f.gasPrice;
+  if (typeof f.satPerByte === "number") payload.satPerByte = f.satPerByte;
+  if (typeof f.nativeSymbol === "string") payload.nativeSymbol = f.nativeSymbol;
+  return payload;
+};
+
 export const getNetworkFees = async (req: express.Request, res: express.Response) => {
   try {
     const { chain } = req.query;
 
     if (chain) {
-      const fee = await getBlockchainNetworkFee(chain as string);
-      // Defensive: strip any non-serializable properties (e.g. socket refs from Axios errors)
-      const safeFee = JSON.parse(JSON.stringify(fee));
+      let fee: unknown;
+      try {
+        fee = await getBlockchainNetworkFee(chain as string);
+      } catch (chainErr) {
+        // Upstream provider (e.g. Tatum) failed for this specific chain — don't 500.
+        cronLogger.warn(
+          `[getNetworkFees] Upstream fee fetch failed for ${chain}:`,
+          (chainErr as { message?: string })?.message || String(chainErr)
+        );
+        errorResponseHelper(res, 502, `Network fee temporarily unavailable for ${chain}`);
+        return;
+      }
+      const safeFee = toSafeFeePayload(fee);
+      if (!safeFee) {
+        // Upstream fee provider returned an error / unusable response for this chain.
+        errorResponseHelper(res, 502, `Network fee temporarily unavailable for ${chain}`);
+        return;
+      }
       successResponseHelper(res, 200, "Network fee retrieved", safeFee);
     } else {
       const fees = await getAllBlockchainFees();
-      // Defensive: strip any non-serializable properties (e.g. socket refs from Axios errors)
-      const safeFees = JSON.parse(JSON.stringify(fees));
+      // Build a clean response containing only chains with valid, serializable fees.
+      const safeFees: Record<string, unknown> = {};
+      for (const [chainKey, fee] of Object.entries(fees || {})) {
+        const safeFee = toSafeFeePayload(fee);
+        if (safeFee) safeFees[chainKey] = safeFee;
+      }
       successResponseHelper(res, 200, "Network fees retrieved", safeFees);
     }
   } catch (e) {

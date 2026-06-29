@@ -466,7 +466,8 @@ export const getAllBlockchainFees = async (): Promise<Record<string, BlockchainF
       try {
         results[chain] = await getBlockchainNetworkFee(chain);
       } catch (error) {
-        cronLogger.error(`[BlockchainFeeService] Failed to get fee for ${chain}:`, error);
+        const msg = (error as { message?: string })?.message || String(error);
+        cronLogger.error(`[BlockchainFeeService] Failed to get fee for ${chain}:`, msg);
       }
     })
   );

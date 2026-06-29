@@ -31,8 +31,32 @@ const isRailway = !!process.env.RAILWAY_ENVIRONMENT;
 const isProduction = process.env.NODE_ENV === 'production';
 
 // Custom format for Railway - simple, no colors, immediate output
+// Uses a circular-safe stringifier: passing objects with circular references
+// (e.g. Axios errors that hold a TLSSocket -> HTTPParser -> socket cycle) as log
+// meta previously made raw JSON.stringify THROW "Converting circular structure to
+// JSON". That throw escaped the calling catch block and crashed request handlers
+// (e.g. GET /api/pay/network-fees returned 500). safeStringify never throws.
+const safeStringify = (obj: unknown): string => {
+  const seen = new WeakSet<object>();
+  try {
+    return JSON.stringify(obj, (_key, value) => {
+      if (typeof value === "bigint") return value.toString();
+      if (value instanceof Error) {
+        return { name: value.name, message: value.message, stack: value.stack };
+      }
+      if (typeof value === "object" && value !== null) {
+        if (seen.has(value as object)) return "[Circular]";
+        seen.add(value as object);
+      }
+      return value;
+    });
+  } catch {
+    return "[Unserializable meta]";
+  }
+};
+
 const railwayFormat = printf(({ level, message, timestamp, service, ...meta }) => {
-  const metaStr = Object.keys(meta).length ? ` ${JSON.stringify(meta)}` : '';
+  const metaStr = Object.keys(meta).length ? ` ${safeStringify(meta)}` : '';
   return `[${timestamp}] [${service}] ${level}: ${message}${metaStr}`;
 });
 
