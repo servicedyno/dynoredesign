@@ -16,6 +16,7 @@ backend:
     - Test email endpoints now require auth (401/403) ✅
     - No 500 errors on public endpoints ✅
   - recent_fixes:
+    - FIX (2026-06-29): Phone onboarding "Failed to send verification code" (503) + SMS branding/length. ROOT CAUSE 1: configured TELNYX_API_KEY was invalid (Telnyx 401 "No key found matching the ID ... with the provided secret"), so registerPhoneStep1 -> sendTelnyxSMS failed -> 503. Updated backend/.env TELNYX_API_KEY to a valid key. ROOT CAUSE 2: TELNYX_VERIFY_PROFILE_ID was 'pod-integration-hub-2' (invalid). ROOT CAUSE 3 (branding/length): only existing valid profile was "Bozzmail" (app_name=Bozzmail, code_length=5) so SMS read "Your Bozzmail verification code is: 02283" AND the 5-digit code could never fill the frontend's 6-digit OTP input (register.tsx requires otp.length===6). Created new Telnyx Verify profile "DynoPay" (id 4900019f-12c3-657a-8b57-54b129bb2a6b, app_name=DynoPay, code_length=6) and set TELNYX_VERIFY_PROFILE_ID to it. RESULT: POST /api/user/registerPhone now returns 200 and SMS reads "Your DynoPay verification code is: <6 digits>". NOTE: each registerPhone call sends a real SMS and consumes Telnyx credit — keep test volume low.
     - FIX (2026-06-29): GET /api/pay/network-fees 500 "Converting circular structure to JSON" — ROOT CAUSE: with NODE_ENV=production the Winston logger uses railwayFormat which did raw JSON.stringify(meta). The per-chain catch in getAllBlockchainFees logged the full Axios error (cronLogger.error(..., error)) for chains whose Tatum fee fetch returns 400 (MATIC/POLYGON/USDT_POLYGON, BCH). The Axios error holds a circular TLSSocket->HTTPParser->socket reference, so JSON.stringify THREW inside the logger, the throw escaped the catch, rejected Promise.all, and bubbled up as a 500 for the whole endpoint. FIXES: (1) utils/loggers.ts railwayFormat now uses a circular-safe stringifier (safeStringify with WeakSet + Error handling) — prevents this entire class of production logging crashes. (2) services/blockchainFeeService.ts getAllBlockchainFees catch now logs error.message string only. (3) controller/payment/feeController.ts getNetworkFees now sanitizes each fee into a known scalar shape (toSafeFeePayload) and skips invalid/error entries; single-chain upstream failures return 502 instead of 500. RESULT: all-fees returns 200 with the 12 supported chains (POLYGON/USDT_POLYGON/BCH gracefully omitted since Tatum's MATIC/BCH fee endpoint returns 400); single-chain BTC→200, POLYGON→502 graceful.
     - FIX (2026-06-29): Onboarding 403 CSRF — `/api/user/registerEmail` and `/api/user/registerEmail/verify-otp` (newer email-only signup flow) were NOT in csrfMiddleware.ts EXEMPT_PATHS, so the first onboarding step (no Bearer token, no CSRF cookie) was blocked with 403 "CSRF token validation failed". Added `/api/user/registerEmail` (covers verify-otp via startsWith) and `/api/user/phone-type-check` to EXEMPT_PATHS, consistent with existing public pre-auth exemptions (registerUser, registerPhone, login). Onboarding email step should now return 200/normal validation responses instead of 403.
     - VERIFIED (2026-06-29 08:20 UTC): CSRF bug fix working correctly. All 3 onboarding endpoints now accessible without CSRF token:
@@ -3452,4 +3453,75 @@ The bug fix is working perfectly. The circular JSON structure error has been com
 - ✅ Mobile menu icon visibility fixed and verified
 - ✅ Light mode regression test passed
 - ✅ Ready to summarize and finish
+
+
+## Phone Number Onboarding Bug Fix Verification — 2026-06-29 09:48 UTC
+- agent: testing
+- test_date: 2026-06-29 09:48:00 UTC
+- test_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com/api
+- bug_fix_context: User reported 503 "Failed to send verification code. Please try again." during phone number onboarding. ROOT CAUSE: (1) Invalid TELNYX_API_KEY causing Telnyx 401, (2) Wrong TELNYX_VERIFY_PROFILE_ID, (3) Old profile "Bozzmail" with 5-digit codes (frontend expects 6). FIX: Updated backend/.env with valid TELNYX_API_KEY=KEY019E2C4363D220CBD666F6B360BE7F7B_FJlqkTyMb4YAr8daYhFZVh and new "DynoPay" profile TELNYX_VERIFY_PROFILE_ID=4900019f-12c3-657a-8b57-54b129bb2a6b (6-digit codes).
+- test_results: ALL TESTS PASSED ✅ (5/5 tests successful - 100% success rate)
+
+### CRITICAL TESTS (Bug Fix Verification) - ALL PASSED ✅
+1. **POST /api/user/registerPhone (valid number)** → HTTP 200
+   - Payload: {"mobile": "+13025149977"}
+   - Response: {"message": "Verification code sent to your phone number."}
+   - ✅ PASS: Phone registration successful (NOT 503, NOT 401, NOT CSRF 403)
+   - ✅ SMS sent successfully (1 real SMS consumed from Telnyx credit)
+   - ✅ Expected SMS format: "Your DynoPay verification code is: <6 digits>"
+   - No Authorization header, No CSRF token → Normal application response (not 503/401/403)
+
+2. **POST /api/user/registerPhone (invalid format)** → HTTP 400
+   - Payload: {"mobile": "123"}
+   - Response: {"success": false, "message": "Invalid mobile number format. Use 10-15 digits with country code (e.g. 13025141000)", "statusCode": 400}
+   - ✅ PASS: Invalid format rejected with proper validation message
+   - ✅ NO SMS sent (validation fails before Telnyx call)
+   - No Authorization header, No CSRF token → Validation error (not 503/401/403)
+
+3. **POST /api/user/phone-type-check** → HTTP 200
+   - Payload: {"mobile": "+13025149977"}
+   - Response: {"message": "Phone type retrieved", "data": {"phone_type": "unknown", "is_mobile": false, "country_code": "US", "carrier_name": null}}
+   - ✅ PASS: Phone type check accessible (NOT 401/403/500)
+   - ✅ NO SMS sent (just checks phone type)
+   - No Authorization header, No CSRF token → Normal application response
+
+4. **POST /api/user/registerEmail (regression)** → HTTP 200
+   - Payload: {"email": "qa.phone.fix.1782726482@dynopaytest.com"}
+   - Response: {"message": "Verification code sent to your email", "data": {}}
+   - ✅ PASS: Email registration still works (no regression from phone fix)
+   - No Authorization header, No CSRF token → Normal application response (not CSRF 403)
+
+### CONTROL TESTS (Regression Check)
+5. **GET /api/** → HTTP 200 ✅
+   - Response: {"status": "operational", "service": "Dynopay API", "version": "1.0.0", ...}
+   - ✅ PASS: Health check endpoint working
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ BUG FIX VERIFIED: Phone onboarding now returns 200 "Verification code sent to your phone number." (NOT 503)
+- ✅ The 503 "Failed to send verification code. Please try again." error is FIXED
+- ✅ Telnyx integration working correctly with valid API key
+- ✅ SMS should read: "Your DynoPay verification code is: <6 digits>" (DynoPay branding, 6-digit code)
+- ✅ Invalid phone format properly validated (400 error) before Telnyx call
+- ✅ phone-type-check endpoint accessible without auth (200)
+- ✅ Email registration still works (no regression)
+- ✅ SMS limit respected: 1 SMS sent (within 2 SMS limit)
+- ✅ No 503 errors detected on registerPhone endpoint
+- ✅ No 401 errors (Telnyx API key valid)
+- ✅ No CSRF 403 errors (endpoints properly exempted)
+
+### PASS CRITERIA MET
+- ✅ POST /api/user/registerPhone with valid number returns 200 "Verification code sent to your phone number." (NOT 503)
+- ✅ Invalid format number returns 400 validation error
+- ✅ POST /api/user/phone-type-check returns 200 (NOT 401/403/500)
+- ✅ POST /api/user/registerEmail still works (200, not CSRF 403)
+- ✅ SMS sends within limit (1/2 SMS sent)
+- ✅ GET /api/ health check operational
+
+### TECHNICAL DETAILS
+- Fix applied: backend/.env updated with valid TELNYX_API_KEY and new TELNYX_VERIFY_PROFILE_ID
+- Old profile: "Bozzmail" (5-digit codes) → New profile: "DynoPay" (6-digit codes)
+- Frontend expects 6-digit OTP (register.tsx requires otp.length===6)
+- SMS branding now correct: "Your DynoPay verification code is: <6 digits>" (not "Your Bozzmail verification code is: <5 digits>")
+- All endpoints tested without auth/CSRF headers (public pre-auth endpoints)
+- Real SMS sent to +13025149977 (1 SMS consumed from ~$8 Telnyx balance)
 
