@@ -72,11 +72,19 @@ export const IconButton = styled(Box, {
     width: "40px",
     height: "40px",
     borderRadius: "50%",
-    background: theme.palette.common.white,
+    background:
+      theme.palette.mode === "dark"
+        ? active
+          ? "rgba(106, 123, 255, 0.22)"
+          : "#2A2D42"
+        : theme.palette.common.white,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    boxShadow:
+      theme.palette.mode === "dark"
+        ? "0 2px 4px rgba(0, 0, 0, 0.35)"
+        : "0 2px 4px rgba(0, 0, 0, 0.1)",
     transition: "all 0.2s ease",
     "& img": {
       filter: active

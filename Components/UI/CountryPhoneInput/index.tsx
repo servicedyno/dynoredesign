@@ -1,5 +1,5 @@
 import React from "react";
-import { Box, useTheme } from "@mui/material";
+import { Box, Typography, useTheme } from "@mui/material";
 import { MuiTelInput, MuiTelInputCountry } from "mui-tel-input";
 import useIsMobile from "@/hooks/useIsMobile";
 
@@ -9,6 +9,8 @@ export interface CountryPhoneInputProps {
   onBlur?: (event: React.FocusEvent<HTMLInputElement>) => void;
   placeholder?: string;
   name?: string;
+  label?: React.ReactNode;
+  helperText?: string;
   defaultCountry?: MuiTelInputCountry;
   fullWidth?: boolean;
   error?: boolean;
@@ -22,6 +24,8 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
   onBlur,
   placeholder,
   name = "mobile",
+  label,
+  helperText,
   defaultCountry = "US",
   fullWidth = true,
   error = false,
@@ -30,16 +34,42 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
 }) => {
   const theme = useTheme();
   const isMobile = useIsMobile("md");
+  const isDark = theme.palette.mode === "dark";
 
-  const height = inputHeight || (isMobile ? "32px" : "40px");
+  // Theme-aware tokens so the input is readable in BOTH light and dark mode.
+  const fieldBg = theme.palette.background.paper;
+  const fieldText = theme.palette.text.primary;
+  const fieldBorder = isDark ? "#2A2D42" : "#E9ECF2";
+  const inputFontSize = isMobile ? "14px" : "13px";
+
+  // Match the email InputField height so the phone field doesn't look small.
+  const height = inputHeight || (isMobile ? "44px" : "40px");
 
   return (
     <Box
       sx={{
         width: fullWidth ? "100%" : "auto",
         position: "relative",
+        display: "flex",
+        flexDirection: "column",
+        gap: "6px",
       }}
     >
+      {label && (
+        <Typography
+          component="label"
+          htmlFor={name}
+          sx={{
+            fontWeight: 500,
+            fontFamily: "UrbanistMedium",
+            fontSize: isMobile ? "14px" : "15px",
+            color: theme.palette.text.primary,
+            lineHeight: 1.2,
+          }}
+        >
+          {label}
+        </Typography>
+      )}
       <MuiTelInput
         value={value}
         onChange={onChange}
@@ -66,12 +96,12 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
           fontFamily: "UrbanistMedium",
           "& .MuiInputBase-root .MuiTypography-root": {
             border: "none !important",
-            fontSize: "13px",
-            color: theme.palette.text.secondary,
+            fontSize: inputFontSize,
+            color: fieldText,
             fontFamily: "UrbanistMedium",
             paddingLeft: "8px !important",
             [theme.breakpoints.down("md")]: {
-              fontSize: "10px",
+              fontSize: "14px",
               paddingLeft: "6px !important",
             },
           },
@@ -82,18 +112,20 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
             height: height,
             borderRadius: "6px",
             boxSizing: "border-box",
-            backgroundColor: theme.palette.background.paper,
-            color: theme.palette.text.primary,
+            backgroundColor: fieldBg,
+            color: fieldText,
             "& input": {
               padding: "12px 0 !important",
               fontFamily: "UrbanistMedium",
               boxSizing: "border-box",
-              fontSize: isMobile ? "10px" : "13px",
+              color: fieldText,
+              fontSize: inputFontSize,
               lineHeight: 1.2,
               "&::placeholder": {
-                color: theme.palette.secondary.contrastText,
+                color: theme.palette.text.secondary,
+                opacity: 1,
                 fontFamily: "UrbanistMedium",
-                fontSize: isMobile ? "10px" : "13px",
+                fontSize: inputFontSize,
                 lineHeight: 1.2,
               },
             },
@@ -108,11 +140,11 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
           },
           "& .MuiOutlinedInput-root": {
             borderRadius: "6px",
-            backgroundColor: theme.palette.background.paper,
+            backgroundColor: fieldBg,
             transition: "all 0.3s ease",
             boxShadow: "rgba(16, 24, 40, 0.05) 0px 1px 2px 0px",
             "& fieldset": {
-              borderColor: error ? theme.palette.error.main : "#E9ECF2",
+              borderColor: error ? theme.palette.error.main : fieldBorder,
               borderWidth: "1px",
             },
             "&:hover fieldset": {
@@ -128,14 +160,14 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
             },
             "& input": {
               "&:-webkit-autofill": {
-                WebkitBoxShadow: "0 0 0 1000px white inset",
-                WebkitTextFillColor: "#333",
+                WebkitBoxShadow: `0 0 0 1000px ${fieldBg} inset`,
+                WebkitTextFillColor: fieldText,
               },
             },
           },
           "& button": {
             marginRight: "0px",
-            color: "#333",
+            color: fieldText,
             minWidth: "auto",
             display: "flex",
             alignItems: "center",
@@ -198,7 +230,7 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
             alignItems: "center",
             "& p": {
               fontSize: "15px",
-              color: "#333",
+              color: fieldText,
               fontFamily: "UrbanistMedium",
               margin: 0,
             },
@@ -229,6 +261,21 @@ const CountryPhoneInput: React.FC<CountryPhoneInputProps> = ({
           },
         }}
       />
+      {helperText && (
+        <Typography
+          sx={{
+            fontSize: isMobile ? "12px" : "13px",
+            fontFamily: "UrbanistMedium",
+            fontWeight: 500,
+            color: error ? theme.palette.error.main : theme.palette.text.secondary,
+            lineHeight: 1.2,
+            textAlign: "start",
+            ml: 0.5,
+          }}
+        >
+          {helperText}
+        </Typography>
+      )}
     </Box>
   );
 };

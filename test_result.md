@@ -59,7 +59,26 @@ backend:
     - FIX: Cron expression "0 */24 * * *" → "0 0 * * *"
 
 frontend:
-  - target_url: https://blockchain-checkout-6.preview.emergentagent.com
+  - target_url: https://e28fa8d0-2f83-434a-a10f-6b9f6b5c3a63.preview.emergentagent.com
+  - recent_fixes:
+    - FIX (2026-06-29): Dark mode readability + registration phone input. (1) CountryPhoneInput (used on /auth/register Mobile Number tab and elsewhere) hardcoded light colors (#333 calling code/flag/text, white autofill inset, #E9ECF2 border) and a small height (32px mobile) + tiny 10px font, and never rendered its label or error helperText. Now theme-aware (background.paper, text.primary, dark border in dark mode), height matched to email field (44px mobile/40px desktop), font 14px mobile, and renders label + helperText. (2) MobileNavigationBar IconButton circle was always white (theme.palette.common.white) so light dark-mode icons were invisible — now uses a dark chip (#2A2D42 / active rgba(106,123,255,.22)) in dark mode. (3) globals.css dark-mode safety net: readable fallback text/placeholder colors + forced themed surface/text on -webkit-autofill (root cause of the white phone box in dark mode).
+    - VERIFIED (2026-06-29 09:20 UTC): Dark mode readability fixes WORKING CORRECTLY ✅
+      * Registration page /auth/register in DARK mode:
+        - Phone input: ✅ PASS - Dark background rgb(20,22,37) with LIGHT text rgb(232,232,236), NOT a white box
+        - Phone input label: ✅ PASS - "Mobile Number" label present and visible
+        - Phone input height: ✅ PASS - 40px (desktop), matches email field, NOT small
+        - Phone input font: ✅ PASS - 13px input, 15px label, readable size
+        - Calling code "+1": ✅ PASS - Visible with light color rgb(232,232,236)
+        - Flag icon: ✅ PASS - Present and visible (20x20px)
+        - Border: ✅ PASS - Dark border rgb(42,45,66), clearly visible
+        - Email input: ✅ PASS - Dark background rgb(20,22,37) with LIGHT text rgb(232,232,236)
+        - Email input label: ✅ PASS - "E-mail" label present and visible
+        - Email input height: ✅ PASS - 40px, matches phone field
+        - Overall page text: ✅ PASS - All text visible (Registration title, description, buttons, links)
+      * Light mode regression: ✅ PASS - Phone/email inputs show dark text rgb(36,36,40) on white background rgb(255,255,255), light border rgb(233,236,242)
+      * Authenticated pages: ⚠️ NOT TESTED - Login requires OTP (cannot automate without Redis access or token injection)
+      * Mobile quick-action menu: ⚠️ NOT TESTED - Requires authentication to access dashboard
+      * CONCLUSION: All HIGH PRIORITY fixes verified working. Phone input is NO LONGER a white box in dark mode. Text is readable across registration page. Light mode still works correctly.
   - test_pages:
     - / (Landing/Home page)
     - /auth/login (Login page)

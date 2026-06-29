@@ -10,6 +10,38 @@ html[data-theme="light"] {
   color-scheme: light;
 }
 
+/* ── Dark-mode readability safety net ──────────────────────────────────────
+   Some components hardcode dark text colors / rely on browser defaults that
+   become unreadable on the dark page background. These conservative fallbacks
+   keep raw text and native form controls legible in dark mode. They use low
+   specificity so intentional MUI palette colors (which nest deeper) still win. */
+html[data-theme="dark"] body {
+  color: #E8E8EC;
+}
+html[data-theme="dark"] input,
+html[data-theme="dark"] textarea,
+html[data-theme="dark"] select {
+  color: #E8E8EC;
+}
+html[data-theme="dark"] input::placeholder,
+html[data-theme="dark"] textarea::placeholder {
+  color: #A0A1A5;
+  opacity: 1;
+}
+/* Chrome/Safari force a white background + dark text on autofilled inputs.
+   This made fields (e.g. the registration phone number) render as a white box
+   in dark mode. Force the themed surface + light text on autofill. */
+html[data-theme="dark"] input:-webkit-autofill,
+html[data-theme="dark"] input:-webkit-autofill:hover,
+html[data-theme="dark"] input:-webkit-autofill:focus,
+html[data-theme="dark"] input:-webkit-autofill:active {
+  -webkit-text-fill-color: #E8E8EC !important;
+  -webkit-box-shadow: 0 0 0 1000px #141625 inset !important;
+  box-shadow: 0 0 0 1000px #141625 inset !important;
+  caret-color: #E8E8EC;
+  transition: background-color 9999s ease-in-out 0s;
+}
+
 * {
   box-sizing: border-box;
   padding: 0;
