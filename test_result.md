@@ -17,6 +17,7 @@ backend:
     - No 500 errors on public endpoints ✅
   - recent_fixes:
     - FIX (2026-06-29): DynoPay mobile onboarding "no OTP received" — registerPhone returns 200 but SMS never arrives. ROOT CAUSE: the DynoPay Telnyx Verify profile (id 4900019f-12c3-657a-8b57-54b129bb2a6b) had sms.messaging_template_id=null, so Telnyx routed via the UNREGISTERED "TELNYX" alpha-sender → carriers drop it → delivery_status=delivery_failed (backend only sees Telnyx's async 2xx on create, so it returns 200 = misleading "code sent"). The known-WORKING Bozzmail profile differs ONLY by having a messaging_template_id set. FIX (no code change — Telnyx config via API): PATCHed DynoPay verify profile sms.messaging_template_id = 46acd63c-be57-4993-ae8d-0e4067ad1d57 (the SAME registered template Bozzmail uses; it uses {{app_name}} so the SMS renders "Your DynoPay verification code is: <6 digits>"). VALIDATION: sending a verify to the account's OWN DID +18022100479 shows delivery_failed for BOTH Bozzmail AND DynoPay (false negative — can't deliver A2P to your own sender number), confirming the own-number test is unreliable; real-handset confirmation required from user.
+    - FIX (2026-06-29): sendTelnyxSMS (backend/controller/userController.ts) now VERIFIES delivery instead of trusting Telnyx's async create-2xx. After creating the verification it logs the verificationId + masked destination (country code visible), then polls GET /v2/verifications/{id} up to ~6s: if delivery_status==='delivery_failed' it returns false (→ registerPhone/generateOTP return 503 with a clear error) instead of a misleading "code sent"; if 'delivered' returns true; if still 'pending' treats as in-flight. This surfaces silent carrier drops AND adds diagnostics to pinpoint the real-number delivery failure. EXPECTED new behavior: registerPhone to an UNDELIVERABLE number (incl. the account's own DID 18022100479) now returns HTTP 503 "Failed to send verification code" (correct), with backend log "[Telnyx] SMS delivery_failed".
     - FIX (2026-06-29): Phone onboarding "Failed to send verification code" (503) + SMS branding/length. ROOT CAUSE 1: configured TELNYX_API_KEY was invalid (Telnyx 401 "No key found matching the ID ... with the provided secret"), so registerPhoneStep1 -> sendTelnyxSMS failed -> 503. Updated backend/.env TELNYX_API_KEY to a valid key. ROOT CAUSE 2: TELNYX_VERIFY_PROFILE_ID was 'pod-integration-hub-2' (invalid). ROOT CAUSE 3 (branding/length): only existing valid profile was "Bozzmail" (app_name=Bozzmail, code_length=5) so SMS read "Your Bozzmail verification code is: 02283" AND the 5-digit code could never fill the frontend's 6-digit OTP input (register.tsx requires otp.length===6). Created new Telnyx Verify profile "DynoPay" (id 4900019f-12c3-657a-8b57-54b129bb2a6b, app_name=DynoPay, code_length=6) and set TELNYX_VERIFY_PROFILE_ID to it. RESULT: POST /api/user/registerPhone now returns 200 and SMS reads "Your DynoPay verification code is: <6 digits>". NOTE: each registerPhone call sends a real SMS and consumes Telnyx credit — keep test volume low.
     - FIX (2026-06-29): GET /api/pay/network-fees 500 "Converting circular structure to JSON" — ROOT CAUSE: with NODE_ENV=production the Winston logger uses railwayFormat which did raw JSON.stringify(meta). The per-chain catch in getAllBlockchainFees logged the full Axios error (cronLogger.error(..., error)) for chains whose Tatum fee fetch returns 400 (MATIC/POLYGON/USDT_POLYGON, BCH). The Axios error holds a circular TLSSocket->HTTPParser->socket reference, so JSON.stringify THREW inside the logger, the throw escaped the catch, rejected Promise.all, and bubbled up as a 500 for the whole endpoint. FIXES: (1) utils/loggers.ts railwayFormat now uses a circular-safe stringifier (safeStringify with WeakSet + Error handling) — prevents this entire class of production logging crashes. (2) services/blockchainFeeService.ts getAllBlockchainFees catch now logs error.message string only. (3) controller/payment/feeController.ts getNetworkFees now sanitizes each fee into a known scalar shape (toSafeFeePayload) and skips invalid/error entries; single-chain upstream failures return 502 instead of 500. RESULT: all-fees returns 200 with the 12 supported chains (POLYGON/USDT_POLYGON/BCH gracefully omitted since Tatum's MATIC/BCH fee endpoint returns 400); single-chain BTC→200, POLYGON→502 graceful.
     - FIX (2026-06-29): Onboarding 403 CSRF — `/api/user/registerEmail` and `/api/user/registerEmail/verify-otp` (newer email-only signup flow) were NOT in csrfMiddleware.ts EXEMPT_PATHS, so the first onboarding step (no Bearer token, no CSRF cookie) was blocked with 403 "CSRF token validation failed". Added `/api/user/registerEmail` (covers verify-otp via startsWith) and `/api/user/phone-type-check` to EXEMPT_PATHS, consistent with existing public pre-auth exemptions (registerUser, registerPhone, login). Onboarding email step should now return 200/normal validation responses instead of 403.
@@ -3574,4 +3575,94 @@ The bug fix is working perfectly. The circular JSON structure error has been com
 - ✅ Did NOT create users, payments, companies, wallets, or submit other forms
 - ✅ Did NOT call settlement/sweep/admin endpoints
 - ✅ Conservative testing approach for LIVE PRODUCTION environment
+
+
+## Telnyx SMS OTP Delivery Status Verification — Review Request Testing (2026-06-29 11:21 UTC)
+- agent: testing
+- test_date: 2026-06-29 11:21:27 UTC
+- test_url: https://crypto-payment-hub-20.preview.emergentagent.com/api
+- review_request_context: Verify backend code change to sendTelnyxSMS function in backend/controller/userController.ts. The change makes the backend POLL Telnyx for the verification's terminal delivery_status after creating it, and return a real failure (HTTP 503) instead of a misleading "code sent" 200 when the carrier drops the SMS (delivery_status === "delivery_failed"). It also logs the Telnyx verificationId and delivery result.
+- test_results: ALL TESTS PASSED ✅ (3/3 tests successful - 100% success rate)
+
+### CRITICAL TESTS - ALL PASSED ✅
+1. **GET /api/** → HTTP 200 ✅
+   - Response time: 0.16s
+   - Status: operational
+   - Service: Dynopay API v1.0.0
+   - ✅ PASS: Health check operational
+
+2. **POST /api/user/registerPhone with {"mobile": "18022100479"}** → HTTP 503 ✅
+   - Response time: 2.86s (polling delay - expected)
+   - Response: {"success": false, "message": "Failed to send verification code. Please try again.", "statusCode": 503}
+   - Backend logs show:
+     * Verification created: verificationId=9299828c-6760-4419-81bb-8222f8152f41
+     * Polling detected delivery_failed: "[Telnyx] SMS delivery_failed (carrier dropped message)"
+     * Correctly returned 503 instead of misleading 200
+   - ✅ PASS: NEW BEHAVIOR WORKING - Backend successfully detects delivery_failed and returns 503
+   - ✅ PASS: Polling is working (2.86s response time indicates polling happened)
+   - ✅ PASS: Logs show verificationId and delivery_status as expected
+   - NOTE: Test number 18022100479 is the account's own DID (undeliverable - perfect test case)
+
+3. **POST /api/user/registerPhone with {}** → HTTP 400 ✅
+   - Response time: 0.2s
+   - Response: {"success": false, "message": "Mobile number is required", "statusCode": 400}
+   - ✅ PASS: Validation working correctly (no SMS sent)
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ No HTTP 500 errors detected (no crashes)
+- ✅ No timeouts (all responses within reasonable time)
+- ✅ Health check operational (200)
+- ✅ NEW BEHAVIOR VERIFIED: Backend now polls Telnyx for delivery_status
+- ✅ NEW BEHAVIOR VERIFIED: Backend returns 503 when delivery_status=delivery_failed
+- ✅ NEW BEHAVIOR VERIFIED: Backend logs verificationId and delivery result
+- ✅ OLD BEHAVIOR FIXED: No longer returns misleading 200 "code sent" when SMS fails
+- ✅ Validation working: Missing mobile returns 400
+- ✅ Response times appropriate: ~3s for polling (expected), <1s for other endpoints
+- ✅ All responses are clean JSON (no crashes or malformed responses)
+
+### PASS CRITERIA MET ✅
+- ✅ No HTTP 500 errors
+- ✅ Health check returns 200
+- ✅ Undeliverable number (18022100479) returns 503 with clear error message
+- ✅ Missing mobile returns 400 with validation error
+- ✅ All responses complete within reasonable time (~10s max, actual <3s)
+- ✅ Backend logs show verificationId and delivery_status as expected
+- ✅ Polling behavior confirmed (2.86s response time for delivery check)
+
+### BACKEND LOGS ANALYSIS
+Backend logs confirm the new behavior is working correctly:
+```
+[2026-06-29T11:21:28.734Z] [userLogger] info: [Telnyx] Verification created 
+  {"mobile":"+18022****","verifyProfileId":"4900019f-12c3-657a-8b57-54b129bb2a6b","verificationId":"9299828c-6760-4419-81bb-8222f8152f41"}
+
+[2026-06-29T11:21:30.355Z] [userLogger] error: [Telnyx] SMS delivery_failed (carrier dropped message) 
+  {"mobile":"+18022****","verificationId":"9299828c-6760-4419-81bb-8222f8152f41","verifyProfileId":"4900019f-12c3-657a-8b57-54b129bb2a6b"}
+
+[2026-06-29T11:21:30.356Z] [apiLogger] info: ❌ POST /api/user/registerPhone 503 2726.8ms
+```
+
+### KEY IMPROVEMENTS VERIFIED
+1. **Delivery Status Polling**: Backend now polls GET /v2/verifications/{id} after creating verification
+2. **Failure Detection**: Backend detects delivery_status=delivery_failed and returns 503
+3. **Diagnostic Logging**: Backend logs verificationId and masked mobile for debugging
+4. **Clear Error Messages**: Returns "Failed to send verification code. Please try again." instead of misleading "code sent"
+5. **No Crashes**: All endpoints return clean JSON responses (no 500 errors)
+6. **Appropriate Timing**: Polling adds ~3s delay (expected), not a hang
+
+### ARCHITECTURE NOTES
+- Node/TypeScript backend (backend/controller/userController.ts)
+- Running behind Python uvicorn proxy
+- All routes under /api on preview origin
+- Connected to LIVE PRODUCTION PostgreSQL DB and real Telnyx account
+- Test was conservative: only 1 SMS sent to account's own number (undeliverable)
+
+### FINAL VERDICT: ✅ PASS
+All tests passed. The backend code change is working correctly:
+- Backend successfully polls Telnyx for delivery_status
+- Backend correctly detects delivery_failed and returns 503
+- Backend logs verificationId and delivery result for diagnostics
+- No crashes, no timeouts, clean JSON responses
+- Old misleading "code sent" 200 behavior is fixed
+
+The change successfully surfaces silent carrier drops that were previously hidden by Telnyx's async 2xx response on verification creation.
 

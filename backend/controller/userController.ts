@@ -1012,10 +1012,12 @@ const sendEmailOTP = async (email: string, name: string): Promise<boolean> => {
 const sendTelnyxSMS = async (mobile: string, maxRetries: number = 1): Promise<boolean> => {
   const telnyxApiKey = process.env.TELNYX_API_KEY || process.env.ACCESS_TOKEN;
   const verifyProfileId = process.env.TELNYX_VERIFY_PROFILE_ID || process.env.PROFILE_ID;
+  // Keep the country code + first digits visible for debugging delivery issues (still masks the subscriber portion).
+  const maskedMobile = "+" + mobile.slice(0, 5) + "****";
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
-      await axios.post(
+      const createResp = await axios.post(
         "https://api.telnyx.com/v2/verifications/sms",
         {
           phone_number: "+" + mobile,
@@ -1029,12 +1031,56 @@ const sendTelnyxSMS = async (mobile: string, maxRetries: number = 1): Promise<bo
           timeout: 10000, // 10s timeout
         }
       );
-      return true; // Success
+
+      const verificationId = createResp?.data?.data?.id;
+      userLogger.info(`[Telnyx] Verification created`, {
+        mobile: maskedMobile,
+        verifyProfileId,
+        verificationId,
+      });
+
+      // Telnyx returns 2xx on CREATE even when the carrier later drops the SMS
+      // (e.g. unregistered sender / 10DLC). Poll the verification for a terminal
+      // delivery status so silent failures are surfaced instead of a misleading
+      // "code sent" response.
+      if (verificationId) {
+        for (let i = 0; i < 4; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          try {
+            const statusResp = await axios.get(
+              `https://api.telnyx.com/v2/verifications/${verificationId}`,
+              { headers: { Authorization: "Bearer " + telnyxApiKey }, timeout: 8000 }
+            );
+            const deliveryStatus = statusResp?.data?.data?.delivery_status;
+            if (deliveryStatus === "delivery_failed") {
+              userLogger.error(`[Telnyx] SMS delivery_failed (carrier dropped message)`, {
+                mobile: maskedMobile,
+                verificationId,
+                verifyProfileId,
+              });
+              return false; // surface as a real failure
+            }
+            if (deliveryStatus === "delivered") {
+              userLogger.info(`[Telnyx] SMS delivered`, { mobile: maskedMobile, verificationId });
+              return true;
+            }
+            // otherwise still pending — keep polling briefly
+          } catch {
+            break; // status lookup failed — assume in-flight and stop polling
+          }
+        }
+        userLogger.info(`[Telnyx] SMS still pending after poll window (treating as sent)`, {
+          mobile: maskedMobile,
+          verificationId,
+        });
+      }
+      // No terminal failure observed within the poll window — treat as sent/in-flight.
+      return true;
     } catch (err: any) {
       const status = err?.response?.status;
       const errMsg = err?.response?.data?.errors?.[0]?.detail || err?.message || "Unknown error";
-      userLogger.error(`[generateOTP] Telnyx SMS attempt ${attempt + 1}/${maxRetries + 1} failed`, {
-        mobile: mobile.slice(0, 4) + "****", // Mask PII
+      userLogger.error(`[Telnyx] SMS create attempt ${attempt + 1}/${maxRetries + 1} failed`, {
+        mobile: maskedMobile,
         status,
         error: errMsg,
       });
