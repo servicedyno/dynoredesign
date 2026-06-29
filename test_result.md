@@ -3674,3 +3674,76 @@ All tests passed. The backend code change is working correctly:
 
 The change successfully surfaces silent carrier drops that were previously hidden by Telnyx's async 2xx response on verification creation.
 
+
+## Next.js Image Configuration Fix Verification — 2026-06-29 11:59 UTC
+- agent: testing
+- test_date: 2026-06-29 11:59:00 UTC
+- test_url: https://d80dbf30-dcc7-4bc4-bd8b-f0937d6af218.preview.emergentagent.com
+- bug_fix_context: User reported runtime error "Invalid src prop (https://dynopay.com/images/user_jh0u8aok96i.png) on next/image, hostname 'dynopay.com' is not configured under images in your next.config.js". Fix added dynopay.com and **.dynopay.com to images.remotePatterns in next.config.mjs
+- test_results: ALL TESTS PASSED ✅ (5/5 tests successful - 100% success rate)
+
+### CRITICAL TESTS (Image Configuration Fix) - ALL PASSED ✅
+
+1. **GET /_next/image?url=https://dynopay.com/images/user_jh0u8aok96i.png&w=64&q=75** → HTTP 200 ✅
+   - ✅ PASS: dynopay.com hostname is now whitelisted
+   - ✅ PASS: Image optimization endpoint returns 200 (NOT 400 host-config error)
+   - ✅ PASS: Original reported bug is FIXED
+
+2. **GET /_next/image?url=https://checkout.dynopay.com/images/test.png&w=64&q=75** → HTTP 200 ✅
+   - ✅ PASS: Subdomain wildcard **.dynopay.com is working
+   - ✅ PASS: checkout.dynopay.com is whitelisted via wildcard pattern
+   - ✅ PASS: Image optimization endpoint returns 200 (NOT 400 host-config error)
+
+3. **GET /_next/image?url=https://api.dynopay.com/images/test.png&w=64&q=75** → HTTP 500 ✅
+   - ✅ PASS: api.dynopay.com hostname is still whitelisted (regression test passed)
+   - ✅ PASS: Got 500 (upstream server issue), NOT 400 host-config error
+   - ✅ PASS: Existing configuration still works after adding new hosts
+
+4. **GET /_next/image?url=https://example-unconfigured-host.com/a.png&w=64&q=75** → HTTP 400 ✅
+   - Response body: `"url" parameter is not allowed`
+   - ✅ PASS: Unconfigured host correctly blocked with 400 error
+   - ✅ PASS: Whitelist is active and specific (not allowing all hosts)
+   - ✅ PASS: Negative control test confirms security is working
+
+5. **Homepage Console Error Check** → No errors ✅
+   - ✅ PASS: No "is not configured under images" errors in browser console
+   - ✅ PASS: No "Invalid src prop" errors in browser console
+   - ✅ PASS: No error overlay on page
+   - ✅ PASS: Homepage loads without image configuration errors
+
+### VERIFICATION STATUS: COMPLETE ✅
+- ✅ Original bug FIXED: dynopay.com hostname now whitelisted in next.config.mjs
+- ✅ Wildcard working: **.dynopay.com pattern allows all subdomains
+- ✅ Regression test passed: api.dynopay.com still works
+- ✅ Security verified: Unconfigured hosts still blocked
+- ✅ No console errors: Homepage loads without image configuration errors
+- ✅ Configuration verified in next.config.mjs:
+  * Line 39: hostname: "dynopay.com" ✓
+  * Line 43: hostname: "**.dynopay.com" ✓
+  * Line 47: hostname: "api.dynopay.com" ✓
+
+### PASS CRITERIA MET ✅
+- ✅ dynopay.com images load without 400 "hostname not configured" error
+- ✅ Subdomain wildcard (**.dynopay.com) works for checkout.dynopay.com
+- ✅ Existing api.dynopay.com configuration still works (no regression)
+- ✅ Unconfigured hosts still blocked (security maintained)
+- ✅ No runtime errors on homepage about image configuration
+
+### TECHNICAL DETAILS
+- **Fix Location**: /app/next.config.mjs lines 35-54
+- **Fix Type**: Added remotePatterns entries for dynopay.com and **.dynopay.com
+- **Next.js Behavior**: /_next/image endpoint returns 400 "url parameter is not allowed" for non-whitelisted hosts
+- **Test Method**: Direct HTTP requests to /_next/image optimization endpoint
+- **Environment**: Next.js app on preview.emergentagent.com (connected to LIVE production DB)
+- **Test Constraints**: Read-only URL checks only (no form submissions, no data creation)
+
+### FINAL VERDICT: ✅ ALL TESTS PASSED
+The next/image configuration fix is working correctly:
+- Original bug (dynopay.com not whitelisted) is FIXED
+- Wildcard subdomain pattern (**.dynopay.com) is working
+- Existing configurations (api.dynopay.com) still work (no regression)
+- Security is maintained (unconfigured hosts still blocked)
+- No runtime errors on homepage
+
+The reported error "Invalid src prop (https://dynopay.com/images/user_jh0u8aok96i.png) on next/image, hostname 'dynopay.com' is not configured under images" will no longer occur.
+
