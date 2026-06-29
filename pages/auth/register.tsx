@@ -68,6 +68,7 @@ const Register = () => {
   const [showReferralInput, setShowReferralInput] = useState(false);
   const [referralCode, setReferralCode] = useState("");
   const [phoneTypeChecking, setPhoneTypeChecking] = useState(false);
+  const [isReturning, setIsReturning] = useState(false);
 
   const otpRefs = useRef<(HTMLInputElement | null)[]>([]);
 
@@ -198,7 +199,18 @@ const Register = () => {
       }
 
       const data = response?.data?.data;
+      // Existing user who has 2FA enabled — finish login on the dedicated login page.
+      if (data?.requires_2fa || data?.redirect_to_login) {
+        dispatch({
+          type: TOAST_SHOW,
+          payload: { message: "Please complete login with your 2FA code.", severity: "info" },
+        });
+        router.push("/auth/login");
+        return;
+      }
       if (data?.accessToken) {
+        const returning = !!data?.existing_user;
+        setIsReturning(returning);
         // Store token and redirect
         dispatch({
           type: USER_LOGIN,
@@ -206,7 +218,10 @@ const Register = () => {
         });
         dispatch({
           type: TOAST_SHOW,
-          payload: { message: "Account created successfully!", severity: "success" },
+          payload: {
+            message: returning ? "Welcome back! You're now logged in." : "Account created successfully!",
+            severity: "success",
+          },
         });
         setStep("success");
         // Auto redirect after brief success display
@@ -214,7 +229,7 @@ const Register = () => {
           router.push("/dashboard");
         }, 1500);
       } else {
-        setOtpError("Account creation failed. Please try again.");
+        setOtpError("Verification failed. Please try again.");
       }
     } catch (err: any) {
       const msg = err?.response?.data?.message || "Invalid verification code. Please try again.";
@@ -649,10 +664,10 @@ const Register = () => {
                     <CheckCircleOutline sx={{ fontSize: 40, color: "#fff" }} />
                   </Box>
                   <Typography sx={{ fontWeight: 700, fontSize: "24px", color: "text.primary", fontFamily: "UrbanistBold", mb: 1 }}>
-                    Welcome to DynoPay!
+                    {isReturning ? "Welcome back!" : "Welcome to DynoPay!"}
                   </Typography>
                   <Typography sx={{ fontSize: "15px", color: "text.secondary", fontFamily: "UrbanistMedium", lineHeight: 1.6, mb: 1 }}>
-                    Your account has been created. Redirecting to your dashboard...
+                    {isReturning ? "You're logged in. Redirecting to your dashboard..." : "Your account has been created. Redirecting to your dashboard..."}
                   </Typography>
                   <LoadingSpinner size={24} />
                 </Box>

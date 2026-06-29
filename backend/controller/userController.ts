@@ -233,6 +233,117 @@ const generateReferralCode = () => {
  * POST /api/user/registerEmail
  * Only requires email — no password, no name
  */
+/**
+ * Returning-user login via onboarding OTP.
+ * If someone re-onboards with an already-registered email/phone, the verified OTP
+ * is treated as a login (product decision: an OTP to a verified contact is enough,
+ * consistent with the OTP-based password reset). Mirrors verifyLoginOTP finalization.
+ * Trial accounts are still blocked and TOTP 2FA is still enforced.
+ */
+const finalizeReturningUserLogin = async (
+  req: express.Request,
+  res: express.Response,
+  userData: any,
+  extra: Record<string, any> = {}
+) => {
+  // Trial accounts cannot log in (same guard as the password login flow).
+  if (userData.status === "trial") {
+    return errorResponseHelper(
+      res,
+      403,
+      "Your account hasn't been activated yet. Please complete a trial payment and claim your funds to activate your account."
+    );
+  }
+
+  // Enforce TOTP 2FA if enabled — onboarding must not bypass it.
+  const needs2FA = await is2FARequired(userData.user_id);
+  if (needs2FA) {
+    return successResponseHelper(res, 200, "Please complete login with your 2FA code.", {
+      requires_2fa: true,
+      redirect_to_login: true,
+      existing_user: true,
+      user_id: userData.user_id,
+    });
+  }
+
+  const rawIp = (req.headers["x-forwarded-for"] as string) || req.ip || "Unknown";
+  const ipAddress = rawIp.split(",")[0].trim().substring(0, 45);
+  const userAgent = (req.headers["user-agent"] || "Unknown") as string;
+  const { device, browser, os } = parseUserAgent(userAgent);
+
+  // Best-effort geo-location (non-blocking)
+  let location: string | null = null;
+  try {
+    const geoResponse = await axios.get(
+      `http://ip-api.com/json/${ipAddress}?fields=status,city,country`,
+      { timeout: 3000 }
+    );
+    if (geoResponse.data && geoResponse.data.status === "success") {
+      const { city, country } = geoResponse.data;
+      location = city && country ? `${city}, ${country}` : country || null;
+    }
+  } catch {
+    /* ignore geo failures */
+  }
+
+  const securityToken = crypto.randomBytes(32).toString("hex");
+
+  try {
+    await loginActivityModel.create({
+      user_id: userData.user_id,
+      ip_address: ipAddress,
+      user_agent: userAgent,
+      device,
+      browser,
+      os,
+      location,
+      security_token: securityToken,
+    });
+  } catch (activityError: any) {
+    userLogger.error(`[ReturningUserLogin] Failed to record login activity: ${activityError.message}`);
+  }
+
+  // Login notification email (fire-and-forget)
+  try {
+    if (userData.email) {
+      const { sendLoginNotificationEmail } = await import("../services/emailService");
+      const now = new Date();
+      const date = now.toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" });
+      const time = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+      sendLoginNotificationEmail(
+        userData.email,
+        userData.name || "User",
+        ipAddress,
+        device,
+        browser,
+        os,
+        location,
+        date,
+        time,
+        securityToken
+      ).catch((err) => userLogger.error("[ReturningUserLogin] Login notification email failed:", err));
+    }
+  } catch (emailError) {
+    userLogger.error("[ReturningUserLogin] Failed to send login notification:", emailError);
+  }
+
+  await userModel.update({ last_login_ip: ipAddress }, { where: { user_id: userData.user_id } });
+
+  const sessionData = await createSession(userData, req as any);
+
+  const { password: _pw, telegram_id: _tid, ...userDataClean } = userData;
+  return successResponseHelper(res, 200, "Welcome back! You're now logged in.", {
+    userData: userDataClean,
+    accessToken: sessionData.accessToken,
+    refreshToken: sessionData.refreshToken,
+    expiresIn: sessionData.expiresIn,
+    session_id: sessionData.session_id,
+    token_type: "Bearer",
+    existing_user: true,
+    ...extra,
+  });
+};
+
 const registerEmailStep1 = async (req: express.Request, res: express.Response) => {
   try {
     const { email, referral_code } = req.body;
@@ -243,25 +354,25 @@ const registerEmailStep1 = async (req: express.Request, res: express.Response) =
 
     const emailLower = email.toLowerCase().trim();
 
-    // Check if email already exists
+    // If the email already exists we DON'T block — re-onboarding is treated as an
+    // OTP login. We still send the OTP; the verify step logs the existing user in.
     const existing = await userModel.findOne({ where: { email: emailLower } });
-    if (existing) {
-      return errorResponseHelper(res, 400, "An account with this email already exists. Please log in.");
-    }
+    const isExisting = !!existing;
 
-    // Store referral code in Redis for later use during verification
-    if (referral_code) {
+    // Store referral code (brand-new sign-ups only) in Redis for later use.
+    if (referral_code && !isExisting) {
       await setRedisItemWithTTL(`reg-referral:${emailLower}`, { referral_code }, 900);
     }
 
     // Send OTP via email
-    const sent = await sendEmailOTP(emailLower, "there");
+    const greetingName = existing?.dataValues?.name || "there";
+    const sent = await sendEmailOTP(emailLower, greetingName);
     if (!sent) {
       return errorResponseHelper(res, 503, "Unable to send verification code. Please try again.");
     }
 
-    userLogger.info(`[RegisterEmail] OTP sent for registration: ${emailLower}`);
-    return successResponseHelper(res, 200, "Verification code sent to your email", {});
+    userLogger.info(`[RegisterEmail] OTP sent (${isExisting ? "returning user" : "new user"}): ${emailLower}`);
+    return successResponseHelper(res, 200, "Verification code sent to your email", { existing_user: isExisting });
 
   } catch (e) {
     handleControllerError(res, e, userLogger);
@@ -304,10 +415,12 @@ const registerEmailVerifyOtp = async (req: express.Request, res: express.Respons
     // OTP verified — delete it
     await deleteRedisItem(otpKey);
 
-    // Double check email not taken (race condition guard)
+    // If the email already belongs to an account, log that user in (returning-user
+    // re-onboarding) instead of creating a duplicate.
     const existing = await userModel.findOne({ where: { email: emailLower } });
     if (existing) {
-      return errorResponseHelper(res, 400, "An account with this email already exists.");
+      userLogger.info(`[RegisterEmail] Returning user verified via onboarding OTP, logging in: ${emailLower}`);
+      return await finalizeReturningUserLogin(req, res, existing.dataValues, { email_verified: true });
     }
 
     // Retrieve referral code if stored
@@ -469,19 +582,19 @@ const registerPhoneStep1 = async (req: express.Request, res: express.Response) =
       where: { mobile }
     });
     
-    if (mobileExists) {
-      return errorResponseHelper(res, 400, "This phone number is already registered. Please log in.");
-    }
+    // If the mobile already exists we DON'T block — re-onboarding is treated as an
+    // OTP login. We still send the OTP; the verify step logs the existing user in.
+    const isExisting = !!mobileExists;
 
-    // Store referral code in Redis for later use
-    if (referral_code) {
+    // Store referral code (brand-new sign-ups only) in Redis for later use
+    if (referral_code && !isExisting) {
       await setRedisItemWithTTL(`reg-referral-phone:${mobile}`, { referral_code }, 900);
     }
     
     // Send OTP via Telnyx
     const smsSent = await sendTelnyxSMS(mobile);
     if (smsSent) {
-      return successResponseHelper(res, 200, "Verification code sent to your phone number.");
+      return successResponseHelper(res, 200, "Verification code sent to your phone number.", { existing_user: isExisting });
     }
     return errorResponseHelper(res, 503, "Failed to send verification code. Please try again.");
     
@@ -531,10 +644,12 @@ const registerPhoneStep2 = async (req: express.Request, res: express.Response) =
       return errorResponseHelper(res, 400, "Invalid or expired verification code");
     }
     
-    // Double-check mobile doesn't exist
+    // If the mobile already belongs to an account, log that user in (returning-user
+    // re-onboarding) instead of creating a duplicate.
     const mobileExists = await userModel.findOne({ where: { mobile } });
     if (mobileExists) {
-      return errorResponseHelper(res, 400, "This phone number is already registered.");
+      userLogger.info(`[RegisterPhone] Returning user verified via onboarding OTP, logging in: ${mobile}`);
+      return await finalizeReturningUserLogin(req, res, mobileExists.dataValues);
     }
 
     // Retrieve referral code if stored
